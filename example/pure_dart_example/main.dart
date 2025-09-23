@@ -36,10 +36,10 @@ Future<void> main() async {
   sdk_2.events.record(key: 'instance_2_event');
   sdk_2.views.startAutoStoppedView("home");
 
-
   sdk.events.record(key: 'session_start');
   sdk.events.record(key: 'button_click', segmentation: {'id': 'start', 'color': 'blue'});
-  await sdk.remoteConfig.fetch();
+  final fetched = await sdk.remoteConfig.fetch();
+  print('Remote config fetch success: $fetched');
 
   await sdk.users.setProperties({'name': 'Alice', 'plan': 'pro'});
   await sdk.processEventsAndRequests();

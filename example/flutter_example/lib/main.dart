@@ -37,7 +37,8 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _refreshRemoteConfig() async {
     final inst = Sdk.defaultInstance!;
-    await inst.remoteConfig.fetch();
+    final ok = await inst.remoteConfig.fetch();
+    debugPrint('Remote config fetch success: $ok');
   }
 
   @override
@@ -59,8 +60,7 @@ class _MyAppState extends State<MyApp> {
               const SizedBox(height: 16),
               ElevatedButton(onPressed: _increment, child: const Text('Record Event & Increment')),
               const SizedBox(height: 8),
-              ElevatedButton(
-                  onPressed: _refreshRemoteConfig, child: const Text('Fetch Remote Config')),
+              ElevatedButton(onPressed: _refreshRemoteConfig, child: const Text('Fetch Remote Config')),
               const SizedBox(height: 8),
               ElevatedButton(
                 onPressed: () async {

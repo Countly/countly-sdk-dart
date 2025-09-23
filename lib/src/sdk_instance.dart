@@ -38,7 +38,6 @@ class SdkInstance {
   bool _suspended = false; // for request backoff
   DateTime? _suspendUntil;
 
-
   static const _sdkVersion = SdkInternal.sdkVersion;
   static const _sdkName = SdkInternal.sdkName;
 
@@ -47,7 +46,6 @@ class SdkInstance {
   late final MigrationService _migration;
   late final SdkLogger _logger;
   late final InstanceLogger L;
-
 
   EventsModule? _eventsModule;
   UsersModule? _usersModule;
@@ -322,7 +320,7 @@ class SdkInstance {
   /// Sends a single request and returns true if successful.
   Future<bool> _sendRequest(Map<String, dynamic> req) async {
     try {
-      final resp = await _network.makeRequest(req, Endpoints.events);
+      final resp = await _network.makeSelectiveRequest(req);
       L.i('Received response: status=[${resp.statusCode}], body=[${resp.body}]');
       return _network.isResponseValid(resp, acceptJSON: false);
     } catch (e, st) {

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'logging_helper.dart';
+import 'constants.dart';
 
 class NetworkClient {
   final String baseUrl;
@@ -22,6 +23,15 @@ class NetworkClient {
   Future<http.Response> makeRequest(Map<String, dynamic> data, String endPoint) async {
     final f = _post('$baseUrl$endPoint', data);
     return f.timeout(Duration(seconds: requestTimeout));
+  }
+
+  /// Chooses endpoint automatically based on the 'method' field inside [data].
+  /// Falls back to events endpoint if not matched.
+  Future<http.Response> makeSelectiveRequest(Map<String, dynamic> data) async {
+    final method = data['method'];
+    const sdkMethods = {'ab'}; // Currently only 'ab' is unique
+    final endpoint = (method != null && sdkMethods.contains(method)) ? Endpoints.sdk : Endpoints.events;
+    return makeRequest(data, endpoint);
   }
 
   Future<http.Response> _post(String url, Map<String, dynamic> data) async {
