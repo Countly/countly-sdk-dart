@@ -1,7 +1,7 @@
 part of sdk_instance_lib;
 
 class SessionsModule {
-  final SdkInstance _inst;
+  final CountlyInstance _inst;
   SessionsModule(this._inst);
 
   DateTime? _sessionBeginTime;

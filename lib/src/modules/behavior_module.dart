@@ -1,7 +1,7 @@
 part of sdk_instance_lib;
 
 class BehaviorModule {
-  final SdkInstance _inst;
+  final CountlyInstance _inst;
   BehaviorModule(this._inst);
 
   final Map<String, dynamic> _sbs = {};

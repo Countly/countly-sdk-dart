@@ -55,7 +55,7 @@ class _CustomStorageEngine implements StorageEngine {
 
 /// Wrapper that chooses engine based on config, or uses custom user functions.
 class StorageFacade {
-  final SdkConfig config;
+  final CountlyConfig config;
   final InstanceLogger? L;
   late final StorageEngine _engine;
 

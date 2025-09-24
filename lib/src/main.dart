@@ -23,8 +23,8 @@ part 'modules/behavior_module.dart';
 part 'modules/sessions_module.dart';
 part 'testing_utils.dart';
 
-class SdkInstance {
-  final SdkConfig config;
+class CountlyInstance {
+  final CountlyConfig config;
   final String instanceKey; // default instance == 'default'.
 
   final List<Map<String, dynamic>> _eventQueue = [];
@@ -62,10 +62,10 @@ class SdkInstance {
   String? _previousEventKey;
   String? _previousViewName;
 
-  SdkInstance._(this.config, this.instanceKey);
+  CountlyInstance._(this.config, this.instanceKey);
 
-  static Future<SdkInstance> create(SdkConfig config, {String instanceKey = 'default'}) async {
-    final inst = SdkInstance._(config, instanceKey);
+  static Future<CountlyInstance> create(CountlyConfig config, {String instanceKey = 'default'}) async {
+    final inst = CountlyInstance._(config, instanceKey);
     await inst._init();
     return inst;
   }
@@ -460,20 +460,20 @@ class SdkInstance {
 }
 
 /// Global manager for multi-instance support.
-class Sdk {
-  static final Map<String, SdkInstance> _instances = {};
+class Countly {
+  static final Map<String, CountlyInstance> _instances = {};
 
   /// Returns default instance if already initialized, else null.
-  static SdkInstance? get defaultInstance => _instances['default'];
+  static CountlyInstance? get defaultInstance => _instances['default'];
 
   /// TODO: If instance exists it is replaced safely. Should not?
-  static Future<SdkInstance> init(SdkConfig config, {String instanceKey = 'default'}) async {
-    final inst = await SdkInstance.create(config, instanceKey: instanceKey);
+  static Future<CountlyInstance> init(CountlyConfig config, {String instanceKey = 'default'}) async {
+    final inst = await CountlyInstance.create(config, instanceKey: instanceKey);
     _instances[instanceKey] = inst;
     return inst;
   }
 
-  static SdkInstance? instance(String key) => _instances[key];
+  static CountlyInstance? instance(String key) => _instances[key];
 
   /// Disposes a specific instance by key; returns true if disposed.
   static Future<bool> disposeInstance(String key, {bool flush = true}) async {
@@ -485,7 +485,7 @@ class Sdk {
 
   /// Disposes all instances.
   static Future<void> disposeAll({bool flush = true}) async {
-    final entries = List<MapEntry<String, SdkInstance>>.from(_instances.entries);
+    final entries = List<MapEntry<String, CountlyInstance>>.from(_instances.entries);
     _instances.clear();
     for (final e in entries) {
       await e.value.dispose(flush: flush);

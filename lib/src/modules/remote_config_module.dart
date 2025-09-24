@@ -1,7 +1,7 @@
 part of sdk_instance_lib;
 
 class RemoteConfigModule {
-  final SdkInstance _inst;
+  final CountlyInstance _inst;
   final Map<String, dynamic> _experimentInfo = {};
   final Map<String, dynamic> _variantInfo = {};
   RemoteConfigModule(this._inst);
@@ -88,8 +88,6 @@ class RemoteConfigModule {
     _inst.L.d('Enrollment request for key [$key] queued (explicit enroll)');
     return true;
   }
-
-
 
   /// Clears in-memory and persisted remote config values.
   Future<void> clearStoredValues() async {

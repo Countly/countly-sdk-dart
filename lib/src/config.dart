@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:meta/meta.dart';
-import 'package:sdk_dart/src/constants.dart';
+import 'package:countly_sdk_dart/src/constants.dart';
 
 /// Storage mode for the SDK. Persistent uses platform storage, memory is ephemeral.
 enum StorageMode { persistent, memory }
@@ -31,7 +31,7 @@ class CustomStorageMethods {
 
 /// Immutable configuration for an SDK instance.
 @immutable
-class SdkConfig {
+class CountlyConfig {
   /// Application key (mandatory)
   final String appKey;
 
@@ -78,7 +78,7 @@ class SdkConfig {
   /// which will only be overridden if explicitly provided).
   final Map<String, String>? customRequestHeaders;
 
-  const SdkConfig._({
+  const CountlyConfig._({
     required this.appKey,
     required this.serverUrl,
     required this.deviceId,
@@ -95,7 +95,7 @@ class SdkConfig {
     required this.customRequestHeaders,
   });
 
-  factory SdkConfig({
+  factory CountlyConfig({
     required String appKey,
     required String serverUrl,
     String? deviceId,
@@ -135,7 +135,7 @@ class SdkConfig {
     /// remove trailing slashes
     final normalized = serverUrl.replaceFirst(RegExp(r'/+$'), '');
 
-    return SdkConfig._(
+    return CountlyConfig._(
       appKey: appKey,
       serverUrl: normalized,
       deviceId: deviceId,
@@ -168,7 +168,7 @@ class DefaultSdkLogger implements SdkLogger {
   void log(LogLevel level, String message, {Object? error, StackTrace? stack}) {
     if (!isEnabled(level)) return;
     final prefix = level.name.toUpperCase();
-    final buffer = StringBuffer('[sdk_dart][$prefix] $message');
+    final buffer = StringBuffer('[countly_sdk_dart][$prefix] $message');
     if (error != null) buffer.write(' | error=$error');
     if (stack != null) buffer.write('\n$stack');
     // ignore: avoid_print

@@ -1,10 +1,10 @@
 // Run with: dart run example/pure_dart_example/main.dart
 
 import 'dart:async';
-import 'package:sdk_dart/sdk_dart.dart';
+import 'package:countly_sdk_dart/countly.dart';
 
 Future<void> main() async {
-  final config = SdkConfig(
+  final config = CountlyConfig(
     appKey: 'YOUR_APP_KEY',
     serverUrl: 'https://sth.com',
     storageMode: StorageMode.memory,
@@ -18,7 +18,7 @@ Future<void> main() async {
       ConsentType.views,
     ],
   );
-  final config2 = SdkConfig(
+  final config2 = CountlyConfig(
     appKey: 'YOUR_APP_KEY',
     serverUrl: 'https://sth.com',
     storageMode: StorageMode.memory,
@@ -26,13 +26,13 @@ Future<void> main() async {
     logLevel: LogLevel.verbose,
   );
 
-  final sdk = await Sdk.init(config);
+  final sdk = await Countly.init(config);
 
   sdk.consents.give([ConsentType.remoteConfig]);
   sdk.events.recordMetrics();
   sdk.views.startAutoStoppedView("home");
 
-  final sdk_2 = await Sdk.init(config2, instanceKey: 'secondary');
+  final sdk_2 = await Countly.init(config2, instanceKey: 'secondary');
   sdk_2.events.record(key: 'instance_2_event');
   sdk_2.views.startAutoStoppedView("home");
 
@@ -46,5 +46,5 @@ Future<void> main() async {
 
   await Future<void>.delayed(const Duration(seconds: 2));
 
-  await Sdk.disposeAll();
+  await Countly.disposeAll();
 }

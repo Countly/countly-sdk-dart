@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:sdk_dart/sdk_dart.dart';
+import 'package:countly_sdk_dart/countly.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final config = SdkConfig(
+  final config = CountlyConfig(
     appKey: 'YOUR_APP_KEY',
     serverUrl: 'https://sth.com',
     storageMode: StorageMode.persistent,
@@ -14,7 +14,7 @@ void main() async {
     giveAllConsents: true,
     userProperties: const {'platform': 'flutter', 'build': '1.0.0'},
   );
-  await Sdk.init(config);
+  await Countly.init(config);
   runApp(const MyApp());
 }
 
@@ -29,21 +29,21 @@ class _MyAppState extends State<MyApp> {
 
   void _increment() {
     counter++;
-    final inst = Sdk.defaultInstance!;
+    final inst = Countly.defaultInstance!;
     inst.events.record(key: 'counter_increment', segmentation: {'value': counter});
     inst.users.setProperties({'last_counter': counter});
     setState(() {});
   }
 
   Future<void> _refreshRemoteConfig() async {
-    final inst = Sdk.defaultInstance!;
+    final inst = Countly.defaultInstance!;
     final ok = await inst.remoteConfig.fetch();
     debugPrint('Remote config fetch success: $ok');
   }
 
   @override
   void dispose() {
-    Sdk.disposeAll();
+    Countly.disposeAll();
     super.dispose();
   }
 
@@ -64,7 +64,7 @@ class _MyAppState extends State<MyApp> {
               const SizedBox(height: 8),
               ElevatedButton(
                 onPressed: () async {
-                  final inst = Sdk.defaultInstance!;
+                  final inst = Countly.defaultInstance!;
                   await inst.processEventsAndRequests();
                 },
                 child: const Text('Force Flush Now'),

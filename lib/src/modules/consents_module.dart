@@ -1,7 +1,7 @@
 part of sdk_instance_lib;
 
 class ConsentsModule {
-  final SdkInstance _inst;
+  final CountlyInstance _inst;
   ConsentsModule(this._inst);
 
   void give(Iterable<ConsentType> types) {

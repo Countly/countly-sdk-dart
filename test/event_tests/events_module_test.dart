@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sdk_dart/sdk_dart.dart';
+import 'package:countly_sdk_dart/countly.dart';
 import 'package:http/http.dart' as http;
-import 'package:sdk_dart/src/networking.dart';
+import 'package:countly_sdk_dart/src/networking.dart';
 
 class TestLogger implements SdkLogger {
   final List<String> logs = [];
@@ -37,9 +37,9 @@ class FakeNetworkClient extends NetworkClient {
   }
 }
 
-Future<SdkInstance> _createInstance({bool requiresConsent = false}) async {
+Future<CountlyInstance> _createInstance({bool requiresConsent = false}) async {
   final logger = TestLogger();
-  final cfg = SdkConfig(
+  final cfg = CountlyConfig(
     appKey: 'app-key',
     serverUrl: 'https://example.com',
     enableSDKLogs: true,
@@ -48,9 +48,9 @@ Future<SdkInstance> _createInstance({bool requiresConsent = false}) async {
     giveAllConsents: true,
     storageMode: StorageMode.memory,
   );
-  final inst = await Sdk.init(cfg, instanceKey: 'test-${DateTime.now().microsecondsSinceEpoch}');
+  final inst = await Countly.init(cfg, instanceKey: 'test-${DateTime.now().microsecondsSinceEpoch}');
   addTearDown(() async {
-    await Sdk.disposeAll();
+    await Countly.disposeAll();
   });
   return inst;
 }

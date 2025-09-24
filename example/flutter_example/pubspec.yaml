@@ -1,5 +1,5 @@
 name: flutter_example
-description: Example Flutter app showcasing sdk_dart usage.
+description: Example Flutter app showcasing countly_sdk_dart usage.
 publish_to: 'none'
 version: 0.0.1+1
 
@@ -10,7 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  sdk_dart:
+  countly_sdk_dart:
     path: ../..
 
 dev_dependencies:

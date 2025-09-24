@@ -45,8 +45,9 @@ String _deviceModel() {
     final raw = Platform.operatingSystemVersion;
     final firstLine = raw.split('\n').first;
     final beforeParen = firstLine.split('(').first.trim();
-    if (beforeParen.isNotEmpty)
+    if (beforeParen.isNotEmpty) {
       return beforeParen.length > 60 ? beforeParen.substring(0, 60) : beforeParen;
+    }
   } catch (_) {}
   return 'unknown';
 }

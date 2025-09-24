@@ -1,4 +1,4 @@
-# sdk_dart
+# countly_sdk_dart
 
 Currently supports:
 - multi instancing

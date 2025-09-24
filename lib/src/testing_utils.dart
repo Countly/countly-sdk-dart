@@ -1,7 +1,7 @@
 part of sdk_instance_lib;
 
 /// Internal testing utilities.
-extension SdkInstanceTesting on SdkInstance {
+extension SdkInstanceTesting on CountlyInstance {
   @visibleForTesting
   void debugOverrideBehaviorSettings({int? eventQueueSize, int? requestQueueSize, int? timerIntervalSeconds}) {
     final overrides = <String, dynamic>{};

@@ -1,7 +1,7 @@
 part of sdk_instance_lib;
 
 class ViewsModule {
-  final SdkInstance _inst;
+  final CountlyInstance _inst;
   ViewsModule(this._inst);
 
   /// Starts a view that ends automatically when another view is started or on dispose.

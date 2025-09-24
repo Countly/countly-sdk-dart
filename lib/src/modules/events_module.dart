@@ -1,7 +1,7 @@
 part of sdk_instance_lib;
 
 class EventsModule {
-  final SdkInstance _i;
+  final CountlyInstance _i;
   EventsModule(this._i);
 
   /// Records an event with the given parameters.

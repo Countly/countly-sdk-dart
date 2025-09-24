@@ -1,7 +1,7 @@
 part of sdk_instance_lib;
 
 class UsersModule {
-  final SdkInstance _inst;
+  final CountlyInstance _inst;
   UsersModule(this._inst);
 
   /// Caches user properties. Merges with existing properties.
