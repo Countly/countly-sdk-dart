@@ -1,5 +1,17 @@
 part of sdk_instance_lib;
 
+/// Named user properties for [UsersModule.setProperties].
+class NamedUserProperty {
+  static const name = 'name';
+  static const username = 'username';
+  static const email = 'email';
+  static const organization = 'organization';
+  static const phone = 'phone';
+  static const picture = 'picture';
+  static const gender = 'gender';
+  static const byear = 'byear';
+}
+
 class UsersModule {
   final CountlyInstance _inst;
   UsersModule(this._inst);

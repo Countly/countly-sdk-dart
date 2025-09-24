@@ -1,4 +1,6 @@
-/// Internal constants for storage key segmentation
+import 'package:meta/meta.dart';
+
+@internal
 class StorageSubKeys {
   static const requestQueue = 'COUNTLY_DART_RQ';
   static const eventQueue = 'COUNTLY_DART_EQ';
@@ -9,12 +11,14 @@ class StorageSubKeys {
 }
 
 /// Device ID type values
+@internal
 class DeviceIdType {
   static const provided = 1; /// Provided by user.
   static const generated = 2; /// Generated UUID.
 }
 
 /// SDK metadata
+@internal
 class SdkInternal {
   static const sdkVersion = '0.0.1';
   static const sdkName = 'sdk-dart';
@@ -22,12 +26,14 @@ class SdkInternal {
   static const requestTimeoutSeconds = 60;
 }
 
+@internal
 class Endpoints {
   static const events = '/i';
   static const sdk = '/o/sdk';
 }
 
 /// Default values for SDK behavior settings.
+@internal
 class SdkBehaviorSettingsDefaults {
   static const tracking = true; // Allow all tracking
   static const networking = true; // Allow sending requests

@@ -41,7 +41,7 @@ Future<void> main() async {
   final fetched = await sdk.remoteConfig.fetch();
   print('Remote config fetch success: $fetched');
 
-  await sdk.users.setProperties({'name': 'Alice', 'plan': 'pro'});
+  await sdk.users.setProperties({NamedUserProperty.name: 'Alice'});
   await sdk.processEventsAndRequests();
 
   await Future<void>.delayed(const Duration(seconds: 2));
