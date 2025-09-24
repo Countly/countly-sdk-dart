@@ -10,14 +10,7 @@ class NetworkClient {
   final int requestTimeout;
   final Map<String, String>? customHeaders;
 
-  NetworkClient(
-    this.baseUrl, {
-    http.Client? client,
-    this.L,
-    int? requestTimeout,
-    this.customHeaders,
-  }) : _client = client ?? http.Client(),
-       requestTimeout = requestTimeout ?? 30;
+  NetworkClient(this.baseUrl, {http.Client? client, this.L, int? requestTimeout, this.customHeaders}) : _client = client ?? http.Client(), requestTimeout = requestTimeout ?? SdkInternal.requestTimeoutSeconds;
 
   /// makes a generic request to the specified endpoint.
   Future<http.Response> makeRequest(Map<String, dynamic> data, String endPoint) async {

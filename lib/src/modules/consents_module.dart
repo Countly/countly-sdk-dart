@@ -9,6 +9,7 @@ class ConsentsModule {
     if (!_inst.config.requiresConsent) return;
     _inst._grantedConsents.addAll(types);
     _inst.L.i('Given consents: ${types.map((e) => e.name).join(', ')}');
+    _inst._recordConsentRequest();
   }
 
   void revoke(Iterable<ConsentType> types) {
@@ -18,6 +19,7 @@ class ConsentsModule {
       _inst._grantedConsents.remove(t);
     }
     _inst.L.i('Revoked consents: ${types.map((e) => e.name).join(', ')}');
+    _inst._recordConsentRequest();
   }
 
   void giveAll() {
@@ -25,6 +27,7 @@ class ConsentsModule {
     if (!_inst.config.requiresConsent) return;
     _inst._grantedConsents.addAll(ConsentType.values);
     _inst.L.i('All consents granted');
+    _inst._recordConsentRequest();
   }
 
   void revokeAll() {
@@ -32,5 +35,6 @@ class ConsentsModule {
     if (!_inst.config.requiresConsent) return;
     _inst._grantedConsents.clear();
     _inst.L.i('All consents revoked');
+    _inst._recordConsentRequest();
   }
 }

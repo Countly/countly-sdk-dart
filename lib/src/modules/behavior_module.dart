@@ -37,6 +37,9 @@ class BehaviorModule {
   @visibleForTesting
   Map<String, dynamic> get snapshot => Map.unmodifiable(_sbs);
 
+  @visibleForTesting
+  void debugApplyOverrides(Map<String, dynamic> overrides) => _applyOverrides(overrides, source: 'debug');
+
   Future<void> init() async {
     _initDefaults();
     await _loadPersisted();
@@ -47,9 +50,9 @@ class BehaviorModule {
     _sbs.addAll({
       'tracking': SdkBehaviorSettingsDefaults.tracking,
       'networking': SdkBehaviorSettingsDefaults.networking,
-      'eqs': _inst.config.eventQueueSize,
-      'rqs': _inst.config.requestQueueSize,
-      'sui': _inst.config.internalTimerInterval,
+      'eqs': SdkBehaviorSettingsDefaults.eqs,
+      'rqs': SdkBehaviorSettingsDefaults.rqs,
+      'sui': SdkBehaviorSettingsDefaults.sui,
       'st': SdkBehaviorSettingsDefaults.st,
       'crt': SdkBehaviorSettingsDefaults.crt,
       'lt': SdkBehaviorSettingsDefaults.lt,
@@ -82,10 +85,10 @@ class BehaviorModule {
     if (cfg.storageMode != StorageMode.persistent && !(cfg.storageMethods?.hasAny ?? false)) return;
     final stored = await _inst._storage.readJson<Map<String, dynamic>>(StorageSubKeys.behavior);
     if (stored == null) return;
-    _inst.L.i('BehaviorModule: loaded persisted SBS object=[${stored.toString()}]');
+    _inst.L.i('BehaviorModule: loaded stored SBS object=[${stored.toString()}]');
     final overrides = stored['c'];
     if (overrides is Map<String, dynamic>) {
-      _applyOverrides(overrides, source: 'persisted');
+      _applyOverrides(overrides, source: 'stored');
     }
   }
 

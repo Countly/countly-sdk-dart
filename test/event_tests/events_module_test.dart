@@ -15,8 +15,7 @@ class TestLogger implements SdkLogger {
 }
 
 class FakeResponseSuccess extends http.Response {
-  FakeResponseSuccess({String body = '{"result":"Success"}', int status = 200})
-    : super(body, status);
+  FakeResponseSuccess({String body = '{"result":"Success"}', int status = 200}) : super(body, status);
 }
 
 class FakeResponseFail extends http.Response {
@@ -38,18 +37,11 @@ class FakeNetworkClient extends NetworkClient {
   }
 }
 
-Future<SdkInstance> _createInstance({
-  int eventQueueSize = 5,
-  int requestQueueSize = 20,
-  bool requiresConsent = false,
-}) async {
+Future<SdkInstance> _createInstance({bool requiresConsent = false}) async {
   final logger = TestLogger();
   final cfg = SdkConfig(
     appKey: 'app-key',
     serverUrl: 'https://example.com',
-    eventQueueSize: eventQueueSize,
-    requestQueueSize: requestQueueSize,
-    internalTimerInterval: 9999, /// TODO: mb no heartbeat for tests?
     enableSDKLogs: true,
     logger: logger,
     requiresConsent: requiresConsent,
@@ -85,7 +77,8 @@ void main() {
     });
 
     test('3. bundling moves events to request queue', () async {
-      final sdk = await _createInstance(eventQueueSize: 10);
+      final sdk = await _createInstance();
+      sdk.debugOverrideBehaviorSettings(eventQueueSize: 10);
       sdk.events.record(key: 'e1');
       sdk.events.record(key: 'e2');
       expect(sdk.debugEventQueueLength, 2);
@@ -102,7 +95,8 @@ void main() {
     });
 
     test('4. changing event queue size triggers early bundling when full', () async {
-      final sdk = await _createInstance(eventQueueSize: 2);
+      final sdk = await _createInstance();
+      sdk.debugOverrideBehaviorSettings(eventQueueSize: 2);
       // Fill to capacity
       sdk.events.record(key: 'a');
       sdk.events.record(key: 'b');
@@ -110,31 +104,20 @@ void main() {
       // should cause auto-bundle (queue cleared -> moved to request)
       sdk.events.record(key: 'c');
       // After adding third: event queue should have 1 (the latest), request queue should have 1 (bundle of first two)
-      expect(
-        sdk.debugEventQueueLength,
-        1,
-        reason: 'Queue should contain only the last event after bundling',
-      );
-      expect(
-        sdk.debugRequestQueueLength,
-        1,
-        reason: 'Request queue should have received bundled events',
-      );
+      expect(sdk.debugEventQueueLength, 1, reason: 'Queue should contain only the last event after bundling');
+      expect(sdk.debugRequestQueueLength, 1, reason: 'Request queue should have received bundled events');
       final bundledReq = sdk.debugRequestQueueSnapshot.first;
       final decoded = jsonDecode(bundledReq['events'] as String) as List<dynamic>;
       final keys = decoded.map((e) => e['key']).toList();
       expect(keys, ['a', 'b']);
       await sdk.processEventsAndRequests();
       expect(sdk.debugEventQueueLength, 0);
-      expect(
-        sdk.debugRequestQueueLength,
-        2,
-        reason: 'Second request added after flushing remaining event',
-      );
+      expect(sdk.debugRequestQueueLength, 2, reason: 'Second request added after flushing remaining event');
     });
 
     test('5. pen & cvn works across sequential events and views', () async {
-      final sdk = await _createInstance(requiresConsent: true, eventQueueSize: 20);
+      final sdk = await _createInstance(requiresConsent: true);
+      sdk.debugOverrideBehaviorSettings(eventQueueSize: 20);
       sdk.views.startAutoStoppedView('Home');
       sdk.events.record(key: 'first');
       sdk.events.record(key: 'second');
@@ -166,15 +149,12 @@ void main() {
       sdk.events.record(key: 'b');
       await sdk.processEventsAndRequests();
       // Second event causes bundling -> new request appended
-      expect(
-        sdk.debugRequestQueueLength,
-        2,
-        reason: 'Second bundled request should be queued while suspended',
-      );
+      expect(sdk.debugRequestQueueLength, 2, reason: 'Second bundled request should be queued while suspended');
     });
 
     test('7. request queue overflow drops oldest', () async {
-      final sdk = await _createInstance(requestQueueSize: 3, eventQueueSize: 2);
+      final sdk = await _createInstance();
+      sdk.debugOverrideBehaviorSettings(eventQueueSize: 2, requestQueueSize: 3);
       // Each pair of events + process => 1 request
       for (var i = 0; i < 5; i++) {
         sdk.events.record(key: 'e${i}a');

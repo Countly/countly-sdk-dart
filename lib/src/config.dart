@@ -47,15 +47,6 @@ class SdkConfig {
   /// Enables remote config fetch loop if true. (default: false)
   final bool turnOnRemoteConfig;
 
-  /// Internal timer interval (seconds) controlling periodic flush & processing.
-  final int internalTimerInterval;
-
-  /// Max in-memory event queue size before flush (default: 100).
-  final int eventQueueSize;
-
-  /// Max request queue size. (default: 1000).
-  final int requestQueueSize;
-
   /// Storage mode selection (persistent by default).
   final StorageMode storageMode;
 
@@ -80,9 +71,6 @@ class SdkConfig {
   /// If true, all consent types will be enabled initially, overriding [initialEnabledConsents]. (default: false)
   final bool giveAllConsents;
 
-  /// Network request timeout in seconds (default: 60).
-  final int requestTimeout;
-
   /// Optional custom request headers to be applied to every network request.
   /// Header names are case-insensitive per HTTP spec. Values must be String.
   /// SDK will merge these with its own required headers (Content-Type, Accept)
@@ -96,9 +84,6 @@ class SdkConfig {
     required this.deviceId,
     required this.userProperties,
     required this.turnOnRemoteConfig,
-    required this.internalTimerInterval,
-    required this.eventQueueSize,
-    required this.requestQueueSize,
     required this.storageMode,
     required this.storageMethods,
     required this.logLevel,
@@ -107,7 +92,6 @@ class SdkConfig {
     required this.initialEnabledConsents,
     required this.giveAllConsents,
     required this.enableSDKLogs,
-    required this.requestTimeout,
     required this.customRequestHeaders,
   });
 
@@ -117,9 +101,6 @@ class SdkConfig {
     String? deviceId,
     Map<String, dynamic>? userProperties,
     bool turnOnRemoteConfig = false,
-    int internalTimerInterval = SdkBehaviorSettingsDefaults.sui,
-    int eventQueueSize = SdkBehaviorSettingsDefaults.eqs,
-    int requestQueueSize = SdkBehaviorSettingsDefaults.rqs,
     StorageMode storageMode = StorageMode.persistent,
     CustomStorageMethods? storageMethods,
     LogLevel logLevel = LogLevel.verbose,
@@ -128,7 +109,6 @@ class SdkConfig {
     bool requiresConsent = SdkBehaviorSettingsDefaults.cr,
     List<ConsentType> setConsentEnabled = const [],
     bool giveAllConsents = false,
-    int requestTimeout = 60, /// TODO: maybe add these to constants?
     Map<String, String>? customRequestHeaders,
   }) {
     if (appKey.isEmpty) {
@@ -137,20 +117,9 @@ class SdkConfig {
     if (serverUrl.isEmpty) {
       throw ArgumentError('server_url cannot be empty');
     }
-    if (!serverUrl.startsWith('http://') && !serverUrl.startsWith('https://')) { /// TODO: too strict?
+    if (!serverUrl.startsWith('http://') && !serverUrl.startsWith('https://')) {
+      /// TODO: too strict?
       throw ArgumentError('server_url must start with http:// or https://');
-    }
-    if (internalTimerInterval <= 0) {
-      throw ArgumentError('internal_timer_interval must be > 0');
-    }
-    if (eventQueueSize <= 0) {
-      throw ArgumentError('event_queue_size must be > 0');
-    }
-    if (requestQueueSize <= 0) {
-      throw ArgumentError('request_queue_size must be > 0');
-    }
-    if (requestTimeout <= 0) {
-      throw ArgumentError('request_timeout must be > 0');
     }
     if (customRequestHeaders != null) {
       for (final e in customRequestHeaders.entries) {
@@ -172,9 +141,6 @@ class SdkConfig {
       deviceId: deviceId,
       userProperties: userProperties == null ? null : Map.unmodifiable(Map.of(userProperties)),
       turnOnRemoteConfig: turnOnRemoteConfig,
-      internalTimerInterval: internalTimerInterval,
-      eventQueueSize: eventQueueSize,
-      requestQueueSize: requestQueueSize,
       storageMode: storageMode,
       storageMethods: storageMethods,
       logLevel: logLevel,
@@ -183,9 +149,7 @@ class SdkConfig {
       initialEnabledConsents: List.unmodifiable(setConsentEnabled),
       giveAllConsents: giveAllConsents,
       enableSDKLogs: enableSDKLogs,
-      requestTimeout: requestTimeout,
-      customRequestHeaders:
-          customRequestHeaders == null ? null : Map.unmodifiable(Map.of(customRequestHeaders)),
+      customRequestHeaders: customRequestHeaders == null ? null : Map.unmodifiable(Map.of(customRequestHeaders)),
     );
   }
 }

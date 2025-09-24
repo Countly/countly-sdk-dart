@@ -20,6 +20,8 @@ part 'modules/consents_module.dart';
 part 'modules/remote_config_module.dart';
 part 'modules/views_module.dart';
 part 'modules/behavior_module.dart';
+part 'modules/sessions_module.dart';
+part 'testing_utils.dart';
 
 class SdkInstance {
   final SdkConfig config;
@@ -53,6 +55,7 @@ class SdkInstance {
   RemoteConfigModule? _remoteConfigModule;
   ViewsModule? _viewsModule;
   BehaviorModule? _sbs;
+  SessionsModule? _sessionsModule;
 
   String? _activeViewName;
   DateTime? _activeViewStart;
@@ -71,7 +74,7 @@ class SdkInstance {
     _logger = config.logger ?? DefaultSdkLogger(config.logLevel);
     L = InstanceLogger(_logger, enabled: config.enableSDKLogs, instanceKey: instanceKey);
     _storage = StorageFacade(config, L: L);
-    _network = NetworkClient(config.serverUrl, L: L, requestTimeout: config.requestTimeout, customHeaders: config.customRequestHeaders);
+    _network = NetworkClient(config.serverUrl, L: L, customHeaders: config.customRequestHeaders);
     _migration = MigrationService(_storage, enabled: instanceKey == 'default' && config.storageMode == StorageMode.persistent, L: L);
 
     _sbs = BehaviorModule(this);
@@ -82,7 +85,6 @@ class SdkInstance {
     L.d('config: remoteConfig=[${config.turnOnRemoteConfig}] internalTimerInterval=[${_sbs?.internalTimerInterval}s] eventQueueSize=[${_sbs?.eventQueueSize}] requestQueueSize=[${_sbs?.requestQueueSize}]');
     L.d('config: storageMode=[${config.storageMode.name}] customStorageOverrides=[${config.storageMethods?.hasAny == true}]');
     L.d('config: loggingEnabled=[${config.enableSDKLogs}] logLevel=[${config.logLevel.name}] customLogger=[${config.logger != null}]');
-    L.d('config: requestTimeout=[${config.requestTimeout}s]');
 
     if (config.requiresConsent) {
       if (config.giveAllConsents) {
@@ -98,6 +100,7 @@ class SdkInstance {
     _consentsModule = ConsentsModule(this);
     _remoteConfigModule = RemoteConfigModule(this);
     _viewsModule = ViewsModule(this);
+    _sessionsModule = SessionsModule(this);
 
     // Migration only for default instance
     if (instanceKey == 'default') {
@@ -119,6 +122,13 @@ class SdkInstance {
     }
 
     _startTimer();
+    // Record initial consent status if consent required
+    if (config.requiresConsent) {
+      _recordConsentRequest();
+    }
+    // Record location request
+    _addToRequestQueue(_prepareRequest({'location': ''}));
+
     L.i('SDK instance initialized successfully');
 
     // Fetch latest SBS values.
@@ -201,9 +211,11 @@ class SdkInstance {
   /// Starts the internal timer for periodic processing.
   void _startTimer() {
     _internalTimer?.cancel();
-    _internalTimer = Timer.periodic(Duration(seconds: config.internalTimerInterval), (_) async {
+    final interval = _sbs?.internalTimerInterval ?? SdkBehaviorSettingsDefaults.sui;
+    _internalTimer = Timer.periodic(Duration(seconds: interval), (_) async {
       L.d('Internal timer tick: processing events and requests');
       await processEventsAndRequests();
+      _sessionsModule?.sessionUpdate();
     });
   }
 
@@ -253,7 +265,8 @@ class SdkInstance {
 
   /// Adds a request to the request queue with overflow handling.
   void _addToRequestQueue(Map<String, dynamic> request) {
-    if (_requestQueue.length >= config.requestQueueSize) {
+    final max = _sbs?.requestQueueSize ?? SdkBehaviorSettingsDefaults.rqs;
+    if (_requestQueue.length >= max) {
       L.w('Request queue full, removing oldest request');
       _requestQueue.removeAt(0); // FIFO overflow handling.
     }
@@ -268,7 +281,8 @@ class SdkInstance {
       L.v('Tracking disabled (SBS), dropping event');
       return;
     }
-    if (_eventQueue.length >= config.eventQueueSize) {
+    final max = _sbs?.eventQueueSize ?? SdkBehaviorSettingsDefaults.eqs;
+    if (_eventQueue.length >= max) {
       L.v('Event queue full, bundling events');
       _bundleEventQueue();
     }
@@ -394,6 +408,16 @@ class SdkInstance {
     L.d('Enqueued user properties request');
   }
 
+  void _recordConsentRequest() {
+    final consentMap = <String, bool>{};
+    for (final c in ConsentType.values) {
+      consentMap[c.name] = _grantedConsents.contains(c);
+    }
+    final req = _prepareRequest({'consent': consentMap});
+    _addToRequestQueue(req);
+    L.d('Recorded consent request:[$consentMap]');
+  }
+
   bool _disposed = false;
 
   /// Disposes this instance: cancels timer, optionally flushes pending events & requests, closes network client.
@@ -432,6 +456,7 @@ class SdkInstance {
   ConsentsModule get consents => _consentsModule ??= ConsentsModule(this);
   RemoteConfigModule get remoteConfig => _remoteConfigModule ??= RemoteConfigModule(this);
   ViewsModule get views => _viewsModule ??= ViewsModule(this);
+  SessionsModule get sessions => _sessionsModule ??= SessionsModule(this);
 }
 
 /// Global manager for multi-instance support.
