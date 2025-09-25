@@ -21,7 +21,7 @@ class DeviceIdType {
 @internal
 class SdkInternal {
   static const sdkVersion = '0.0.1';
-  static const sdkName = 'sdk-dart';
+  static const sdkName = 'countly-sdk-dart';
   static const appVersion = '1.0.0';
   static const requestTimeoutSeconds = 60;
 }

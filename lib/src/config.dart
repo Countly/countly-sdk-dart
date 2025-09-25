@@ -168,7 +168,7 @@ class DefaultSdkLogger implements SdkLogger {
   void log(LogLevel level, String message, {Object? error, StackTrace? stack}) {
     if (!isEnabled(level)) return;
     final prefix = level.name.toUpperCase();
-    final buffer = StringBuffer('[countly_sdk_dart][$prefix] $message');
+    final buffer = StringBuffer('[c][$prefix] $message');
     if (error != null) buffer.write(' | error=$error');
     if (stack != null) buffer.write('\n$stack');
     // ignore: avoid_print

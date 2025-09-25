@@ -222,11 +222,11 @@ class CountlyInstance {
   /// Flushes events to request queue then attempts sending.
   Future<void> processEventsAndRequests() async {
     L.d('Triggered processing event and request queues');
+    _bundleEventQueue();
     if (_userPropertiesCache.isNotEmpty && hasConsentInternal(ConsentType.users)) {
-      L.d('Enqueuing user properties request');
+      L.d('Enqueuing user properties request cache: ${_userPropertiesCache.toString()}');
       await _enqueueUserPropertiesCache();
     }
-    _bundleEventQueue();
     await _processRequestQueue();
   }
 
@@ -243,7 +243,7 @@ class CountlyInstance {
   /// Converts batched events into a request and sends to request queue.
   void _bundleEventQueue() {
     if (_eventQueue.isEmpty) {
-      L.v('No events to bundle');
+      L.v('Event Bundler: No events to bundle');
       return;
     }
     final batch = List<Map<String, dynamic>>.from(_eventQueue);
@@ -252,25 +252,38 @@ class CountlyInstance {
 
     final payload = jsonEncode(batch);
     final request = _prepareRequest({'events': payload});
-    L.d('Flushed events to request queue');
+    L.d('Event Bundler: Flushed events to request queue');
     _addToRequestQueue(request);
   }
 
   /// Adds necessary common fields to request data.
   Map<String, dynamic> _prepareRequest(Map<String, dynamic> data) {
+    if (_deviceId == null) {
+      L.e('prepareRequest called with null deviceId, this should not happen');
+    }
+    if (config.appKey.isEmpty) {
+      L.e('prepareRequest called with empty appKey, this should not happen');
+    }
     final now = DateTime.now();
     final tzOffsetMinutes = now.timeZoneOffset.inMinutes;
     return {'app_key': config.appKey, 'device_id': _deviceId, 'timestamp': now.millisecondsSinceEpoch, 'hour': now.hour, 'dow': now.weekday % 7, 'tz': tzOffsetMinutes, 'sdk_version': _sdkVersion, 'sdk_name': _sdkName, ...data};
   }
 
   /// Adds a request to the request queue with overflow handling.
+  /// If sending nested data, ensure to use Map<String, dynamic> copies to avoid mutation issues.
+  /// example:
+  ///
+  /// ```dart
+  /// final inner = <String,dynamic>{'name': 'Alice'};
+  /// final req = _prepareRequest({'user_details': inner});
+  /// ```
   void _addToRequestQueue(Map<String, dynamic> request) {
     final max = _sbs?.requestQueueSize ?? SdkBehaviorSettingsDefaults.rqs;
     if (_requestQueue.length >= max) {
       L.w('Request queue full, removing oldest request');
       _requestQueue.removeAt(0); // FIFO overflow handling.
     }
-    L.v('Enqueuing request');
+    L.d('To request queue: Enqueuing request');
     _requestQueue.add(request);
     _persistRequestQueue();
   }
@@ -278,15 +291,15 @@ class CountlyInstance {
   /// Adds an event to the event queue with bundling handling.
   void _addToEventQueue(Map<String, dynamic> event) {
     if (!(_sbs?.trackingEnabled ?? true)) {
-      L.v('Tracking disabled (SBS), dropping event');
+      L.d('Tracking disabled (SBS), dropping event');
       return;
     }
     final max = _sbs?.eventQueueSize ?? SdkBehaviorSettingsDefaults.eqs;
     if (_eventQueue.length >= max) {
-      L.v('Event queue full, bundling events');
+      L.d('Event queue full, bundling events');
       _bundleEventQueue();
     }
-    L.v('Enqueuing event');
+    L.d('To event queue: Enqueuing event');
     _eventQueue.add(event);
     _persistEventQueue();
   }
@@ -401,11 +414,11 @@ class CountlyInstance {
       L.v('User properties cache empty, skipping enqueue');
       return;
     }
-    _bundleEventQueue();
-    final request = _prepareRequest({'user_details': _userPropertiesCache});
+    final request = _prepareRequest({'user_details': Map<String, dynamic>.from(_userPropertiesCache)});
     _addToRequestQueue(request);
+    L.d('Enqueued user properties request: ${request.toString()}');
     _userPropertiesCache.clear();
-    L.d('Enqueued user properties request');
+    return;
   }
 
   void _recordConsentRequest() {

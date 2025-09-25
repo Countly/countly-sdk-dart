@@ -21,8 +21,9 @@ class NetworkClient {
   /// Chooses endpoint automatically based on the 'method' field inside [data].
   /// Falls back to events endpoint if not matched.
   Future<http.Response> makeSelectiveRequest(Map<String, dynamic> data) async {
+    L?.i('Make selective request with data: ${data.toString()}');
     final method = data['method'];
-    const sdkMethods = {'ab'}; // Currently only 'ab' is unique
+    const sdkMethods = {'ab'}; // Currently only 'ab' needs a different endpoint.
     final endpoint = (method != null && sdkMethods.contains(method)) ? Endpoints.sdk : Endpoints.events;
     return makeRequest(data, endpoint);
   }

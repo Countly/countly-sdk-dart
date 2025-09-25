@@ -47,16 +47,17 @@ class EventsModule {
     _i.L.d(
       'Recording event key=[$key] count=[${count ?? 1}] sum=[${sum ?? 'n/a'}] dur=[${dur ?? 'n/a'}] segmentation=[${segmentation != null ? segmentation.toString() : 'n/a'}]',
     );
+    _i._enqueueUserPropertiesCache();
     _i._addToEventQueue(evt);
     _i._previousEventKey = key;
   }
 
-  // TODO: should be used for previous event?
   /// Sends a custom request with the given data.
   void customRequest(Map<String, dynamic> data) {
     final enriched = Map<String, dynamic>.from(data);
     enriched['cvn'] = _i._activeViewName ?? '';
     final req = _i._prepareRequest(enriched);
+    _i._enqueueUserPropertiesCache();
     _i._addToRequestQueue(req);
   }
 
@@ -71,6 +72,7 @@ class EventsModule {
     final metrics = metrics_collector.getCurrentMetrics();
     if (metricOverride != null) metrics.addAll(metricOverride);
     final req = _i._prepareRequest({'metrics': metrics});
+    _i._enqueueUserPropertiesCache();
     _i._addToRequestQueue(req);
     _i.L.d('Recorded metrics request: [${metrics.toString()}');
   }
