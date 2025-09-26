@@ -25,8 +25,8 @@ class UsersModule {
       _inst.L.w('Attempt to set user properties without users consent');
       return;
     }
-    _inst._userPropertiesCache.addAll(props);
-    _inst.L.d('User properties merged. Merged cache: ${_inst._userPropertiesCache.toString()}');
+    _inst._ingestUserProperties(props);
+    _inst.L.d('User properties merged. Named=${_inst._userPropertiesNamedCache.keys.length} Custom=${_inst._customUserPropertiesCache.keys.length}');
     _inst._bundleEventQueue();
   }
 }

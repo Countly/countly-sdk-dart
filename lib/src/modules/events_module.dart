@@ -10,17 +10,15 @@ class EventsModule {
   /// The [sum] and [dur] are optional double values.
   /// The [segmentation] is an optional map of key-value pairs (String to primitive types).
   /// The [timestamp] can be provided to record past events; if omitted, current time is used.
-  void record({
-    required String key,
-    int? count,
-    double? sum,
-    double? dur,
-    Map<String, dynamic>? segmentation,
-    DateTime? timestamp,
-  }) {
+  void record({required String key, int? count, double? sum, double? dur, Map<String, dynamic>? segmentation, DateTime? timestamp}) {
     if (_i._guardDisposed('events.record')) return;
-    if (!_i.hasConsentInternal(ConsentType.events)) {
-      _i.L.w('Event ["$key"] dropped: missing events consent');
+    final internalConsentMap = <String, ConsentType?>{'[CLY]_nps': ConsentType.feedback, '[CLY]_survey': ConsentType.feedback, '[CLY]_star_rating': ConsentType.feedback, '[CLY]_view': ConsentType.views};
+    ConsentType requiredConsent = ConsentType.events;
+    if (internalConsentMap.containsKey(key)) {
+      requiredConsent = internalConsentMap[key]!;
+    }
+    if (!_i.hasConsentInternal(requiredConsent)) {
+      _i.L.w('Event ["$key"] dropped: missing consent for [${requiredConsent.name}]');
       return;
     }
     if (key.isEmpty) {
@@ -34,19 +32,8 @@ class EventsModule {
     }
     segOut['pen'] = _i._previousEventKey ?? '';
     segOut['cvn'] = _i._activeViewName ?? '';
-    final evt = <String, dynamic>{
-      'key': key,
-      'count': count ?? 1,
-      if (sum != null) 'sum': sum,
-      if (dur != null) 'dur': dur,
-      if (segOut.isNotEmpty) 'segmentation': segOut,
-      'timestamp': ts.millisecondsSinceEpoch,
-      'hour': ts.hour,
-      'dow': ts.weekday % 7,
-    };
-    _i.L.d(
-      'Recording event key=[$key] count=[${count ?? 1}] sum=[${sum ?? 'n/a'}] dur=[${dur ?? 'n/a'}] segmentation=[${segmentation != null ? segmentation.toString() : 'n/a'}]',
-    );
+    final evt = <String, dynamic>{'key': key, 'count': count ?? 1, if (sum != null) 'sum': sum, if (dur != null) 'dur': dur, if (segOut.isNotEmpty) 'segmentation': segOut, 'timestamp': ts.millisecondsSinceEpoch, 'hour': ts.hour, 'dow': ts.weekday % 7};
+    _i.L.d('Recording event key=[$key] count=[${count ?? 1}] sum=[${sum ?? 'n/a'}] dur=[${dur ?? 'n/a'}] segmentation=[${segmentation != null ? segmentation.toString() : 'n/a'}]');
     _i._enqueueUserPropertiesCache();
     _i._addToEventQueue(evt);
     _i._previousEventKey = key;

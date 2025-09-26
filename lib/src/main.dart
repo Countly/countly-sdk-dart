@@ -30,8 +30,16 @@ class CountlyInstance {
   final List<Map<String, dynamic>> _eventQueue = [];
   final List<Map<String, dynamic>> _requestQueue = [];
   Map<String, dynamic> _remoteConfigValues = {};
-  Map<String, dynamic> _userPropertiesCache = {};
+  Map<String, dynamic> _userPropertiesNamedCache = {};
+  Map<String, dynamic> _customUserPropertiesCache = {};
   final Set<ConsentType> _grantedConsents = {};
+
+  // Health check counters
+  int _logErrorCount = 0;
+  int _logWarningCount = 0;
+  int? _lastFailedStatusCode;
+  String? _lastFailedErrorMessage;
+  bool _didSendHealthCheckThisInit = false;
 
   String? _deviceId;
   int? _deviceIdType;
@@ -72,7 +80,13 @@ class CountlyInstance {
 
   Future<void> _init() async {
     _logger = config.logger ?? DefaultSdkLogger(config.logLevel);
-    L = InstanceLogger(_logger, enabled: config.enableSDKLogs, instanceKey: instanceKey);
+    L = InstanceLogger(_logger, enabled: config.enableSDKLogs, instanceKey: instanceKey, onLog: (lvl) {
+        if (lvl == LogLevel.error)
+          _logErrorCount++;
+        else if (lvl == LogLevel.warning)
+          _logWarningCount++;
+      },
+    );
     _storage = StorageFacade(config, L: L);
     _network = NetworkClient(config.serverUrl, L: L, customHeaders: config.customRequestHeaders);
     _migration = MigrationService(_storage, enabled: instanceKey == 'default' && config.storageMode == StorageMode.persistent, L: L);
@@ -112,7 +126,7 @@ class CountlyInstance {
 
     // Initial user properties if any and consent given.
     if (config.userProperties != null && config.userProperties!.isNotEmpty && hasConsentInternal(ConsentType.users)) {
-      _userPropertiesCache = Map.of(config.userProperties!);
+      _ingestUserProperties(config.userProperties!);
       await _enqueueUserPropertiesCache();
     }
 
@@ -131,9 +145,10 @@ class CountlyInstance {
 
     L.i('SDK instance initialized successfully');
 
-    // Fetch latest SBS values.
     // ignore: discarded_futures
     _sbs!.fetchLatest();
+    // ignore: discarded_futures
+    _attemptHealthCheck();
   }
 
   /// Checks storage for data from previous runs and loads into memory.
@@ -223,8 +238,8 @@ class CountlyInstance {
   Future<void> processEventsAndRequests() async {
     L.d('Triggered processing event and request queues');
     _bundleEventQueue();
-    if (_userPropertiesCache.isNotEmpty && hasConsentInternal(ConsentType.users)) {
-      L.d('Enqueuing user properties request cache: ${_userPropertiesCache.toString()}');
+    if ((_userPropertiesNamedCache.isNotEmpty || _customUserPropertiesCache.isNotEmpty) && hasConsentInternal(ConsentType.users)) {
+      L.d('Enqueuing user properties request cache: named=${_userPropertiesNamedCache.keys.length} custom=${_customUserPropertiesCache.keys.length}');
       await _enqueueUserPropertiesCache();
     }
     await _processRequestQueue();
@@ -264,9 +279,26 @@ class CountlyInstance {
     if (config.appKey.isEmpty) {
       L.e('prepareRequest called with empty appKey, this should not happen');
     }
+    return {
+      'app_key': config.appKey,
+      'device_id': _deviceId,
+      'sdk_version': _sdkVersion,
+      'sdk_name': _sdkName,
+      'av': SdkInternal.appVersion,
+      ...data,
+    };
+  }
+
+  /// Attach time and optionally rr
+  void _attachDynamicRequestMeta(Map<String, dynamic> req, {bool includeRR = false}) {
     final now = DateTime.now();
-    final tzOffsetMinutes = now.timeZoneOffset.inMinutes;
-    return {'app_key': config.appKey, 'device_id': _deviceId, 'timestamp': now.millisecondsSinceEpoch, 'hour': now.hour, 'dow': now.weekday % 7, 'tz': tzOffsetMinutes, 'sdk_version': _sdkVersion, 'sdk_name': _sdkName, ...data};
+    req['timestamp'] = now.millisecondsSinceEpoch;
+    req['hour'] = now.hour;
+    req['dow'] = now.weekday % 7;
+    req['tz'] = now.timeZoneOffset.inMinutes;
+    if (includeRR) {
+      req['rr'] = _requestQueue.length;
+    }
   }
 
   /// Adds a request to the request queue with overflow handling.
@@ -281,7 +313,7 @@ class CountlyInstance {
     final max = _sbs?.requestQueueSize ?? SdkBehaviorSettingsDefaults.rqs;
     if (_requestQueue.length >= max) {
       L.w('Request queue full, removing oldest request');
-      _requestQueue.removeAt(0); // FIFO overflow handling.
+      _requestQueue.removeAt(0);
     }
     L.d('To request queue: Enqueuing request');
     _requestQueue.add(request);
@@ -347,9 +379,15 @@ class CountlyInstance {
   /// Sends a single request and returns true if successful.
   Future<bool> _sendRequest(Map<String, dynamic> req) async {
     try {
+      _attachDynamicRequestMeta(req, includeRR: true);
       final resp = await _network.makeSelectiveRequest(req);
       L.i('Received response: status=[${resp.statusCode}], body=[${resp.body}]');
-      return _network.isResponseValid(resp, acceptJSON: false);
+      final ok = _network.isResponseValid(resp, acceptJSON: false);
+      if (!ok) {
+        _lastFailedStatusCode = resp.statusCode;
+        _lastFailedErrorMessage = 'HTTP ${resp.statusCode}';
+      }
+      return ok;
     } catch (e, st) {
       L.e('Request failed', error: e, stack: st);
       return false; // Network / other error.
@@ -410,15 +448,55 @@ class CountlyInstance {
 
   /// Bundles event queue and then adds user properties request to request queue if any.
   Future<void> _enqueueUserPropertiesCache() async {
-    if (_userPropertiesCache.isEmpty) {
+    if (_userPropertiesNamedCache.isEmpty && _customUserPropertiesCache.isEmpty) {
       L.v('User properties cache empty, skipping enqueue');
       return;
     }
-    final request = _prepareRequest({'user_details': Map<String, dynamic>.from(_userPropertiesCache)});
+    final userDetails = <String, dynamic>{};
+    if (_userPropertiesNamedCache.isNotEmpty) userDetails.addAll(_userPropertiesNamedCache);
+    if (_customUserPropertiesCache.isNotEmpty) userDetails['custom'] = Map<String, dynamic>.from(_customUserPropertiesCache);
+    final request = _prepareRequest({'user_details': userDetails});
     _addToRequestQueue(request);
-    L.d('Enqueued user properties request: ${request.toString()}');
-    _userPropertiesCache.clear();
-    return;
+    L.d('Enqueued user properties request: named=${_userPropertiesNamedCache.keys.length} custom=${_customUserPropertiesCache.keys.length}');
+    _userPropertiesNamedCache.clear();
+    _customUserPropertiesCache.clear();
+  }
+
+  /// Sends user properties to correct cache (named/custom) based on keys
+  void _ingestUserProperties(Map<String, dynamic> props) {
+    const named = {NamedUserProperty.name, NamedUserProperty.username, NamedUserProperty.email, NamedUserProperty.organization, NamedUserProperty.phone, NamedUserProperty.picture, NamedUserProperty.gender, NamedUserProperty.byear};
+    props.forEach((k, v) {
+      if (named.contains(k)) {
+        _userPropertiesNamedCache[k] = v;
+      } else {
+        _customUserPropertiesCache[k] = v;
+      }
+    });
+  }
+
+  /// HC request
+  Future<void> _attemptHealthCheck() async {
+    if (_didSendHealthCheckThisInit) return;
+    _didSendHealthCheckThisInit = true;
+    try {
+      final hc = <String, dynamic>{'el': _logErrorCount, 'wl': _logWarningCount, 'sc': _lastFailedStatusCode ?? "", 'em':  _lastFailedErrorMessage ?? ""};
+      final metrics = {'_app_version': SdkInternal.appVersion};
+      final req = _prepareRequest({'hc': hc, 'metrics': metrics});
+      _attachDynamicRequestMeta(req);
+      final resp = await _network.makeRequest(req, Endpoints.events);
+      final ok = _network.isResponseValid(resp, acceptJSON: false);
+      if (ok) {
+        _logErrorCount = 0;
+        _logWarningCount = 0;
+        _lastFailedStatusCode = null;
+        _lastFailedErrorMessage = null;
+        L.i('Health check request sent successfully and counters reset');
+      } else {
+        L.w('Health check failed');
+      }
+    } catch (e, st) {
+      L.w('Health check request attempt error:', error: e, stack: st);
+    }
   }
 
   void _recordConsentRequest() {
@@ -472,7 +550,7 @@ class CountlyInstance {
   SessionsModule get sessions => _sessionsModule ??= SessionsModule(this);
 }
 
-/// Global manager for multi-instance support.
+/// Global manager for multi-instance support with dispose handling.
 class Countly {
   static final Map<String, CountlyInstance> _instances = {};
 
