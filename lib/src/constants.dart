@@ -13,14 +13,16 @@ class StorageSubKeys {
 /// Device ID type values
 @internal
 class DeviceIdType {
-  static const provided = 1; /// Provided by user.
-  static const generated = 2; /// Generated UUID.
+  /// Provided by user.
+  static const provided = 1;
+  /// Generated UUID.
+  static const generated = 2;
 }
 
 /// SDK metadata
 @internal
 class SdkInternal {
-  static const sdkVersion = '0.0.1';
+  static const sdkVersion = '1.0.0';
   static const sdkName = 'countly-sdk-dart';
   static const appVersion = '1.0.0';
   static const requestTimeoutSeconds = 60;
@@ -28,13 +30,13 @@ class SdkInternal {
 
 @internal
 class Endpoints {
-  static const events = '/i';
+  static const i = '/i';
   static const sdk = '/o/sdk';
 }
 
 /// Default values for SDK behavior settings.
 @internal
-class SdkBehaviorSettingsDefaults {
+class SBSDefaults {
   static const tracking = true; // Allow all tracking
   static const networking = true; // Allow sending requests
   static const rqs = 1000; // Request queue size (requests)
@@ -62,4 +64,5 @@ class SdkBehaviorSettingsDefaults {
   static const bom_rqp = 0.5; // Backoff mechanism request queue % (0-1)
   static const bom_ra = 24 * 60 * 60; // Backoff mechanism request age (seconds, 24 hours)
   static const bom_d = 60; // Backoff mechanism duration (seconds)
+  static const upcl = 100; // User properties cache limit (key/value pairs)
 }

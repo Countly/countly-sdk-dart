@@ -21,6 +21,10 @@ class EventsModule {
       _i.L.w('Event ["$key"] dropped: missing consent for [${requiredConsent.name}]');
       return;
     }
+    if (_i._sbs?.isCustomEventTrackingAllowed == false && requiredConsent == ConsentType.events) {
+      _i.L.d('Event tracking disabled (SBS), skipping event record');
+      return;
+    }
     if (key.isEmpty) {
       _i.L.e('events.record called with empty key');
       return;

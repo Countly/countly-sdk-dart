@@ -8,6 +8,12 @@ class ViewsModule {
   /// [viewName] must be non-empty.
   void startAutoStoppedView(String viewName) {
     if (_inst._guardDisposed('views.startAutoStoppedView')) return;
+
+    if (!(_inst._sbs?.isViewTrackingAllowed == true)) {
+      _inst.L.d('View tracking disabled (SBS), skipping view start');
+      return;
+    }
+
     if (viewName.isEmpty) {
       _inst.L.w('views.startAutoStoppedView called with empty viewName');
       return;
@@ -40,6 +46,11 @@ class ViewsModule {
 
   /// Ends currently active view if any. Used on dispose.
   void endIfActive() {
+    if (!(_inst._sbs?.isViewTrackingAllowed == true)) {
+      _inst.L.v('View tracking disabled (SBS), skipping view end');
+      return;
+    }
+
     if (_inst._activeViewName == null || _inst._activeViewStart == null) return;
     if (!_inst.hasConsentInternal(ConsentType.views)) return;
     final now = DateTime.now();

@@ -45,6 +45,7 @@ class CountlyInstance {
   int? _deviceIdType;
 
   Timer? _internalTimer;
+  Timer? _serverConfigTimer;
   bool _suspended = false; // for request backoff
   DateTime? _suspendUntil;
 
@@ -80,19 +81,24 @@ class CountlyInstance {
 
   Future<void> _init() async {
     _logger = config.logger ?? DefaultSdkLogger(config.logLevel);
-    L = InstanceLogger(_logger, enabled: config.enableSDKLogs, instanceKey: instanceKey, onLog: (lvl) {
+    L = InstanceLogger(
+      _logger,
+      enabled: config.enableSDKLogs,
+      instanceKey: instanceKey,
+      onLog: (lvl) {
         if (lvl == LogLevel.error)
           _logErrorCount++;
         else if (lvl == LogLevel.warning)
           _logWarningCount++;
       },
     );
-    _storage = StorageFacade(config, L: L);
-    _network = NetworkClient(config.serverUrl, L: L, customHeaders: config.customRequestHeaders);
-    _migration = MigrationService(_storage, enabled: instanceKey == 'default' && config.storageMode == StorageMode.persistent, L: L);
 
     _sbs = BehaviorModule(this);
     await _sbs!.init();
+
+    _storage = StorageFacade(config, L: L);
+    _network = NetworkClient(config.serverUrl, L: L, customHeaders: config.customRequestHeaders);
+    _migration = MigrationService(_storage, enabled: instanceKey == 'default' && config.storageMode == StorageMode.persistent, L: L);
 
     L.i('init: instanceKey=[$instanceKey] appKey=[${config.appKey}] serverUrl=[${config.serverUrl}]');
     L.d('config: deviceIdProvided=[${config.deviceId != null}] requiresConsent=[${_sbs?.isConsentRequired ?? false}] giveAllConsents=[${config.giveAllConsents}] initialConsents=[${config.initialEnabledConsents.map((e) => e.name).join(',')}]');
@@ -135,7 +141,10 @@ class CountlyInstance {
       await _remoteConfigModule!.fetch();
     }
 
+    // Timers
     _startTimer();
+    _startServerConfigTimer();
+
     // Record initial consent status if consent required
     if (config.requiresConsent) {
       _recordConsentRequest();
@@ -146,7 +155,7 @@ class CountlyInstance {
     L.i('SDK instance initialized successfully');
 
     // ignore: discarded_futures
-    _sbs!.fetchLatest();
+    _sbs!.fetchAndApply();
     // ignore: discarded_futures
     _attemptHealthCheck();
   }
@@ -161,9 +170,9 @@ class CountlyInstance {
     if (rq is List) {
       L.v('Loading persisted request queue with [${rq.length}] items');
       for (final item in rq) {
-        if (item is Map<String, dynamic>)
+        if (item is Map<String, dynamic>) {
           _requestQueue.add(item);
-        else if (item is String) {
+        } else if (item is String) {
           try {
             final d = jsonDecode(item);
             if (d is Map<String, dynamic>) _requestQueue.add(d);
@@ -177,9 +186,9 @@ class CountlyInstance {
     if (eq is List) {
       L.v('Loading persisted event queue with ${eq.length} items');
       for (final item in eq) {
-        if (item is Map<String, dynamic>)
+        if (item is Map<String, dynamic>) {
           _eventQueue.add(item);
-        else if (item is String) {
+        } else if (item is String) {
           try {
             final d = jsonDecode(item);
             if (d is Map<String, dynamic>) _eventQueue.add(d);
@@ -226,11 +235,27 @@ class CountlyInstance {
   /// Starts the internal timer for periodic processing.
   void _startTimer() {
     _internalTimer?.cancel();
-    final interval = _sbs?.internalTimerInterval ?? SdkBehaviorSettingsDefaults.sui;
+    final interval = _sbs?.internalTimerInterval ?? SBSDefaults.sui;
     _internalTimer = Timer.periodic(Duration(seconds: interval), (_) async {
       L.d('Internal timer tick: processing events and requests');
       await processEventsAndRequests();
       _sessionsModule?.sessionUpdate();
+    });
+  }
+
+  /// Fetches SBS for pure dart backend use cases
+  void _startServerConfigTimer() {
+    _serverConfigTimer?.cancel();
+    final intervalSeconds = _sbs?.serverConfigUpdateInterval ?? SBSDefaults.scui;
+
+    L.d('Starting server config timer with interval: [${intervalSeconds / 3600}]h');
+    _serverConfigTimer = Timer.periodic(Duration(seconds: intervalSeconds), (_) async {
+      L.d('Server config timer tick: fetching latest SBS configuration');
+      try {
+        await _sbs?.fetchAndApply();
+      } catch (e, st) {
+        L.e('Failed to fetch server config update', error: e, stack: st);
+      }
     });
   }
 
@@ -279,14 +304,7 @@ class CountlyInstance {
     if (config.appKey.isEmpty) {
       L.e('prepareRequest called with empty appKey, this should not happen');
     }
-    return {
-      'app_key': config.appKey,
-      'device_id': _deviceId,
-      'sdk_version': _sdkVersion,
-      'sdk_name': _sdkName,
-      'av': SdkInternal.appVersion,
-      ...data,
-    };
+    return {'app_key': config.appKey, 'device_id': _deviceId, 'sdk_version': _sdkVersion, 'sdk_name': _sdkName, 'av': SdkInternal.appVersion, ...data};
   }
 
   /// Attach time and optionally rr
@@ -310,7 +328,14 @@ class CountlyInstance {
   /// final req = _prepareRequest({'user_details': inner});
   /// ```
   void _addToRequestQueue(Map<String, dynamic> request) {
-    final max = _sbs?.requestQueueSize ?? SdkBehaviorSettingsDefaults.rqs;
+    // ab enroll does not count
+    final isEnrollRequest = request['method'] == 'ab';
+    if (!(_sbs?.trackingEnabled ?? true) && !isEnrollRequest) {
+      L.d('Tracking disabled (SBS), dropping request');
+      return;
+    }
+
+    final max = _sbs?.requestQueueSize ?? SBSDefaults.rqs;
     if (_requestQueue.length >= max) {
       L.w('Request queue full, removing oldest request');
       _requestQueue.removeAt(0);
@@ -326,7 +351,7 @@ class CountlyInstance {
       L.d('Tracking disabled (SBS), dropping event');
       return;
     }
-    final max = _sbs?.eventQueueSize ?? SdkBehaviorSettingsDefaults.eqs;
+    final max = _sbs?.eventQueueSize ?? SBSDefaults.eqs;
     if (_eventQueue.length >= max) {
       L.d('Event queue full, bundling events');
       _bundleEventQueue();
@@ -431,8 +456,10 @@ class CountlyInstance {
 
   /// Checks if consent of given type is granted.
   bool hasConsentInternal(ConsentType type) {
-    if (!config.requiresConsent) {
-      L.d('Consent not required, treating as granted for type [${type.name}]');
+    final consentRequired = _sbs?.isConsentRequired == true;
+
+    if (!consentRequired && !config.requiresConsent) {
+      L.d('Consent not required sbs:[$consentRequired], config: [${config.requiresConsent}], treating as granted for type [${type.name}]');
       return true;
     }
     if (_disposed) {
@@ -443,6 +470,7 @@ class CountlyInstance {
       L.d('Consent granted for type [${type.name}]');
       return true;
     }
+    L.d('Consent not granted for type [${type.name}]');
     return false;
   }
 
@@ -479,11 +507,11 @@ class CountlyInstance {
     if (_didSendHealthCheckThisInit) return;
     _didSendHealthCheckThisInit = true;
     try {
-      final hc = <String, dynamic>{'el': _logErrorCount, 'wl': _logWarningCount, 'sc': _lastFailedStatusCode ?? "", 'em':  _lastFailedErrorMessage ?? ""};
+      final hc = <String, dynamic>{'el': _logErrorCount, 'wl': _logWarningCount, 'sc': _lastFailedStatusCode ?? "", 'em': _lastFailedErrorMessage ?? ""};
       final metrics = {'_app_version': SdkInternal.appVersion};
       final req = _prepareRequest({'hc': hc, 'metrics': metrics});
       _attachDynamicRequestMeta(req);
-      final resp = await _network.makeRequest(req, Endpoints.events);
+      final resp = await _network.makeRequest(req, Endpoints.i);
       final ok = _network.isResponseValid(resp, acceptJSON: false);
       if (ok) {
         _logErrorCount = 0;
@@ -516,6 +544,8 @@ class CountlyInstance {
     if (_disposed) return;
     _internalTimer?.cancel();
     _internalTimer = null;
+    _serverConfigTimer?.cancel();
+    _serverConfigTimer = null;
 
     // End active view before flushing so duration is captured.
     try {

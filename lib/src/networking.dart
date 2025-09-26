@@ -24,7 +24,7 @@ class NetworkClient {
     L?.i('Make selective request with data: ${data.toString()}');
     final method = data['method'];
     const sdkMethods = {'ab'}; // Currently only 'ab' needs a different endpoint.
-    final endpoint = (method != null && sdkMethods.contains(method)) ? Endpoints.sdk : Endpoints.events;
+    final endpoint = (method != null && sdkMethods.contains(method)) ? Endpoints.sdk : Endpoints.i;
     return makeRequest(data, endpoint);
   }
 

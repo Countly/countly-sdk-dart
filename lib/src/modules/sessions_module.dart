@@ -11,6 +11,12 @@ class SessionsModule {
   /// Begins a session.
   void begin({Map<String, dynamic>? metricsOverride}) {
     if (_inst._guardDisposed('sessions.begin')) return;
+
+    if (!(_inst._sbs?.isSessionTrackingAllowed == true)) {
+      _inst.L.d('Session tracking disabled (SBS), skipping begin session');
+      return;
+    }
+
     if (_isActive) {
       _inst.L.w('Session begin ignored: already active');
       return;
@@ -32,6 +38,11 @@ class SessionsModule {
 
   /// Update request if session active.
   void sessionUpdate() {
+    if (!(_inst._sbs?.isSessionTrackingAllowed == true)) {
+      _inst.L.v('Session tracking disabled (SBS), skipping session update');
+      return;
+    }
+
     if (!_isActive) return;
     final now = DateTime.now();
     final last = _lastUpdateTime ?? _sessionBeginTime!;
@@ -47,6 +58,12 @@ class SessionsModule {
   /// Ends a session.
   void end() {
     if (_inst._guardDisposed('sessions.end')) return;
+
+    if (!(_inst._sbs?.isSessionTrackingAllowed == true)) {
+      _inst.L.d('Session tracking disabled (SBS), skipping end session');
+      return;
+    }
+
     if (!_isActive) {
       _inst.L.w('Session end ignored: no active session');
       return;

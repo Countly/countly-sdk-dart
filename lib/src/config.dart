@@ -106,7 +106,7 @@ class CountlyConfig {
     LogLevel logLevel = LogLevel.verbose,
     SdkLogger? logger,
     bool enableSDKLogs = false,
-    bool requiresConsent = SdkBehaviorSettingsDefaults.cr,
+    bool requiresConsent = SBSDefaults.cr,
     List<ConsentType> setConsentEnabled = const [],
     bool giveAllConsents = false,
     Map<String, String>? customRequestHeaders,
