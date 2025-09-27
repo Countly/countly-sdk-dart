@@ -78,6 +78,10 @@ class CountlyConfig {
   /// which will only be overridden if explicitly provided).
   final Map<String, String>? customRequestHeaders;
 
+  /// If true, automatically restarts the last
+  /// view with the same name in bg -> fg. (default: true)
+  final bool autoRestartViews;
+
   const CountlyConfig._({
     required this.appKey,
     required this.serverUrl,
@@ -93,6 +97,7 @@ class CountlyConfig {
     required this.giveAllConsents,
     required this.enableSDKLogs,
     required this.customRequestHeaders,
+    required this.autoRestartViews,
   });
 
   factory CountlyConfig({
@@ -110,6 +115,7 @@ class CountlyConfig {
     List<ConsentType> setConsentEnabled = const [],
     bool giveAllConsents = false,
     Map<String, String>? customRequestHeaders,
+    bool autoRestartViews = true,
   }) {
     if (appKey.isEmpty) {
       throw ArgumentError('app_key cannot be empty');
@@ -150,6 +156,7 @@ class CountlyConfig {
       giveAllConsents: giveAllConsents,
       enableSDKLogs: enableSDKLogs,
       customRequestHeaders: customRequestHeaders == null ? null : Map.unmodifiable(Map.of(customRequestHeaders)),
+      autoRestartViews: autoRestartViews,
     );
   }
 }

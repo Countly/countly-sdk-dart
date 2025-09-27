@@ -1,4 +1,5 @@
 import 'config.dart';
+import 'toast_stub.dart' if (dart.library.ui) 'toast_flutter.dart';
 
 class InstanceLogger {
   final SdkLogger _sdkLogger;
@@ -17,7 +18,17 @@ class InstanceLogger {
   void _log(LogLevel level, String message, {Object? error, StackTrace? stack}) {
     final shouldEmit = _enabled && _sdkLogger.isEnabled(level);
     if (shouldEmit) {
-      _sdkLogger.log(level, '[${instanceKey.substring(0, 3)}] $message', error: error, stack: stack);
+      if (level == LogLevel.error || level == LogLevel.warning) {
+        message = '!!!!!\n $message';
+      }
+      final formatted = '[${instanceKey.substring(0, 3)}] $message';
+      _sdkLogger.log(level, formatted, error: error, stack: stack);
+      if ((level == LogLevel.error || level == LogLevel.warning) && sdkToastAvailable) {
+        try {
+          showSdkToast(message);
+        } catch (_) {
+        }
+      }
     }
     if (onLog != null) {
       try {

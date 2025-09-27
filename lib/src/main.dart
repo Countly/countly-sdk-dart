@@ -13,6 +13,7 @@ import 'storage.dart';
 import 'migration.dart';
 import 'logging_helper.dart';
 import 'constants.dart';
+import 'lifecycle_stub.dart' if (dart.library.ui) 'lifecycle_flutter.dart';
 
 part 'modules/events_module.dart';
 part 'modules/users_module.dart';
@@ -70,6 +71,7 @@ class CountlyInstance {
   DateTime? _activeViewStart;
   String? _previousEventKey;
   String? _previousViewName;
+  String? _lastClosedViewName; // for autoRestartViews
 
   CountlyInstance._(this.config, this.instanceKey);
 
@@ -93,12 +95,12 @@ class CountlyInstance {
       },
     );
 
-    _sbs = BehaviorModule(this);
-    await _sbs!.init();
-
     _storage = StorageFacade(config, L: L);
     _network = NetworkClient(config.serverUrl, L: L, customHeaders: config.customRequestHeaders);
     _migration = MigrationService(_storage, enabled: instanceKey == 'default' && config.storageMode == StorageMode.persistent, L: L);
+
+    _sbs = BehaviorModule(this);
+    await _sbs!.init();
 
     L.i('init: instanceKey=[$instanceKey] appKey=[${config.appKey}] serverUrl=[${config.serverUrl}]');
     L.d('config: deviceIdProvided=[${config.deviceId != null}] requiresConsent=[${_sbs?.isConsentRequired ?? false}] giveAllConsents=[${config.giveAllConsents}] initialConsents=[${config.initialEnabledConsents.map((e) => e.name).join(',')}]');
@@ -129,6 +131,9 @@ class CountlyInstance {
 
     await _loadPersistedState();
     await _initializeDeviceId();
+    try {
+      await _viewsModule?.recoverView();
+    } catch (_) {}
 
     // Initial user properties if any and consent given.
     if (config.userProperties != null && config.userProperties!.isNotEmpty && hasConsentInternal(ConsentType.users)) {
@@ -154,6 +159,26 @@ class CountlyInstance {
 
     L.i('SDK instance initialized successfully');
 
+    // Lifecycle listeners
+    try {
+      listenToLifecycle(
+        onBackground: () {
+          try {
+            if (_activeViewName != null) {
+              _lastClosedViewName = _activeViewName;
+            }
+            _viewsModule?._endIfActive();
+          } catch (_) {}
+        },
+        onForeground: () {
+          if (config.autoRestartViews && _lastClosedViewName != null) {
+            try {
+              _viewsModule?.startAutoStoppedView(_lastClosedViewName!);
+            } catch (_) {}
+          }
+        },
+      );
+    } catch (_) {}
     // ignore: discarded_futures
     _sbs!.fetchAndApply();
     // ignore: discarded_futures
@@ -549,7 +574,7 @@ class CountlyInstance {
 
     // End active view before flushing so duration is captured.
     try {
-      _viewsModule?.endIfActive();
+      _viewsModule?._endIfActive();
     } catch (_) {}
     if (flush) {
       try {
