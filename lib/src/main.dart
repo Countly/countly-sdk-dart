@@ -22,6 +22,7 @@ part 'modules/remote_config_module.dart';
 part 'modules/views_module.dart';
 part 'modules/behavior_module.dart';
 part 'modules/sessions_module.dart';
+part 'modules/crashes_module.dart';
 part 'testing_utils.dart';
 
 class CountlyInstance {
@@ -66,12 +67,15 @@ class CountlyInstance {
   ViewsModule? _viewsModule;
   BehaviorModule? _sbs;
   SessionsModule? _sessionsModule;
+  CrashesModule? _crashesModule;
 
   String? _activeViewName;
   DateTime? _activeViewStart;
   String? _previousEventKey;
   String? _previousViewName;
   String? _lastClosedViewName; // for autoRestartViews
+  late final DateTime _sdkStartTime;
+  bool _isInBackground = false;
 
   CountlyInstance._(this.config, this.instanceKey);
 
@@ -82,6 +86,7 @@ class CountlyInstance {
   }
 
   Future<void> _init() async {
+    _sdkStartTime = DateTime.now();
     _logger = config.logger ?? DefaultSdkLogger(config.logLevel);
     L = InstanceLogger(
       _logger,
@@ -131,9 +136,7 @@ class CountlyInstance {
 
     await _loadPersistedState();
     await _initializeDeviceId();
-    try {
-      await _viewsModule?.recoverView();
-    } catch (_) {}
+    await _viewsModule?.recoverView(); // TODO: should use old device id
 
     // Initial user properties if any and consent given.
     if (config.userProperties != null && config.userProperties!.isNotEmpty && hasConsentInternal(ConsentType.users)) {
@@ -163,19 +166,17 @@ class CountlyInstance {
     try {
       listenToLifecycle(
         onBackground: () {
-          try {
-            if (_activeViewName != null) {
-              _lastClosedViewName = _activeViewName;
-            }
-            _viewsModule?._endIfActive();
-          } catch (_) {}
+          if (_activeViewName != null) {
+            _lastClosedViewName = _activeViewName;
+          }
+          _viewsModule?._endIfActive();
+          _isInBackground = true;
         },
         onForeground: () {
           if (config.autoRestartViews && _lastClosedViewName != null) {
-            try {
-              _viewsModule?.startAutoStoppedView(_lastClosedViewName!);
-            } catch (_) {}
+            _viewsModule?.startAutoStoppedView(_lastClosedViewName!);
           }
+          _isInBackground = false;
         },
       );
     } catch (_) {}
@@ -381,6 +382,10 @@ class CountlyInstance {
       L.d('Event queue full, bundling events');
       _bundleEventQueue();
     }
+    final key = event['key'];
+    if (key is String && _previousEventKey == key) {
+      L.w('Duplicate event key [$key] recorded consecutively');
+    }
     L.d('To event queue: Enqueuing event');
     _eventQueue.add(event);
     _persistEventQueue();
@@ -518,10 +523,23 @@ class CountlyInstance {
   /// Sends user properties to correct cache (named/custom) based on keys
   void _ingestUserProperties(Map<String, dynamic> props) {
     const named = {NamedUserProperty.name, NamedUserProperty.username, NamedUserProperty.email, NamedUserProperty.organization, NamedUserProperty.phone, NamedUserProperty.picture, NamedUserProperty.gender, NamedUserProperty.byear};
-    props.forEach((k, v) {
+    if (props.isEmpty) return;
+    props.forEach((key, value) {
+      var k = key;
+      dynamic v = value;
+      if (v is String) {
+        final limit = k == NamedUserProperty.picture ? 4096 : _sbs!.valueSizeLimit;
+        if (v.length > limit) {
+          L.w('User property value for key [$k] too long truncating');
+          v = v.substring(0, limit);
+        }
+      } else if (v is Map) {
+        v = _sanitizeSegmentation(v as Map<String, dynamic>, forCrash: false);
+      }
       if (named.contains(k)) {
         _userPropertiesNamedCache[k] = v;
       } else {
+        k = _truncateKeyIfNeeded(k);
         _customUserPropertiesCache[k] = v;
       }
     });
@@ -603,6 +621,69 @@ class CountlyInstance {
   RemoteConfigModule get remoteConfig => _remoteConfigModule ??= RemoteConfigModule(this);
   ViewsModule get views => _viewsModule ??= ViewsModule(this);
   SessionsModule get sessions => _sessionsModule ??= SessionsModule(this);
+  CrashesModule get crashes => _crashesModule ??= CrashesModule(this);
+
+  Map<String, dynamic> _sanitizeSegmentation(Map<String, dynamic> input, {required bool forCrash}) {
+    final out = <String, dynamic>{};
+    if (input.isEmpty) return out;
+    int added = 0;
+    input.forEach((k, v) {
+      if (added >= _sbs!.segmentationValuesLimit) return;
+      var key = _truncateKeyIfNeeded(k);
+      dynamic value = v;
+      if (value is String) {
+        if (forCrash) {
+          value = _sanitizeStackTrace(value);
+        } else {
+          value = _truncateValueIfNeeded(value);
+        }
+      }
+      // nested map or list
+      if (value is Map || value is List) {
+        if (value.length > _sbs!.segmentationValuesLimit) {
+          L.w('Segmentation value for key [$key] too long, truncating');
+          if (value is Map) {
+            value = _truncateValueIfNeeded(value.toString()); // TODO: too much?
+          } else if (value is List) {
+            value = value.sublist(0, _sbs!.segmentationValuesLimit);
+          }
+        }
+      }
+
+      out[key] = value;
+      added++;
+    });
+    return out;
+  }
+
+  String _sanitizeStackTrace(String stack) {
+    final lines = stack.split('\n');
+    final limited = <String>[];
+    for (var i = 0; i < lines.length && i < _sbs!.stackTraceLineCountLimit; i++) {
+      var ln = lines[i];
+      if (ln.length > _sbs!.stackTraceLineLengthLimit) {
+        ln = ln.substring(0, _sbs!.stackTraceLineLengthLimit);
+      }
+      limited.add(ln);
+    }
+    return limited.join('\n');
+  }
+
+  String _truncateKeyIfNeeded(String key) {
+    if (key.length > _sbs!.keyLengthLimit) {
+      L.w('Key too long truncating [$key]');
+      return key.substring(0, _sbs!.keyLengthLimit);
+    }
+    return key;
+  }
+
+  String _truncateValueIfNeeded(String value) {
+    if (value.length > _sbs!.valueSizeLimit) {
+      L.w('Value too long truncating [$value]');
+      return value.substring(0, _sbs!.valueSizeLimit);
+    }
+    return value;
+  }
 }
 
 /// Global manager for multi-instance support with dispose handling.

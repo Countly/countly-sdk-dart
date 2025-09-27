@@ -21,7 +21,7 @@ class EventsModule {
       _i.L.w('Event ["$key"] dropped: missing consent for [${requiredConsent.name}]');
       return;
     }
-    if (_i._sbs?.isCustomEventTrackingAllowed == false && requiredConsent == ConsentType.events) {
+    if (_i._sbs!.isCustomEventTrackingAllowed == false && requiredConsent == ConsentType.events) {
       _i.L.d('Event tracking disabled (SBS), skipping event record');
       return;
     }
@@ -29,10 +29,11 @@ class EventsModule {
       _i.L.e('events.record called with empty key');
       return;
     }
+    key = _i._truncateKeyIfNeeded(key);
     final ts = timestamp ?? DateTime.now(); // Can record past events with custom timestamp
     Map<String, dynamic> segOut = {};
     if (segmentation != null && segmentation.isNotEmpty) {
-      segOut.addAll(segmentation);
+      segOut.addAll(_i._sanitizeSegmentation(segmentation, forCrash: false));
     }
     segOut['pen'] = _i._previousEventKey ?? '';
     segOut['cvn'] = _i._activeViewName ?? '';
@@ -44,10 +45,25 @@ class EventsModule {
   }
 
   /// Sends a custom request with the given data.
+  /// [data] should be key-value pairs of request parameters and its value.
   void customRequest(Map<String, dynamic> data) {
-    final enriched = Map<String, dynamic>.from(data);
-    enriched['cvn'] = _i._activeViewName ?? '';
-    final req = _i._prepareRequest(enriched);
+    if (data.isEmpty) {
+      _i.L.e('customRequest called with empty data');
+      return;
+    }
+    final tempData = <String, dynamic>{};
+    data.forEach((key, value) {
+      var k = _i._truncateKeyIfNeeded(key);
+      dynamic v = value;
+      if (v is String) {
+        v = _i._truncateValueIfNeeded(v);
+      } else if (v is Map<String, dynamic>) {
+        v = _i._sanitizeSegmentation(v, forCrash: false);
+      }
+      tempData[k] = v;
+    });
+    tempData['cvn'] = _i._activeViewName ?? '';
+    final req = _i._prepareRequest(tempData);
     _i._enqueueUserPropertiesCache();
     _i._addToRequestQueue(req);
   }
@@ -61,7 +77,9 @@ class EventsModule {
       return;
     }
     final metrics = metrics_collector.getCurrentMetrics();
-    if (metricOverride != null) metrics.addAll(metricOverride);
+    if (metricOverride != null && metricOverride.isNotEmpty) {
+      metrics.addAll(_i._sanitizeSegmentation(metricOverride, forCrash: false));
+    }
     final req = _i._prepareRequest({'metrics': metrics});
     _i._enqueueUserPropertiesCache();
     _i._addToRequestQueue(req);

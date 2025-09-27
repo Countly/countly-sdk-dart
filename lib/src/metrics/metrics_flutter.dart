@@ -21,6 +21,18 @@ Map<String, dynamic> getCurrentMetrics() {
   };
 }
 
+String? getOrientation() {
+  try {
+    final view = ui.PlatformDispatcher.instance.views.isNotEmpty ? ui.PlatformDispatcher.instance.views.first : null;
+    if (view == null) return null;
+    final size = view.physicalSize;
+    if (size.width == 0 || size.height == 0) return null;
+    return size.height >= size.width ? 'portrait' : 'landscape';
+  } catch (_) {
+    return null;
+  }
+}
+
 String _platformName() {
   if (Platform.isAndroid) return 'Android';
   if (Platform.isIOS) return 'iOS';

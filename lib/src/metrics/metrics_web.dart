@@ -27,6 +27,16 @@ Map<String, dynamic> getCurrentMetrics() {
   };
 }
 
+String? getOrientation() {
+  try {
+    final s = web.window.screen;
+    if (s.width == 0 || s.height == 0) return null;
+    return s.height >= s.width ? 'portrait' : 'landscape';
+  } catch (_) {
+    return null;
+  }
+}
+
 String _locale() {
   final l = web.window.navigator.language;
   if (l.isEmpty) return 'en-US';
@@ -40,14 +50,7 @@ class _BrowserInfo {
 }
 
 _BrowserInfo _parseBrowser(String ua) {
-  final patterns = <RegExp, String>{
-    RegExp(r'OPR\/([0-9.]+)'): 'Opera',
-    RegExp(r'Edg\/([0-9.]+)'): 'Edge',
-    RegExp(r'Chrome\/([0-9.]+)'): 'Chrome',
-    RegExp(r'Firefox\/([0-9.]+)'): 'Firefox',
-    RegExp(r'Verv\/([0-9.]+)'): 'Vivaldi',
-    RegExp(r'Safari\/([0-9.]+)'): 'Safari',
-  };
+  final patterns = <RegExp, String>{RegExp(r'OPR\/([0-9.]+)'): 'Opera', RegExp(r'Edg\/([0-9.]+)'): 'Edge', RegExp(r'Chrome\/([0-9.]+)'): 'Chrome', RegExp(r'Firefox\/([0-9.]+)'): 'Firefox', RegExp(r'Verv\/([0-9.]+)'): 'Vivaldi', RegExp(r'Safari\/([0-9.]+)'): 'Safari'};
   for (final e in patterns.entries) {
     final m = e.key.firstMatch(ua);
     if (m != null) return _BrowserInfo(e.value, m.group(1)!);
@@ -91,8 +94,7 @@ _BrowserInfo _parseBrowser(String ua) {
 
 String _inferDeviceTypeFromUa(String ua) {
   final lower = ua.toLowerCase();
-  if (lower.contains('mobile') || lower.contains('android') || lower.contains('iphone'))
-    return 'mobile';
+  if (lower.contains('mobile') || lower.contains('android') || lower.contains('iphone')) return 'mobile';
   if (lower.contains('ipad') || lower.contains('tablet')) return 'tablet';
   return 'desktop';
 }

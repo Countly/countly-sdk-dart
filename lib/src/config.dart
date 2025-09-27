@@ -9,7 +9,7 @@ enum StorageMode { persistent, memory }
 enum LogLevel { error, warning, info, debug, verbose }
 
 /// Consent types
-enum ConsentType { events, users, remoteConfig, feedback, metrics, views }
+enum ConsentType { events, users, remoteConfig, feedback, metrics, views, crashes }
 
 /// User provided custom storage method signatures.
 typedef StorageReadFn = FutureOr<String?> Function(String key);

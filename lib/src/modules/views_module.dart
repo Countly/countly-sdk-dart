@@ -30,7 +30,7 @@ class ViewsModule {
 
     _endIfActive();
 
-    _inst._activeViewName = viewName;
+    _inst._activeViewName = _inst._truncateKeyIfNeeded(viewName);
     final now = DateTime.now();
     _inst._activeViewStart = now;
     _lastBeatTime = now;
@@ -83,13 +83,15 @@ class ViewsModule {
     try {
       final data = await _inst._storage.readJson<Map<String, dynamic>>('COUNTLY_ACTIVE_VIEW');
       if (data == null) return;
+      _inst.L.d('Recovered view data: [$data]');
       final name = data['n'];
       final startMs = data['ts'];
       final time = data['d'];
       final pvn = data['pvn'];
       final start = DateTime.fromMillisecondsSinceEpoch(startMs);
-      int durMs = time;
+      int durMs = time as int;
       if (durMs < 0) durMs = 0;
+
       final evt = <String, dynamic>{
         'key': '[CLY]_view',
         'count': 1,
@@ -99,7 +101,8 @@ class ViewsModule {
         'hour': start.hour,
         'dow': start.weekday % 7,
       };
-      _inst._addToEventQueue(evt);
+
+      _inst._addToEventQueue(evt); // TODO: request queue?
       _inst.L.i('Recovered unended view name=[$name] durMs=[$durMs]');
       _clearPersistedActiveViewState();
     } catch (error) {

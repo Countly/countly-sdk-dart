@@ -41,7 +41,7 @@ class UsersModule {
     _inst._bundleEventQueue();
 
     final totalCachedSize = _inst._userPropertiesNamedCache.length + _inst._customUserPropertiesCache.length;
-    final cacheLimit = _inst._sbs?.userPropertiesCacheLimit ?? SBSDefaults.upcl;
+    final cacheLimit = _inst._sbs!.userPropertiesCacheLimit;
 
     if (totalCachedSize >= cacheLimit) {
       _inst.L.d('User properties cache limit reached [$totalCachedSize] >= [$cacheLimit], processing early');

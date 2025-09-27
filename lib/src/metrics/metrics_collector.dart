@@ -6,3 +6,4 @@ import 'metrics_stub.dart'
     as impl;
 
 Map<String, dynamic> getCurrentMetrics() => impl.getCurrentMetrics();
+String? getOrientation() => impl.getOrientation();
