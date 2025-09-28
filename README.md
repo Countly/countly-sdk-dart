@@ -25,13 +25,12 @@ Currently supports:
 - manual crash reporting
 - SDK limits
 - duplicate event recording checks
-
-considerations:
-
 - filtered event keys to sbs
 - filter segmentation global and per key
 - filtered user properties to sbs
-  - print or block
+
+considerations:
 
 - test code coverage
 - dart/flutter version support outlines (min support)
+- test suite
