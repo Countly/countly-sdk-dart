@@ -3,4 +3,4 @@
 library;
 
 export 'src/config.dart';
-export 'src/main.dart';
+export 'src/main.dart' hide UserData;

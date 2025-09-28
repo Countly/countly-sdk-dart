@@ -5,12 +5,15 @@ Map<String, dynamic> getCurrentMetrics() {
   return {
     '_os': _platformName(),
     '_os_version': _platformVersion(),
-    '_device': _deviceName(), // TODO: this might be generic 'hostname' on desktops plus some other info. Check.
+    '_device':
+        _deviceName(), // TODO: this might be generic 'hostname' on desktops plus some other info. Check.
     '_device_type': _inferDeviceType(),
     '_locale': _locale(),
     '_app_version': SdkInternal.sdkVersion,
   };
 }
+
+String? getOrientation() => null;
 
 String _platformName() {
   if (Platform.isLinux) return 'Linux';
@@ -23,7 +26,8 @@ String _platformName() {
 }
 
 String _platformVersion() => Platform.version;
-String _inferDeviceType() => (Platform.isAndroid || Platform.isIOS) ? 'mobile' : 'desktop';
+String _inferDeviceType() =>
+    (Platform.isAndroid || Platform.isIOS) ? 'mobile' : 'desktop';
 String _locale() {
   try {
     return Platform.localeName.replaceAll('_', '-');

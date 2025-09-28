@@ -12,9 +12,12 @@ class BehaviorModule {
   int get eventQueueSize => _sbs['eqs'] as int; // default 100
   int get requestQueueSize => _sbs['rqs'] as int; // default 50
   int get internalTimerInterval => _sbs['sui'] as int; // default 60
-  bool get isSessionTrackingAllowed => (_sbs['st'] as bool? ?? true); // default 1
-  bool get isCrashTrackingAllowed => (_sbs['crt'] as bool? ?? true); // default 1
-  bool get isLocationTrackingAllowed => (_sbs['lt'] as bool? ?? true); // default 1
+  bool get isSessionTrackingAllowed =>
+      (_sbs['st'] as bool? ?? true); // default 1
+  bool get isCrashTrackingAllowed =>
+      (_sbs['crt'] as bool? ?? true); // default 1
+  bool get isLocationTrackingAllowed =>
+      (_sbs['lt'] as bool? ?? true); // default 1
   bool get isViewTrackingAllowed => (_sbs['vt'] as bool? ?? true); // default 1
   int get keyLengthLimit => _sbs['lkl'] as int; // default 128
   int get valueSizeLimit => _sbs['lvs'] as int; // default 256
@@ -22,24 +25,37 @@ class BehaviorModule {
   int get breadcrumbCountLimit => _sbs['lbc'] as int; // default 100
   int get stackTraceLineCountLimit => _sbs['ltlpt'] as int; // default 30
   int get stackTraceLineLengthLimit => _sbs['ltl'] as int; // default 200
-  bool get isCustomEventTrackingAllowed => (_sbs['cet'] as bool? ?? true); // default 1
-  bool get enterContentZoneAfterInit => (_sbs['ecz'] as bool? ?? false); // default 0
+  bool get isCustomEventTrackingAllowed =>
+      (_sbs['cet'] as bool? ?? true); // default 1
+  bool get enterContentZoneAfterInit =>
+      (_sbs['ecz'] as bool? ?? false); // default 0
   int get contentZoneRequestInterval => _sbs['czi'] as int; // default 30
   bool get isConsentRequired => (_sbs['cr'] as bool? ?? false); // default 0
   int get serverConfigUpdateInterval => _sbs['scui'] as int; // default 4 hours
-  bool get isRefreshContentZoneAllowed => (_sbs['rcz'] as bool? ?? true); // default 1
+  bool get isRefreshContentZoneAllowed =>
+      (_sbs['rcz'] as bool? ?? true); // default 1
   int get dropOldRequestTime => _sbs['dort'] as int; // default 0 (disabled)
-  bool get isBackoffMechanismEnabled => (_sbs['bom'] as bool? ?? true); // default 1
-  int get backoffMechanismAcceptedTimeout => _sbs['bom_at'] as int; // default 10
-  double get backoffMechanismRequestQueuePercent => _sbs['bom_rqp'] as double; // default 0.5
-  int get backoffMechanismRequestAge => _sbs['bom_ra'] as int; // default 24 hours
+  bool get isBackoffMechanismEnabled =>
+      (_sbs['bom'] as bool? ?? true); // default 1
+  int get backoffMechanismAcceptedTimeout =>
+      _sbs['bom_at'] as int; // default 10
+  double get backoffMechanismRequestQueuePercent =>
+      _sbs['bom_rqp'] as double; // default 0.5
+  int get backoffMechanismRequestAge =>
+      _sbs['bom_ra'] as int; // default 24 hours
   int get backoffMechanismDuration => _sbs['bom_d'] as int; // default 60
   int get userPropertiesCacheLimit => _sbs['upcl'] as int; // default 100
+  List get eventBlacklist => _sbs['eb'] as List; // default []
+  List get userPropertiesBlacklist => _sbs['upb'] as List; // default []
+  List get segmentationBlacklist => _sbs['sb'] as List; // default []
+  Map get eventSegmentationBlacklist => _sbs['esb'] as Map; // default {}
+
   @visibleForTesting
   Map<String, dynamic> get snapshot => Map.unmodifiable(_sbs);
 
   @visibleForTesting
-  void debugApplyOverrides(Map<String, dynamic> overrides) => _applyOverrides(overrides, source: 'debug');
+  void debugApplyOverrides(Map<String, dynamic> overrides) =>
+      _applyOverrides(overrides, source: 'debug');
 
   Future<void> init() async {
     _initDefaults();
@@ -77,6 +93,10 @@ class BehaviorModule {
       'bom_ra': SBSDefaults.bom_ra,
       'bom_d': SBSDefaults.bom_d,
       'upcl': SBSDefaults.upcl,
+      'eb': SBSDefaults.eb,
+      'upb': SBSDefaults.upb,
+      'sb': SBSDefaults.sb,
+      'esb': SBSDefaults.esb,
     });
     _inst.L.d('BehaviorModule: defaults initialized');
   }
@@ -84,10 +104,22 @@ class BehaviorModule {
   /// Load persisted SBS object and apply any overrides.
   Future<void> _loadPersisted() async {
     final cfg = _inst.config;
-    if (cfg.storageMode != StorageMode.persistent && !(cfg.storageMethods?.hasAny ?? false)) return;
-    final stored = await _inst._storage.readJson<Map<String, dynamic>>(StorageSubKeys.behavior);
-    if (stored == null) return;
-    _inst.L.i('BehaviorModule: loaded stored SBS object=[${stored.toString()}]');
+    if (cfg.storageMode != StorageMode.persistent &&
+        !(cfg.storageMethods?.hasAny ?? false) &&
+        cfg.sbs.isEmpty) return;
+    final stored = await _inst._storage
+        .readJson<Map<String, dynamic>>(StorageSubKeys.behavior);
+    if (stored == null) {
+      if (cfg.sbs.isNotEmpty && cfg.sbs['c'] is Map<String, dynamic>) {
+        _inst.L.i(
+            'BehaviorModule: loaded given SBS object=[${cfg.sbs.toString()}]');
+        _applyOverrides(cfg.sbs['c'], source: 'config');
+      }
+      return;
+    }
+    ;
+    _inst.L
+        .i('BehaviorModule: loaded stored SBS object=[${stored.toString()}]');
     final overrides = stored['c'];
     if (overrides is Map<String, dynamic>) {
       _applyOverrides(overrides, source: 'stored');
@@ -96,16 +128,22 @@ class BehaviorModule {
 
   /// Apply overrides from given map, log applied ones.
   /// Ignores unknown keys.
-  void _applyOverrides(Map<String, dynamic> overrides, {required String source}) {
+  void _applyOverrides(Map<String, dynamic> overrides,
+      {required String source}) {
     int applied = 0;
+    _inst.L.d('BehaviorModule: applying overrides from [$source]');
     overrides.forEach((k, v) {
+      _inst.L.v('BehaviorModule: for key[$k] value[$v]');
       if (_sbs.containsKey(k)) {
         _sbs[k] = v;
         applied++;
         _inst.L.d('BehaviorModule override ($source): [$k]=[$v]');
+      } else {
+        _inst.L.w('BehaviorModule: unknown SBS key [$k], ignoring');
       }
     });
-    if (applied > 0) _inst.L.i('BehaviorModule: applied [$applied] overrides from [$source]');
+    if (applied > 0)
+      _inst.L.i('BehaviorModule: applied [$applied] overrides from [$source]');
   }
 
   /// Fetch latest SBS from server and apply any overrides.
@@ -127,7 +165,8 @@ class BehaviorModule {
             _inst.L.w('BehaviorModule: server response missing "c" map');
           }
         } else {
-          _inst.L.w('BehaviorModule: unexpected JSON type ${decoded.runtimeType}');
+          _inst.L
+              .w('BehaviorModule: unexpected JSON type ${decoded.runtimeType}');
         }
       } else {
         _inst.L.w('BehaviorModule: fetch invalid response');

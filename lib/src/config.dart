@@ -9,7 +9,15 @@ enum StorageMode { persistent, memory }
 enum LogLevel { error, warning, info, debug, verbose }
 
 /// Consent types
-enum ConsentType { events, users, remoteConfig, feedback, metrics, views, crashes }
+enum ConsentType {
+  events,
+  users,
+  remoteConfig,
+  feedback,
+  metrics,
+  views,
+  crashes
+}
 
 /// User provided custom storage method signatures.
 typedef StorageReadFn = FutureOr<String?> Function(String key);
@@ -26,7 +34,8 @@ class CustomStorageMethods {
 
   const CustomStorageMethods({this.read, this.write, this.remove, this.keys});
 
-  bool get hasAny => read != null || write != null || remove != null || keys != null;
+  bool get hasAny =>
+      read != null || write != null || remove != null || keys != null;
 }
 
 /// Immutable configuration for an SDK instance.
@@ -82,6 +91,9 @@ class CountlyConfig {
   /// view with the same name in bg -> fg. (default: true)
   final bool autoRestartViews;
 
+  /// SBS data to be used in first init.
+  final Map<String, dynamic> sbs;
+
   const CountlyConfig._({
     required this.appKey,
     required this.serverUrl,
@@ -98,6 +110,7 @@ class CountlyConfig {
     required this.enableSDKLogs,
     required this.customRequestHeaders,
     required this.autoRestartViews,
+    required this.sbs,
   });
 
   factory CountlyConfig({
@@ -116,6 +129,7 @@ class CountlyConfig {
     bool giveAllConsents = false,
     Map<String, String>? customRequestHeaders,
     bool autoRestartViews = true,
+    Map<String, dynamic> sbs = const {},
   }) {
     if (appKey.isEmpty) {
       throw ArgumentError('app_key cannot be empty');
@@ -130,10 +144,12 @@ class CountlyConfig {
     if (customRequestHeaders != null) {
       for (final e in customRequestHeaders.entries) {
         if (e.key.trim().isEmpty) {
-          throw ArgumentError('customRequestHeaders contains empty header name');
+          throw ArgumentError(
+              'customRequestHeaders contains empty header name');
         }
         if (e.value.trim().isEmpty) {
-          throw ArgumentError('customRequestHeaders header [${e.key}] has empty value');
+          throw ArgumentError(
+              'customRequestHeaders header [${e.key}] has empty value');
         }
       }
     }
@@ -142,22 +158,26 @@ class CountlyConfig {
     final normalized = serverUrl.replaceFirst(RegExp(r'/+$'), '');
 
     return CountlyConfig._(
-      appKey: appKey,
-      serverUrl: normalized,
-      deviceId: deviceId,
-      userProperties: userProperties == null ? null : Map.unmodifiable(Map.of(userProperties)),
-      turnOnRemoteConfig: turnOnRemoteConfig,
-      storageMode: storageMode,
-      storageMethods: storageMethods,
-      logLevel: logLevel,
-      logger: logger,
-      requiresConsent: requiresConsent,
-      initialEnabledConsents: List.unmodifiable(setConsentEnabled),
-      giveAllConsents: giveAllConsents,
-      enableSDKLogs: enableSDKLogs,
-      customRequestHeaders: customRequestHeaders == null ? null : Map.unmodifiable(Map.of(customRequestHeaders)),
-      autoRestartViews: autoRestartViews,
-    );
+        appKey: appKey,
+        serverUrl: normalized,
+        deviceId: deviceId,
+        userProperties: userProperties == null
+            ? null
+            : Map.unmodifiable(Map.of(userProperties)),
+        turnOnRemoteConfig: turnOnRemoteConfig,
+        storageMode: storageMode,
+        storageMethods: storageMethods,
+        logLevel: logLevel,
+        logger: logger,
+        requiresConsent: requiresConsent,
+        initialEnabledConsents: List.unmodifiable(setConsentEnabled),
+        giveAllConsents: giveAllConsents,
+        enableSDKLogs: enableSDKLogs,
+        customRequestHeaders: customRequestHeaders == null
+            ? null
+            : Map.unmodifiable(Map.of(customRequestHeaders)),
+        autoRestartViews: autoRestartViews,
+        sbs: Map.of(sbs));
   }
 }
 

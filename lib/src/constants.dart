@@ -15,6 +15,7 @@ class StorageSubKeys {
 class DeviceIdType {
   /// Provided by user.
   static const provided = 1;
+
   /// Generated UUID.
   static const generated = 2;
 }
@@ -56,13 +57,19 @@ class SBSDefaults {
   static const ecz = false; // Enter Content Zone after init
   static const czi = 30; // Content Zone request interval (seconds)
   static const cr = false; // Consent required
-  static const scui = 4 * 60 * 60; // Server config update interval (seconds, 4 hours)
+  static const scui =
+      4 * 60 * 60; // Server config update interval (seconds, 4 hours)
   static const rcz = true; // Allow Refresh Content Zone
   static const dort = 0; // Drop old request time (disabled)
   static const bom = true; // Backoff mechanism enabled
   static const bom_at = 10; // Backoff mechanism accepted timeout (seconds)
   static const bom_rqp = 0.5; // Backoff mechanism request queue % (0-1)
-  static const bom_ra = 24 * 60 * 60; // Backoff mechanism request age (seconds, 24 hours)
+  static const bom_ra =
+      24 * 60 * 60; // Backoff mechanism request age (seconds, 24 hours)
   static const bom_d = 60; // Backoff mechanism duration (seconds)
   static const upcl = 100; // User properties cache limit (key/value pairs)
+  static const eb = []; // Event blacklist
+  static const upb = []; // User properties blacklist
+  static const sb = []; // Segmentation blacklist
+  static const esb = {}; // Event segmentation blacklist
 }

@@ -79,7 +79,8 @@ class CountlyInstance {
 
   CountlyInstance._(this.config, this.instanceKey);
 
-  static Future<CountlyInstance> create(CountlyConfig config, {String instanceKey = 'default'}) async {
+  static Future<CountlyInstance> create(CountlyConfig config,
+      {String instanceKey = 'default'}) async {
     final inst = CountlyInstance._(config, instanceKey);
     await inst._init();
     return inst;
@@ -95,14 +96,17 @@ class CountlyInstance {
       onLog: (lvl) {
         if (lvl == LogLevel.error)
           _logErrorCount++;
-        else if (lvl == LogLevel.warning)
-          _logWarningCount++;
+        else if (lvl == LogLevel.warning) _logWarningCount++;
       },
     );
 
     _storage = StorageFacade(config, L: L);
-    _network = NetworkClient(config.serverUrl, L: L, customHeaders: config.customRequestHeaders);
-    _migration = MigrationService(_storage, enabled: instanceKey == 'default' && config.storageMode == StorageMode.persistent, L: L);
+    _network = NetworkClient(config.serverUrl,
+        L: L, customHeaders: config.customRequestHeaders);
+    _migration = MigrationService(_storage,
+        enabled: instanceKey == 'default' &&
+            config.storageMode == StorageMode.persistent,
+        L: L);
 
     _sbs = BehaviorModule(this);
     await _sbs!.init();
@@ -139,13 +143,16 @@ class CountlyInstance {
     await _viewsModule?.recoverView(); // TODO: should use old device id
 
     // Initial user properties if any and consent given.
-    if (config.userProperties != null && config.userProperties!.isNotEmpty && hasConsentInternal(ConsentType.users)) {
+    if (config.userProperties != null &&
+        config.userProperties!.isNotEmpty &&
+        hasConsentInternal(ConsentType.users)) {
       _ingestUserProperties(config.userProperties!);
       await _enqueueUserPropertiesCache();
     }
 
     // Fetch remote config if enabled and consent given.
-    if (config.turnOnRemoteConfig && hasConsentInternal(ConsentType.remoteConfig)) {
+    if (config.turnOnRemoteConfig &&
+        hasConsentInternal(ConsentType.remoteConfig)) {
       await _remoteConfigModule!.fetch();
     }
 
@@ -188,11 +195,13 @@ class CountlyInstance {
 
   /// Checks storage for data from previous runs and loads into memory.
   Future<void> _loadPersistedState() async {
-    if (config.storageMode != StorageMode.persistent && !(config.storageMethods?.hasAny ?? false)) {
+    if (config.storageMode != StorageMode.persistent &&
+        !(config.storageMethods?.hasAny ?? false)) {
       L.v('No storage, skipping checking for stored data');
       return;
     }
-    final rq = await _storage.readJson<List<dynamic>>(StorageSubKeys.requestQueue);
+    final rq =
+        await _storage.readJson<List<dynamic>>(StorageSubKeys.requestQueue);
     if (rq is List) {
       L.v('Loading persisted request queue with [${rq.length}] items');
       for (final item in rq) {
@@ -208,7 +217,8 @@ class CountlyInstance {
     } else {
       L.v('No persisted request queue found');
     }
-    final eq = await _storage.readJson<List<dynamic>>(StorageSubKeys.eventQueue);
+    final eq =
+        await _storage.readJson<List<dynamic>>(StorageSubKeys.eventQueue);
     if (eq is List) {
       L.v('Loading persisted event queue with ${eq.length} items');
       for (final item in eq) {
@@ -224,13 +234,15 @@ class CountlyInstance {
     } else {
       L.v('No persisted event queue found');
     }
-    final rc = await _storage.readJson<Map<String, dynamic>>(StorageSubKeys.remoteConfig);
+    final rc = await _storage
+        .readJson<Map<String, dynamic>>(StorageSubKeys.remoteConfig);
     if (rc is Map<String, dynamic>) _remoteConfigValues = rc;
   }
 
   /// Initializes device id: loads from storage if any, else uses provided or generates new.
   Future<void> _initializeDeviceId() async {
-    if (config.storageMode == StorageMode.persistent || (config.storageMethods?.hasAny ?? false)) {
+    if (config.storageMode == StorageMode.persistent ||
+        (config.storageMethods?.hasAny ?? false)) {
       final stored = await _storage.readString(StorageSubKeys.deviceId);
       final storedType = await _storage.readString(StorageSubKeys.deviceIdType);
       if (stored != null) {
@@ -251,10 +263,12 @@ class CountlyInstance {
     }
 
     /// Save device id if storage enabled.
-    if (config.storageMode == StorageMode.memory && !(config.storageMethods?.hasAny ?? false)) return;
+    if (config.storageMode == StorageMode.memory &&
+        !(config.storageMethods?.hasAny ?? false)) return;
     if (_deviceId != null) {
       await _storage.writeString(StorageSubKeys.deviceId, _deviceId!);
-      await _storage.writeString(StorageSubKeys.deviceIdType, _deviceIdType.toString());
+      await _storage.writeString(
+          StorageSubKeys.deviceIdType, _deviceIdType.toString());
     }
   }
 
@@ -272,10 +286,12 @@ class CountlyInstance {
   /// Fetches SBS for pure dart backend use cases
   void _startServerConfigTimer() {
     _serverConfigTimer?.cancel();
-    final intervalSeconds = _sbs?.serverConfigUpdateInterval ?? SBSDefaults.scui;
+    final intervalSeconds =
+        _sbs?.serverConfigUpdateInterval ?? SBSDefaults.scui;
 
     L.d('Starting server config timer with interval: [${intervalSeconds / 3600}]h');
-    _serverConfigTimer = Timer.periodic(Duration(seconds: intervalSeconds), (_) async {
+    _serverConfigTimer =
+        Timer.periodic(Duration(seconds: intervalSeconds), (_) async {
       L.d('Server config timer tick: fetching latest SBS configuration');
       try {
         await _sbs?.fetchAndApply();
@@ -289,7 +305,9 @@ class CountlyInstance {
   Future<void> processEventsAndRequests() async {
     L.d('Triggered processing event and request queues');
     _bundleEventQueue();
-    if ((_userPropertiesNamedCache.isNotEmpty || _customUserPropertiesCache.isNotEmpty) && hasConsentInternal(ConsentType.users)) {
+    if ((_userPropertiesNamedCache.isNotEmpty ||
+            _customUserPropertiesCache.isNotEmpty) &&
+        hasConsentInternal(ConsentType.users)) {
       L.d('Enqueuing user properties request cache: named=${_userPropertiesNamedCache.keys.length} custom=${_customUserPropertiesCache.keys.length}');
       await _enqueueUserPropertiesCache();
     }
@@ -330,11 +348,19 @@ class CountlyInstance {
     if (config.appKey.isEmpty) {
       L.e('prepareRequest called with empty appKey, this should not happen');
     }
-    return {'app_key': config.appKey, 'device_id': _deviceId, 'sdk_version': _sdkVersion, 'sdk_name': _sdkName, 'av': SdkInternal.appVersion, ...data};
+    return {
+      'app_key': config.appKey,
+      'device_id': _deviceId,
+      'sdk_version': _sdkVersion,
+      'sdk_name': _sdkName,
+      'av': SdkInternal.appVersion,
+      ...data
+    };
   }
 
   /// Attach time and optionally rr
-  void _attachDynamicRequestMeta(Map<String, dynamic> req, {bool includeRR = false}) {
+  void _attachDynamicRequestMeta(Map<String, dynamic> req,
+      {bool includeRR = false}) {
     final now = DateTime.now();
     req['timestamp'] = now.millisecondsSinceEpoch;
     req['hour'] = now.hour;
@@ -451,10 +477,12 @@ class CountlyInstance {
 
   // --- For Test (read-only) ---
   @visibleForTesting
-  List<Map<String, dynamic>> get debugEventQueueSnapshot => List.unmodifiable(_eventQueue);
+  List<Map<String, dynamic>> get debugEventQueueSnapshot =>
+      List.unmodifiable(_eventQueue);
 
   @visibleForTesting
-  List<Map<String, dynamic>> get debugRequestQueueSnapshot => List.unmodifiable(_requestQueue);
+  List<Map<String, dynamic>> get debugRequestQueueSnapshot =>
+      List.unmodifiable(_requestQueue);
 
   @visibleForTesting
   int get debugEventQueueLength => _eventQueue.length;
@@ -506,13 +534,17 @@ class CountlyInstance {
 
   /// Bundles event queue and then adds user properties request to request queue if any.
   Future<void> _enqueueUserPropertiesCache() async {
-    if (_userPropertiesNamedCache.isEmpty && _customUserPropertiesCache.isEmpty) {
+    if (_userPropertiesNamedCache.isEmpty &&
+        _customUserPropertiesCache.isEmpty) {
       L.v('User properties cache empty, skipping enqueue');
       return;
     }
     final userDetails = <String, dynamic>{};
-    if (_userPropertiesNamedCache.isNotEmpty) userDetails.addAll(_userPropertiesNamedCache);
-    if (_customUserPropertiesCache.isNotEmpty) userDetails['custom'] = Map<String, dynamic>.from(_customUserPropertiesCache);
+    if (_userPropertiesNamedCache.isNotEmpty)
+      userDetails.addAll(_userPropertiesNamedCache);
+    if (_customUserPropertiesCache.isNotEmpty)
+      userDetails['custom'] =
+          Map<String, dynamic>.from(_customUserPropertiesCache);
     final request = _prepareRequest({'user_details': userDetails});
     _addToRequestQueue(request);
     L.d('Enqueued user properties request: named=${_userPropertiesNamedCache.keys.length} custom=${_customUserPropertiesCache.keys.length}');
@@ -522,13 +554,27 @@ class CountlyInstance {
 
   /// Sends user properties to correct cache (named/custom) based on keys
   void _ingestUserProperties(Map<String, dynamic> props) {
-    const named = {NamedUserProperty.name, NamedUserProperty.username, NamedUserProperty.email, NamedUserProperty.organization, NamedUserProperty.phone, NamedUserProperty.picture, NamedUserProperty.gender, NamedUserProperty.byear};
+    const named = {
+      NamedUserProperty.name,
+      NamedUserProperty.username,
+      NamedUserProperty.email,
+      NamedUserProperty.organization,
+      NamedUserProperty.phone,
+      NamedUserProperty.picture,
+      NamedUserProperty.gender,
+      NamedUserProperty.byear
+    };
     if (props.isEmpty) return;
     props.forEach((key, value) {
+      if (_sbs!.userPropertiesBlacklist.contains(key)) {
+        L.w('User property ["${key}"] dropped: blacklisted key');
+        return;
+      }
       var k = key;
       dynamic v = value;
       if (v is String) {
-        final limit = k == NamedUserProperty.picture ? 4096 : _sbs!.valueSizeLimit;
+        final limit =
+            k == NamedUserProperty.picture ? 4096 : _sbs!.valueSizeLimit;
         if (v.length > limit) {
           L.w('User property value for key [$k] too long truncating');
           v = v.substring(0, limit);
@@ -550,7 +596,12 @@ class CountlyInstance {
     if (_didSendHealthCheckThisInit) return;
     _didSendHealthCheckThisInit = true;
     try {
-      final hc = <String, dynamic>{'el': _logErrorCount, 'wl': _logWarningCount, 'sc': _lastFailedStatusCode ?? "", 'em': _lastFailedErrorMessage ?? ""};
+      final hc = <String, dynamic>{
+        'el': _logErrorCount,
+        'wl': _logWarningCount,
+        'sc': _lastFailedStatusCode ?? "",
+        'em': _lastFailedErrorMessage ?? ""
+      };
       final metrics = {'_app_version': SdkInternal.appVersion};
       final req = _prepareRequest({'hc': hc, 'metrics': metrics});
       _attachDynamicRequestMeta(req);
@@ -618,12 +669,14 @@ class CountlyInstance {
   EventsModule get events => _eventsModule ??= EventsModule(this);
   UsersModule get users => _usersModule ??= UsersModule(this);
   ConsentsModule get consents => _consentsModule ??= ConsentsModule(this);
-  RemoteConfigModule get remoteConfig => _remoteConfigModule ??= RemoteConfigModule(this);
+  RemoteConfigModule get remoteConfig =>
+      _remoteConfigModule ??= RemoteConfigModule(this);
   ViewsModule get views => _viewsModule ??= ViewsModule(this);
   SessionsModule get sessions => _sessionsModule ??= SessionsModule(this);
   CrashesModule get crashes => _crashesModule ??= CrashesModule(this);
 
-  Map<String, dynamic> _sanitizeSegmentation(Map<String, dynamic> input, {required bool forCrash}) {
+  Map<String, dynamic> _sanitizeSegmentation(Map<String, dynamic> input,
+      {required bool forCrash}) {
     final out = <String, dynamic>{};
     if (input.isEmpty) return out;
     int added = 0;
@@ -659,7 +712,9 @@ class CountlyInstance {
   String _sanitizeStackTrace(String stack) {
     final lines = stack.split('\n');
     final limited = <String>[];
-    for (var i = 0; i < lines.length && i < _sbs!.stackTraceLineCountLimit; i++) {
+    for (var i = 0;
+        i < lines.length && i < _sbs!.stackTraceLineCountLimit;
+        i++) {
       var ln = lines[i];
       if (ln.length > _sbs!.stackTraceLineLengthLimit) {
         ln = ln.substring(0, _sbs!.stackTraceLineLengthLimit);
@@ -684,6 +739,31 @@ class CountlyInstance {
     }
     return value;
   }
+
+  Map<String, dynamic>? removeBlacklistedSegmentation(
+      Map<String, dynamic>? segmentation, String? eventKey) {
+    if (segmentation != null && segmentation.isNotEmpty) {
+      final keysToRemove = <String>{};
+      segmentation.forEach((k, v) {
+        if (_sbs!.segmentationBlacklist.contains(k)) {
+          keysToRemove.add(k);
+          L.w('Seg ["$k"] dropped: blacklisted segmentation key');
+        }
+        if (eventKey != null &&
+            _sbs!.eventSegmentationBlacklist.containsKey(eventKey)) {
+          final eventBlacklist = _sbs!.eventSegmentationBlacklist[eventKey];
+          if (eventBlacklist is List && eventBlacklist.contains(k)) {
+            keysToRemove.add(k);
+            L.w('Seg ["$k"] dropped: blacklisted segmentation for key [$eventKey]');
+          }
+        }
+      });
+      for (final key in keysToRemove) {
+        segmentation.remove(key);
+      }
+    }
+    return segmentation;
+  }
 }
 
 /// Global manager for multi-instance support with dispose handling.
@@ -694,7 +774,8 @@ class Countly {
   static CountlyInstance? get defaultInstance => _instances['default'];
 
   /// TODO: If instance exists it is replaced safely. Should not?
-  static Future<CountlyInstance> init(CountlyConfig config, {String instanceKey = 'default'}) async {
+  static Future<CountlyInstance> init(CountlyConfig config,
+      {String instanceKey = 'default'}) async {
     final inst = await CountlyInstance.create(config, instanceKey: instanceKey);
     _instances[instanceKey] = inst;
     return inst;
@@ -712,7 +793,8 @@ class Countly {
 
   /// Disposes all instances.
   static Future<void> disposeAll({bool flush = true}) async {
-    final entries = List<MapEntry<String, CountlyInstance>>.from(_instances.entries);
+    final entries =
+        List<MapEntry<String, CountlyInstance>>.from(_instances.entries);
     _instances.clear();
     for (final e in entries) {
       await e.value.dispose(flush: flush);
