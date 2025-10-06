@@ -19,7 +19,8 @@ class CrashesModule {
       _inst.L.w('Crash dropped: missing crashes consent');
       return;
     }
-    _inst.L.d('Recording exception: handled=[$isHandled] name=[$exceptionName], segmentation=[$segmentation], exception=[$exception]');
+    _inst.L.d(
+        'Recording exception: handled=[$isHandled] name=[$exceptionName], segmentation=[$segmentation], exception=[$exception]');
     if (exception.trim().isEmpty) {
       _inst.L.e('recordException called with empty exception string');
       return;
@@ -27,10 +28,16 @@ class CrashesModule {
 
     final sanitizedStack = _inst._sanitizeStackTrace(exception);
     final linesFirst = sanitizedStack.split('\n').first.trim();
-    final name = exceptionName.isEmpty ? _inst._truncateKeyIfNeeded(linesFirst) : _inst._truncateKeyIfNeeded(exceptionName);
+    final name =
+        exceptionName.isEmpty ? _inst._truncateKeyIfNeeded(linesFirst) : _inst._truncateKeyIfNeeded(exceptionName);
     final runSeconds = DateTime.now().difference(_inst._sdkStartTime).inSeconds;
 
-    final crash = <String, dynamic>{'_name': name, '_error': sanitizedStack, '_nonfatal': isHandled, '_run': runSeconds};
+    final crash = <String, dynamic>{
+      '_name': name,
+      '_error': sanitizedStack,
+      '_nonfatal': isHandled,
+      '_run': runSeconds
+    };
 
     final o = metrics_collector.getOrientation();
     if (o != null) crash['_orientation'] = o;

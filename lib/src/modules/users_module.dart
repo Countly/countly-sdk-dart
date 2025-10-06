@@ -37,7 +37,8 @@ class UsersModule {
       return;
     }
     _inst._ingestUserProperties(props);
-    _inst.L.d('User properties merged. Named=${_inst._userPropertiesNamedCache.keys.length} Custom=${_inst._customUserPropertiesCache.keys.length}');
+    _inst.L.d(
+        'User properties merged. Named=${_inst._userPropertiesNamedCache.keys.length} Custom=${_inst._customUserPropertiesCache.keys.length}');
     _inst._bundleEventQueue();
 
     final totalCachedSize = _inst._userPropertiesNamedCache.length + _inst._customUserPropertiesCache.length;

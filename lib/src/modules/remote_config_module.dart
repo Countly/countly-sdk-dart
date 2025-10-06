@@ -141,7 +141,8 @@ class RemoteConfigModule {
       return false;
     }
     final metrics = metrics_collector.getCurrentMetrics();
-    final data = _inst._prepareRequest({'method': 'ab_enroll_variant', 'key': key, 'variant': variant, 'metrics': metrics});
+    final data =
+        _inst._prepareRequest({'method': 'ab_enroll_variant', 'key': key, 'variant': variant, 'metrics': metrics});
     try {
       final resp = await _inst._network.makeRequest(data, Endpoints.sdk);
       final ok = _inst._network.isResponseValid(resp, acceptJSON: true);

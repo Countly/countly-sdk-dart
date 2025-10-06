@@ -9,11 +9,16 @@ class InstanceLogger {
 
   InstanceLogger(this._sdkLogger, {required bool enabled, required this.instanceKey, this.onLog}) : _enabled = enabled;
 
-  void e(String message, {Object? error, StackTrace? stack}) => _log(LogLevel.error, message, error: error, stack: stack);
-  void w(String message, {Object? error, StackTrace? stack}) => _log(LogLevel.warning, message, error: error, stack: stack);
-  void i(String message, {Object? error, StackTrace? stack}) => _log(LogLevel.info, message, error: error, stack: stack);
-  void d(String message, {Object? error, StackTrace? stack}) => _log(LogLevel.debug, message, error: error, stack: stack);
-  void v(String message, {Object? error, StackTrace? stack}) => _log(LogLevel.verbose, message, error: error, stack: stack);
+  void e(String message, {Object? error, StackTrace? stack}) =>
+      _log(LogLevel.error, message, error: error, stack: stack);
+  void w(String message, {Object? error, StackTrace? stack}) =>
+      _log(LogLevel.warning, message, error: error, stack: stack);
+  void i(String message, {Object? error, StackTrace? stack}) =>
+      _log(LogLevel.info, message, error: error, stack: stack);
+  void d(String message, {Object? error, StackTrace? stack}) =>
+      _log(LogLevel.debug, message, error: error, stack: stack);
+  void v(String message, {Object? error, StackTrace? stack}) =>
+      _log(LogLevel.verbose, message, error: error, stack: stack);
 
   void _log(LogLevel level, String message, {Object? error, StackTrace? stack}) {
     final shouldEmit = _enabled && _sdkLogger.isEnabled(level);
@@ -26,8 +31,7 @@ class InstanceLogger {
       if ((level == LogLevel.error || level == LogLevel.warning) && sdkToastAvailable) {
         try {
           showSdkToast(message);
-        } catch (_) {
-        }
+        } catch (_) {}
       }
     }
     if (onLog != null) {

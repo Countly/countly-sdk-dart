@@ -3,10 +3,7 @@ import 'dart:ui' as ui;
 import '../constants.dart';
 
 Map<String, dynamic> getCurrentMetrics() {
-  final window =
-      ui.PlatformDispatcher.instance.views.isNotEmpty
-          ? ui.PlatformDispatcher.instance.views.first
-          : null;
+  final window = ui.PlatformDispatcher.instance.views.isNotEmpty ? ui.PlatformDispatcher.instance.views.first : null;
   final pixelRatio = window?.devicePixelRatio;
   final size = window?.physicalSize;
   return {

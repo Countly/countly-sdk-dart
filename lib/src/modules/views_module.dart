@@ -53,11 +53,23 @@ class ViewsModule {
     final now = DateTime.now();
     final start = _inst._activeViewStart!;
     int durMs;
-    final segmentation = <String, dynamic>{'name': _inst._activeViewName, 'pvn': _inst._previousViewName ?? '', 'visit': 1};
+    final segmentation = <String, dynamic>{
+      'name': _inst._activeViewName,
+      'pvn': _inst._previousViewName ?? '',
+      'visit': 1
+    };
     durMs = now.difference(start).inMilliseconds;
     if (durMs < 0) durMs = 0;
 
-    final evt = <String, dynamic>{'key': '[CLY]_view', 'count': 1, 'dur': durMs / 1000.0, 'segmentation': segmentation, 'timestamp': start.millisecondsSinceEpoch, 'hour': start.hour, 'dow': start.weekday % 7};
+    final evt = <String, dynamic>{
+      'key': '[CLY]_view',
+      'count': 1,
+      'dur': durMs / 1000.0,
+      'segmentation': segmentation,
+      'timestamp': start.millisecondsSinceEpoch,
+      'hour': start.hour,
+      'dow': start.weekday % 7
+    };
     _inst._addToEventQueue(evt);
     _inst.L.d('Ended view name=[${_inst._activeViewName}] durMs=[$durMs] mode=direct-diff');
     _inst._previousViewName = _inst._activeViewName;
@@ -75,7 +87,8 @@ class ViewsModule {
       final name = _inst._activeViewName;
       final start = _inst._activeViewStart;
       if (name == null || start == null) return;
-      _inst._storage.writeJson('COUNTLY_ACTIVE_VIEW', {'n': name, 'ts': start.millisecondsSinceEpoch, 'd': _viewTime, 'pvn': _inst._previousViewName ?? ''});
+      _inst._storage.writeJson('COUNTLY_ACTIVE_VIEW',
+          {'n': name, 'ts': start.millisecondsSinceEpoch, 'd': _viewTime, 'pvn': _inst._previousViewName ?? ''});
     } catch (_) {}
   }
 

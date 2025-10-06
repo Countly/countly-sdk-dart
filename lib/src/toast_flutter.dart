@@ -90,7 +90,7 @@ class _SdkToastWidget extends StatelessWidget {
       text = text.replaceFirst('!!!!!', '').trim();
     }
 
-    final bgColor = Colors.redAccent ;
+    final bgColor = Colors.redAccent;
     final fontSize = 16.0;
     final fontWeight = FontWeight.w600;
 
@@ -103,8 +103,16 @@ class _SdkToastWidget extends StatelessWidget {
             child: Container(
               margin: const EdgeInsets.only(top: 12),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(28), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 4))], border: Border.all(color: Colors.white.withOpacity(0.9), width: 1)),
-              child: DefaultTextStyle(style: TextStyle(color: Colors.white, fontSize: fontSize, fontWeight: fontWeight, height: 1.2), child: Text('[Countly] $text', maxLines: 5, overflow: TextOverflow.ellipsis)),
+              decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 4))
+                  ],
+                  border: Border.all(color: Colors.white.withOpacity(0.9), width: 1)),
+              child: DefaultTextStyle(
+                  style: TextStyle(color: Colors.white, fontSize: fontSize, fontWeight: fontWeight, height: 1.2),
+                  child: Text('[Countly] $text', maxLines: 5, overflow: TextOverflow.ellipsis)),
             ),
           ),
         ),

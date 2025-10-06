@@ -29,12 +29,10 @@ class EventsModule {
       requiredConsent = internalConsentMap[key]!;
     }
     if (!_i.hasConsentInternal(requiredConsent)) {
-      _i.L.w(
-          'Event ["$key"] dropped: missing consent for [${requiredConsent.name}]');
+      _i.L.w('Event ["$key"] dropped: missing consent for [${requiredConsent.name}]');
       return;
     }
-    if (_i._sbs!.isCustomEventTrackingAllowed == false &&
-        requiredConsent == ConsentType.events) {
+    if (_i._sbs!.isCustomEventTrackingAllowed == false && requiredConsent == ConsentType.events) {
       _i.L.d('Event tracking disabled (SBS), skipping event record');
       return;
     }
@@ -42,14 +40,19 @@ class EventsModule {
       _i.L.e('events.record called with empty key');
       return;
     }
-    if (_i._sbs!.eventBlacklist.contains(key)) {
+    if (_i._sbs!.eventWhitelist.isNotEmpty) {
+      if (!_i._sbs!.eventWhitelist.contains(key)) {
+        _i.L.w('Event ["$key"] dropped: not in whitelist');
+        return;
+      }
+    } else if (_i._sbs!.eventBlacklist.contains(key)) {
       _i.L.w('Event ["$key"] dropped: blacklisted key');
       return;
     }
-    segmentation = _i.removeBlacklistedSegmentation(segmentation, key);
+
+    segmentation = _i.removeGraylistedSegmentation(segmentation, key); // both whitelist and blacklist
     key = _i._truncateKeyIfNeeded(key);
-    final ts = timestamp ??
-        DateTime.now(); // Can record past events with custom timestamp
+    final ts = timestamp ?? DateTime.now(); // Can record past events with custom timestamp
     Map<String, dynamic> segOut = {};
     if (segmentation != null && segmentation.isNotEmpty) {
       segOut.addAll(_i._sanitizeSegmentation(segmentation, forCrash: false));

@@ -28,6 +28,7 @@ Currently supports:
 - filtered event keys to sbs
 - filter segmentation global and per key
 - filtered user properties to sbs
+- whitelisting
 
 considerations:
 

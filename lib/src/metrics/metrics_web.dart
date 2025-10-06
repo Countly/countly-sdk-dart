@@ -50,7 +50,14 @@ class _BrowserInfo {
 }
 
 _BrowserInfo _parseBrowser(String ua) {
-  final patterns = <RegExp, String>{RegExp(r'OPR\/([0-9.]+)'): 'Opera', RegExp(r'Edg\/([0-9.]+)'): 'Edge', RegExp(r'Chrome\/([0-9.]+)'): 'Chrome', RegExp(r'Firefox\/([0-9.]+)'): 'Firefox', RegExp(r'Verv\/([0-9.]+)'): 'Vivaldi', RegExp(r'Safari\/([0-9.]+)'): 'Safari'};
+  final patterns = <RegExp, String>{
+    RegExp(r'OPR\/([0-9.]+)'): 'Opera',
+    RegExp(r'Edg\/([0-9.]+)'): 'Edge',
+    RegExp(r'Chrome\/([0-9.]+)'): 'Chrome',
+    RegExp(r'Firefox\/([0-9.]+)'): 'Firefox',
+    RegExp(r'Verv\/([0-9.]+)'): 'Vivaldi',
+    RegExp(r'Safari\/([0-9.]+)'): 'Safari'
+  };
   for (final e in patterns.entries) {
     final m = e.key.firstMatch(ua);
     if (m != null) return _BrowserInfo(e.value, m.group(1)!);
