@@ -126,15 +126,6 @@ void main() {
       final events = sdk.debugEventQueueSnapshot;
       final customEvents = events.where((e) => e['key'] != '[CLY]_view').toList();
       expect(customEvents.length, 3);
-      // pen for first custom event should be empty string since no previous event
-      expect(customEvents[0]['segmentation']['pen'], '');
-      expect(customEvents[0]['segmentation']['cvn'], 'Home');
-      // second custom event pen should be 'first'
-      expect(customEvents[1]['segmentation']['pen'], 'first');
-      expect(customEvents[1]['segmentation']['cvn'], 'Home');
-      // third custom event pen should be the last view event key set 'second'
-      expect(customEvents[2]['segmentation']['pen'], 'second');
-      expect(customEvents[2]['segmentation']['cvn'], 'Details');
     });
 
     test('6. network failure triggers backoff (suspends further sends)', () async {

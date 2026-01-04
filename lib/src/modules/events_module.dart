@@ -57,8 +57,7 @@ class EventsModule {
     if (segmentation != null && segmentation.isNotEmpty) {
       segOut.addAll(_i._sanitizeSegmentation(segmentation));
     }
-    segOut['pen'] = _i._previousEventKey ?? '';
-    segOut['cvn'] = _i._activeViewName ?? '';
+
     final evt = <String, dynamic>{
       'key': key,
       'count': count ?? 1,
@@ -94,7 +93,6 @@ class EventsModule {
       }
       tempData[k] = v;
     });
-    tempData['cvn'] = _i._activeViewName ?? '';
     final req = _i._prepareRequest(tempData);
     _i._enqueueUserPropertiesCache();
     _i._addToRequestQueue(req);

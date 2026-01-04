@@ -55,7 +55,6 @@ class ViewsModule {
     int durMs;
     final segmentation = <String, dynamic>{
       'name': _inst._activeViewName,
-      'pvn': _inst._previousViewName ?? '',
       'visit': 1
     };
     durMs = now.difference(start).inMilliseconds;
@@ -88,7 +87,7 @@ class ViewsModule {
       final start = _inst._activeViewStart;
       if (name == null || start == null) return;
       _inst._storage.writeJson('COUNTLY_ACTIVE_VIEW',
-          {'n': name, 'ts': start.millisecondsSinceEpoch, 'd': _viewTime, 'pvn': _inst._previousViewName ?? ''});
+          {'n': name, 'ts': start.millisecondsSinceEpoch, 'd': _viewTime});
     } catch (_) {}
   }
 
@@ -100,7 +99,6 @@ class ViewsModule {
       final name = data['n'];
       final startMs = data['ts'];
       final time = data['d'];
-      final pvn = data['pvn'];
       final start = DateTime.fromMillisecondsSinceEpoch(startMs);
       int durMs = time as int;
       if (durMs < 0) durMs = 0;
@@ -109,7 +107,7 @@ class ViewsModule {
         'key': '[CLY]_view',
         'count': 1,
         'dur': durMs / 1000.0,
-        'segmentation': {'name': name, 'pvn': pvn, 'visit': 1, 'recovered': 1},
+        'segmentation': {'name': name, 'visit': 1, 'recovered': 1},
         'timestamp': start.millisecondsSinceEpoch,
         'hour': start.hour,
         'dow': start.weekday % 7,
