@@ -12,7 +12,7 @@ class BehaviorModule {
   int get eventQueueSize => _sbs['eqs'] as int; // default 100
   int get requestQueueSize => _sbs['rqs'] as int; // default 50
   int get internalTimerInterval => _sbs['sui'] as int; // default 60
-  bool get isSessionTrackingAllowed => (_sbs['st'] as bool? ?? true); // default 1
+  // bool get isSessionTrackingAllowed => (_sbs['st'] as bool? ?? true); // default 1 - NOT SUPPORTED
   // bool get isCrashTrackingAllowed => (_sbs['crt'] as bool? ?? true); // default 1 - NOT SUPPORTED
   bool get isLocationTrackingAllowed => (_sbs['lt'] as bool? ?? true); // default 1
   bool get isViewTrackingAllowed => (_sbs['vt'] as bool? ?? true); // default 1
@@ -63,7 +63,7 @@ class BehaviorModule {
       'eqs': SBSDefaults.eqs,
       'rqs': SBSDefaults.rqs,
       'sui': SBSDefaults.sui,
-      'st': SBSDefaults.st,
+      // 'st': SBSDefaults.st, // NOT SUPPORTED
       // 'crt': SBSDefaults.crt, // NOT SUPPORTED
       'lt': SBSDefaults.lt,
       'vt': SBSDefaults.vt,

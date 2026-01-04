@@ -21,7 +21,6 @@ part 'modules/consents_module.dart';
 part 'modules/remote_config_module.dart';
 part 'modules/views_module.dart';
 part 'modules/behavior_module.dart';
-part 'modules/sessions_module.dart';
 part 'testing_utils.dart';
 
 class CountlyInstance {
@@ -65,7 +64,6 @@ class CountlyInstance {
   RemoteConfigModule? _remoteConfigModule;
   ViewsModule? _viewsModule;
   BehaviorModule? _sbs;
-  SessionsModule? _sessionsModule;
 
   String? _activeViewName;
   DateTime? _activeViewStart;
@@ -125,7 +123,6 @@ class CountlyInstance {
     _consentsModule = ConsentsModule(this);
     _remoteConfigModule = RemoteConfigModule(this);
     _viewsModule = ViewsModule(this);
-    _sessionsModule = SessionsModule(this);
 
     // Migration only for default instance
     if (instanceKey == 'default') {
@@ -263,7 +260,6 @@ class CountlyInstance {
     _internalTimer = Timer.periodic(Duration(seconds: interval), (_) async {
       L.d('Internal timer tick: processing events and requests');
       await processEventsAndRequests();
-      _sessionsModule?.sessionUpdate();
     });
   }
 
@@ -650,7 +646,6 @@ class CountlyInstance {
   ConsentsModule get consents => _consentsModule ??= ConsentsModule(this);
   RemoteConfigModule get remoteConfig => _remoteConfigModule ??= RemoteConfigModule(this);
   ViewsModule get views => _viewsModule ??= ViewsModule(this);
-  SessionsModule get sessions => _sessionsModule ??= SessionsModule(this);
 
   Map<String, dynamic> _sanitizeSegmentation(Map<String, dynamic> input) {
     final out = <String, dynamic>{};
@@ -679,19 +674,6 @@ class CountlyInstance {
       added++;
     });
     return out;
-  }
-
-  String _sanitizeStackTrace(String stack) {
-    final lines = stack.split('\n');
-    final limited = <String>[];
-    for (var i = 0; i < lines.length && i < _sbs!.stackTraceLineCountLimit; i++) {
-      var ln = lines[i];
-      if (ln.length > _sbs!.stackTraceLineLengthLimit) {
-        ln = ln.substring(0, _sbs!.stackTraceLineLengthLimit);
-      }
-      limited.add(ln);
-    }
-    return limited.join('\n');
   }
 
   String _truncateKeyIfNeeded(String key) {

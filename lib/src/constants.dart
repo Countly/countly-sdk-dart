@@ -42,8 +42,8 @@ class SBSDefaults {
   static const networking = true; // Allow sending requests
   static const rqs = 1000; // Request queue size (requests)
   static const eqs = 100; // Event queue size (events)
-  static const sui = 60; // Session update interval (seconds)
-  static const st = true; // Allow session tracking
+  static const sui = 60; // Session update interval (seconds) // TODO: Check if this is the only internal timer flag
+  // static const st = true; // Allow session tracking - NOT SUPPORTED
   // static const crt = true; // Allow crash tracking - NOT SUPPORTED
   static const lt = true; // Allow location tracking
   static const vt = true; // Allow view tracking
