@@ -75,6 +75,9 @@ class CountlyConfig {
   /// which will only be overridden if explicitly provided).
   final Map<String, String>? customRequestHeaders;
 
+  /// Optional override for SDK detected device metrics.
+  final Map<String, dynamic>? deviceMetricOverrides;
+
   /// If true, automatically restarts the last
   /// view with the same name in bg -> fg. (default: true)
   final bool autoRestartViews;
@@ -96,6 +99,7 @@ class CountlyConfig {
     required this.giveAllConsents,
     required this.enableSDKLogs,
     required this.customRequestHeaders,
+    required this.deviceMetricOverrides,
     required this.autoRestartViews,
     required this.sbs,
   });
@@ -108,6 +112,7 @@ class CountlyConfig {
     StorageMode storageMode = StorageMode.persistent,
     CustomStorageMethods? storageMethods,
     LogLevel logLevel = LogLevel.verbose,
+    Map<String, dynamic>? deviceMetricOverrides,
     SdkLogger? logger,
     bool enableSDKLogs = false,
     bool requiresConsent = SBSDefaults.cr,
@@ -155,6 +160,7 @@ class CountlyConfig {
         giveAllConsents: giveAllConsents,
         enableSDKLogs: enableSDKLogs,
         customRequestHeaders: customRequestHeaders == null ? null : Map.unmodifiable(Map.of(customRequestHeaders)),
+        deviceMetricOverrides: deviceMetricOverrides == null ? null : Map.unmodifiable(Map.of(deviceMetricOverrides)),
         autoRestartViews: autoRestartViews,
         sbs: Map.of(sbs));
   }

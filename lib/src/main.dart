@@ -165,6 +165,10 @@ class CountlyInstance {
         },
       );
     } catch (_) {}
+
+    if (config.deviceMetricOverrides?.isNotEmpty == true) {
+      _eventsModule?.recordMetrics(metricOverride: config.deviceMetricOverrides);
+    }
     // ignore: discarded_futures
     _sbs!.fetchAndApply();
     // ignore: discarded_futures
