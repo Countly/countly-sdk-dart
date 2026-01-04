@@ -18,16 +18,7 @@ class EventsModule {
       Map<String, dynamic>? segmentation,
       DateTime? timestamp}) {
     if (_i._guardDisposed('events.record')) return;
-    final internalConsentMap = <String, ConsentType?>{
-      '[CLY]_nps': ConsentType.feedback,
-      '[CLY]_survey': ConsentType.feedback,
-      '[CLY]_star_rating': ConsentType.feedback,
-      '[CLY]_view': ConsentType.views
-    };
     ConsentType requiredConsent = ConsentType.events;
-    if (internalConsentMap.containsKey(key)) {
-      requiredConsent = internalConsentMap[key]!;
-    }
     if (!_i.hasConsentInternal(requiredConsent)) {
       _i.L.w('Event ["$key"] dropped: missing consent for [${requiredConsent.name}]');
       return;
