@@ -75,29 +75,6 @@ class EventsModule {
     _i._previousEventKey = key;
   }
 
-  /// Sends a custom request with the given data.
-  /// [data] should be key-value pairs of request parameters and its value.
-  void customRequest(Map<String, dynamic> data) {
-    if (data.isEmpty) {
-      _i.L.e('customRequest called with empty data');
-      return;
-    }
-    final tempData = <String, dynamic>{};
-    data.forEach((key, value) {
-      var k = _i._truncateKeyIfNeeded(key);
-      dynamic v = value;
-      if (v is String) {
-        v = _i._truncateValueIfNeeded(v);
-      } else if (v is Map<String, dynamic>) {
-        v = _i._sanitizeSegmentation(v);
-      }
-      tempData[k] = v;
-    });
-    final req = _i._prepareRequest(tempData);
-    _i._enqueueUserPropertiesCache();
-    _i._addToRequestQueue(req);
-  }
-
   /// Collects device metrics and adds a request to request queue.
   /// The provided [metricOverride] map is shallow-merged onto collected values (overriding conflicts).
   void recordMetrics({Map<String, dynamic>? metricOverride}) {
