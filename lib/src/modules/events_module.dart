@@ -55,7 +55,7 @@ class EventsModule {
     final ts = timestamp ?? DateTime.now(); // Can record past events with custom timestamp
     Map<String, dynamic> segOut = {};
     if (segmentation != null && segmentation.isNotEmpty) {
-      segOut.addAll(_i._sanitizeSegmentation(segmentation, forCrash: false));
+      segOut.addAll(_i._sanitizeSegmentation(segmentation));
     }
     segOut['pen'] = _i._previousEventKey ?? '';
     segOut['cvn'] = _i._activeViewName ?? '';
@@ -90,7 +90,7 @@ class EventsModule {
       if (v is String) {
         v = _i._truncateValueIfNeeded(v);
       } else if (v is Map<String, dynamic>) {
-        v = _i._sanitizeSegmentation(v, forCrash: false);
+        v = _i._sanitizeSegmentation(v);
       }
       tempData[k] = v;
     });
@@ -110,7 +110,7 @@ class EventsModule {
     }
     final metrics = metrics_collector.getCurrentMetrics();
     if (metricOverride != null && metricOverride.isNotEmpty) {
-      metrics.addAll(_i._sanitizeSegmentation(metricOverride, forCrash: false));
+      metrics.addAll(_i._sanitizeSegmentation(metricOverride));
     }
     final req = _i._prepareRequest({'metrics': metrics});
     _i._enqueueUserPropertiesCache();

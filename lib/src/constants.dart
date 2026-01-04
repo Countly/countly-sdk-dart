@@ -44,7 +44,7 @@ class SBSDefaults {
   static const eqs = 100; // Event queue size (events)
   static const sui = 60; // Session update interval (seconds)
   static const st = true; // Allow session tracking
-  static const crt = true; // Allow crash tracking
+  // static const crt = true; // Allow crash tracking - NOT SUPPORTED
   static const lt = true; // Allow location tracking
   static const vt = true; // Allow view tracking
   static const lkl = 128; // Key length limit (chars)

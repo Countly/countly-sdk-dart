@@ -22,7 +22,6 @@ part 'modules/remote_config_module.dart';
 part 'modules/views_module.dart';
 part 'modules/behavior_module.dart';
 part 'modules/sessions_module.dart';
-part 'modules/crashes_module.dart';
 part 'testing_utils.dart';
 
 class CountlyInstance {
@@ -67,7 +66,6 @@ class CountlyInstance {
   ViewsModule? _viewsModule;
   BehaviorModule? _sbs;
   SessionsModule? _sessionsModule;
-  CrashesModule? _crashesModule;
 
   String? _activeViewName;
   DateTime? _activeViewStart;
@@ -561,7 +559,7 @@ class CountlyInstance {
           v = v.substring(0, limit);
         }
       } else if (v is Map) {
-        v = _sanitizeSegmentation(v as Map<String, dynamic>, forCrash: false);
+        v = _sanitizeSegmentation(v as Map<String, dynamic>);
       }
       if (named.contains(k)) {
         _userPropertiesNamedCache[k] = v;
@@ -653,9 +651,8 @@ class CountlyInstance {
   RemoteConfigModule get remoteConfig => _remoteConfigModule ??= RemoteConfigModule(this);
   ViewsModule get views => _viewsModule ??= ViewsModule(this);
   SessionsModule get sessions => _sessionsModule ??= SessionsModule(this);
-  CrashesModule get crashes => _crashesModule ??= CrashesModule(this);
 
-  Map<String, dynamic> _sanitizeSegmentation(Map<String, dynamic> input, {required bool forCrash}) {
+  Map<String, dynamic> _sanitizeSegmentation(Map<String, dynamic> input) {
     final out = <String, dynamic>{};
     if (input.isEmpty) return out;
     int added = 0;
@@ -664,11 +661,7 @@ class CountlyInstance {
       var key = _truncateKeyIfNeeded(k);
       dynamic value = v;
       if (value is String) {
-        if (forCrash) {
-          value = _sanitizeStackTrace(value);
-        } else {
-          value = _truncateValueIfNeeded(value);
-        }
+        value = _truncateValueIfNeeded(value);
       }
       // nested map or list
       if (value is Map || value is List) {
