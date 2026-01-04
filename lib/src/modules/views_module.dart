@@ -71,7 +71,6 @@ class ViewsModule {
     };
     _inst._addToEventQueue(evt);
     _inst.L.d('Ended view name=[${_inst._activeViewName}] durMs=[$durMs] mode=direct-diff');
-    _inst._previousViewName = _inst._activeViewName;
     _inst._activeViewName = null;
     _inst._activeViewStart = null;
     _viewTime = 0;

@@ -9,7 +9,7 @@ enum StorageMode { persistent, memory }
 enum LogLevel { error, warning, info, debug, verbose }
 
 /// Consent types
-enum ConsentType { events, users, remoteConfig, feedback, metrics, views }
+enum ConsentType { events, users, feedback, metrics, views }
 
 /// User provided custom storage method signatures.
 typedef StorageReadFn = FutureOr<String?> Function(String key);
@@ -43,9 +43,6 @@ class CountlyConfig {
 
   /// Optional initial user properties.
   final Map<String, dynamic>? userProperties;
-
-  /// Enables remote config fetch loop if true. (default: false)
-  final bool turnOnRemoteConfig;
 
   /// Storage mode selection (persistent by default).
   final StorageMode storageMode;
@@ -90,7 +87,6 @@ class CountlyConfig {
     required this.serverUrl,
     required this.deviceId,
     required this.userProperties,
-    required this.turnOnRemoteConfig,
     required this.storageMode,
     required this.storageMethods,
     required this.logLevel,
@@ -109,7 +105,6 @@ class CountlyConfig {
     required String serverUrl,
     String? deviceId,
     Map<String, dynamic>? userProperties,
-    bool turnOnRemoteConfig = false,
     StorageMode storageMode = StorageMode.persistent,
     CustomStorageMethods? storageMethods,
     LogLevel logLevel = LogLevel.verbose,
@@ -151,7 +146,6 @@ class CountlyConfig {
         serverUrl: normalized,
         deviceId: deviceId,
         userProperties: userProperties == null ? null : Map.unmodifiable(Map.of(userProperties)),
-        turnOnRemoteConfig: turnOnRemoteConfig,
         storageMode: storageMode,
         storageMethods: storageMethods,
         logLevel: logLevel,

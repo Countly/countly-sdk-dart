@@ -4,7 +4,6 @@ import 'package:meta/meta.dart';
 class StorageSubKeys {
   static const requestQueue = 'COUNTLY_DART_RQ';
   static const eventQueue = 'COUNTLY_DART_EQ';
-  static const remoteConfig = 'COUNTLY_DART_RC';
   static const deviceId = 'COUNTLY_DART_ID';
   static const deviceIdType = 'COUNTLY_DART_IDT';
   static const behavior = 'COUNTLY_DART_SBS';

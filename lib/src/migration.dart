@@ -30,7 +30,6 @@ class MigrationService {
         L?.i('migration: legacy data found, starting');
         final rq = decoded['CONNECTIONS'];
         final eq = decoded['EVENTS'];
-        final rc = decoded['REMOTE_CONFIG'];
         final did = decoded['ly.count.android.api.DeviceId.id'];
         final didt = decoded['ly.count.android.api.DeviceId.type'];
         if (rq is String && rq.isNotEmpty) {
@@ -42,10 +41,6 @@ class MigrationService {
           final items = eq.split(':::').where((e) => e.isNotEmpty).toList();
           await storage.writeJson(StorageSubKeys.eventQueue, items);
           L?.d('migration: migrated event queue (${items.length} items)');
-        }
-        if (rc != null) {
-          await storage.writeJson(StorageSubKeys.remoteConfig, rc);
-          L?.d('migration: migrated remote config');
         }
         if (did is String) {
           await storage.writeString(StorageSubKeys.deviceId, did);

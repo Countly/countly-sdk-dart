@@ -18,7 +18,6 @@ import 'lifecycle_stub.dart' if (dart.library.ui) 'lifecycle_flutter.dart';
 part 'modules/events_module.dart';
 part 'modules/users_module.dart';
 part 'modules/consents_module.dart';
-part 'modules/remote_config_module.dart';
 part 'modules/views_module.dart';
 part 'modules/behavior_module.dart';
 part 'testing_utils.dart';
@@ -29,7 +28,6 @@ class CountlyInstance {
 
   final List<Map<String, dynamic>> _eventQueue = [];
   final List<Map<String, dynamic>> _requestQueue = [];
-  Map<String, dynamic> _remoteConfigValues = {};
   Map<String, dynamic> _userPropertiesNamedCache = {};
   Map<String, dynamic> _customUserPropertiesCache = {};
   final Set<ConsentType> _grantedConsents = {};
@@ -61,14 +59,12 @@ class CountlyInstance {
   EventsModule? _eventsModule;
   UsersModule? _usersModule;
   ConsentsModule? _consentsModule;
-  RemoteConfigModule? _remoteConfigModule;
   ViewsModule? _viewsModule;
   BehaviorModule? _sbs;
 
   String? _activeViewName;
   DateTime? _activeViewStart;
   String? _previousEventKey;
-  String? _previousViewName;
   String? _lastClosedViewName; // for autoRestartViews
   late final DateTime _sdkStartTime;
   bool _isInBackground = false;
@@ -105,7 +101,7 @@ class CountlyInstance {
 
     L.i('init: instanceKey=[$instanceKey] appKey=[${config.appKey}] serverUrl=[${config.serverUrl}]');
     L.d('config: deviceIdProvided=[${config.deviceId != null}] requiresConsent=[${_sbs?.isConsentRequired ?? false}] giveAllConsents=[${config.giveAllConsents}] initialConsents=[${config.initialEnabledConsents.map((e) => e.name).join(',')}]');
-    L.d('config: remoteConfig=[${config.turnOnRemoteConfig}] internalTimerInterval=[${_sbs?.internalTimerInterval}s] eventQueueSize=[${_sbs?.eventQueueSize}] requestQueueSize=[${_sbs?.requestQueueSize}]');
+    L.d('config: internalTimerInterval=[${_sbs?.internalTimerInterval}s] eventQueueSize=[${_sbs?.eventQueueSize}] requestQueueSize=[${_sbs?.requestQueueSize}]');
     L.d('config: storageMode=[${config.storageMode.name}] customStorageOverrides=[${config.storageMethods?.hasAny == true}]');
     L.d('config: loggingEnabled=[${config.enableSDKLogs}] logLevel=[${config.logLevel.name}] customLogger=[${config.logger != null}]');
 
@@ -121,7 +117,6 @@ class CountlyInstance {
     _eventsModule = EventsModule(this);
     _usersModule = UsersModule(this);
     _consentsModule = ConsentsModule(this);
-    _remoteConfigModule = RemoteConfigModule(this);
     _viewsModule = ViewsModule(this);
 
     // Migration only for default instance
@@ -137,11 +132,6 @@ class CountlyInstance {
     if (config.userProperties != null && config.userProperties!.isNotEmpty && hasConsentInternal(ConsentType.users)) {
       _ingestUserProperties(config.userProperties!);
       await _enqueueUserPropertiesCache();
-    }
-
-    // Fetch remote config if enabled and consent given.
-    if (config.turnOnRemoteConfig && hasConsentInternal(ConsentType.remoteConfig)) {
-      await _remoteConfigModule!.fetch();
     }
 
     // Timers
@@ -219,8 +209,6 @@ class CountlyInstance {
     } else {
       L.v('No persisted event queue found');
     }
-    final rc = await _storage.readJson<Map<String, dynamic>>(StorageSubKeys.remoteConfig);
-    if (rc is Map<String, dynamic>) _remoteConfigValues = rc;
   }
 
   /// Initializes device id: loads from storage if any, else uses provided or generates new.
@@ -644,7 +632,6 @@ class CountlyInstance {
   EventsModule get events => _eventsModule ??= EventsModule(this);
   UsersModule get users => _usersModule ??= UsersModule(this);
   ConsentsModule get consents => _consentsModule ??= ConsentsModule(this);
-  RemoteConfigModule get remoteConfig => _remoteConfigModule ??= RemoteConfigModule(this);
   ViewsModule get views => _viewsModule ??= ViewsModule(this);
 
   Map<String, dynamic> _sanitizeSegmentation(Map<String, dynamic> input) {
