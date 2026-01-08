@@ -18,12 +18,11 @@ class EventsModule {
       Map<String, dynamic>? segmentation,
       DateTime? timestamp}) {
     if (_i._guardDisposed('events.record')) return;
-    ConsentType requiredConsent = ConsentType.events;
-    if (!_i.hasConsentInternal(requiredConsent)) {
-      _i.L.w('Event ["$key"] dropped: missing consent for [${requiredConsent.name}]');
+    if (!_i.hasConsentInternal()) {
+      _i.L.w('Event ["$key"] dropped: missing consent');
       return;
     }
-    if (_i._sbs!.isCustomEventTrackingAllowed == false && requiredConsent == ConsentType.events) {
+    if (_i._sbs!.isCustomEventTrackingAllowed == false) {
       _i.L.d('Event tracking disabled (SBS), skipping event record');
       return;
     }
@@ -70,8 +69,8 @@ class EventsModule {
   /// The provided [metricOverride] map is shallow-merged onto collected values (overriding conflicts).
   void recordMetrics({Map<String, dynamic>? metricOverride}) {
     if (_i._guardDisposed('events.recordMetrics')) return;
-    if (!_i.hasConsentInternal(ConsentType.metrics)) {
-      _i.L.v('Metrics collection skipped: missing metrics consent');
+    if (!_i.hasConsentInternal()) {
+      _i.L.v('Metrics collection skipped: missing consent');
       return;
     }
     final metrics = metrics_collector.getCurrentMetrics();

@@ -23,8 +23,8 @@ class ViewsModule {
       _inst.L.w('views.startAutoStoppedView called with empty viewName');
       return;
     }
-    if (!_inst.hasConsentInternal(ConsentType.views)) {
-      _inst.L.v('View ["$viewName"] dropped: missing views consent');
+    if (!_inst.hasConsentInternal()) {
+      _inst.L.v('View ["$viewName"] dropped: missing consent');
       return;
     }
 
@@ -49,7 +49,7 @@ class ViewsModule {
     }
 
     if (_inst._activeViewName == null || _inst._activeViewStart == null) return;
-    if (!_inst.hasConsentInternal(ConsentType.views)) return;
+    if (!_inst.hasConsentInternal()) return;
     final now = DateTime.now();
     final start = _inst._activeViewStart!;
     int durMs;

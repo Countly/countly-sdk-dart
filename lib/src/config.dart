@@ -8,9 +8,6 @@ enum StorageMode { persistent, memory }
 /// Logging levels ordered by verbosity.
 enum LogLevel { error, warning, info, debug, verbose }
 
-/// Consent types
-enum ConsentType { events, users, feedback, metrics, views }
-
 /// User provided custom storage method signatures.
 typedef StorageReadFn = FutureOr<String?> Function(String key);
 typedef StorageWriteFn = FutureOr<void> Function(String key, String value);
@@ -59,14 +56,8 @@ class CountlyConfig {
   /// SDK internal logging. (disabled by default)
   final bool enableSDKLogs;
 
-  /// If true, SDK features requiring consent will be disabled until consent is given. (default: false)
-  final bool requiresConsent;
-
-  /// Initial list of enabled consent types. (empty by default)
-  final List<ConsentType> initialEnabledConsents;
-
-  /// If true, all consent types will be enabled initially, overriding [initialEnabledConsents]. (default: false)
-  final bool giveAllConsents;
+  /// If true, consent will be given to SDK to enable features requiring consent. (default: false)
+  final bool giveConsent;
 
   /// Optional custom request headers to be applied to every network request.
   /// Header names are case-insensitive per HTTP spec. Values must be String.
@@ -94,9 +85,7 @@ class CountlyConfig {
     required this.storageMethods,
     required this.logLevel,
     required this.logger,
-    required this.requiresConsent,
-    required this.initialEnabledConsents,
-    required this.giveAllConsents,
+    required this.giveConsent,
     required this.enableSDKLogs,
     required this.customRequestHeaders,
     required this.deviceMetricOverrides,
@@ -115,9 +104,7 @@ class CountlyConfig {
     Map<String, dynamic>? deviceMetricOverrides,
     SdkLogger? logger,
     bool enableSDKLogs = false,
-    bool requiresConsent = SBSDefaults.cr,
-    List<ConsentType> setConsentEnabled = const [],
-    bool giveAllConsents = false,
+    bool giveConsent = false,
     Map<String, String>? customRequestHeaders,
     bool autoRestartViews = true,
     Map<String, dynamic> sbs = const {},
@@ -155,9 +142,7 @@ class CountlyConfig {
         storageMethods: storageMethods,
         logLevel: logLevel,
         logger: logger,
-        requiresConsent: requiresConsent,
-        initialEnabledConsents: List.unmodifiable(setConsentEnabled),
-        giveAllConsents: giveAllConsents,
+        giveConsent: giveConsent,
         enableSDKLogs: enableSDKLogs,
         customRequestHeaders: customRequestHeaders == null ? null : Map.unmodifiable(Map.of(customRequestHeaders)),
         deviceMetricOverrides: deviceMetricOverrides == null ? null : Map.unmodifiable(Map.of(deviceMetricOverrides)),

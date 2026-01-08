@@ -28,8 +28,8 @@ class UsersModule {
   void setProperties(Map<String, dynamic> props) {
     if (_inst._guardDisposed('users.setProperties')) return;
     _inst.L.d('Setting user properties: [${props.toString()}]');
-    if (!_inst.hasConsentInternal(ConsentType.users)) {
-      _inst.L.w('Attempt to set user properties without users consent');
+    if (!_inst.hasConsentInternal()) {
+      _inst.L.w('Attempt to set user properties without consent');
       return;
     }
     if (_inst._sbs?.trackingEnabled == false) {

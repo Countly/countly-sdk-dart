@@ -25,7 +25,7 @@ class BehaviorModule {
   bool get isCustomEventTrackingAllowed => (_sbs['cet'] as bool? ?? true); // default 1
   bool get enterContentZoneAfterInit => (_sbs['ecz'] as bool? ?? false); // default 0
   int get contentZoneRequestInterval => _sbs['czi'] as int; // default 30
-  bool get isConsentRequired => (_sbs['cr'] as bool? ?? false); // default 0
+  // bool get isConsentRequired => (_sbs['cr'] as bool? ?? false); // default 0 - NOT SUPPORTED
   int get serverConfigUpdateInterval => _sbs['scui'] as int; // default 4 hours
   bool get isRefreshContentZoneAllowed => (_sbs['rcz'] as bool? ?? true); // default 1
   int get dropOldRequestTime => _sbs['dort'] as int; // default 0 (disabled)
@@ -76,7 +76,7 @@ class BehaviorModule {
       'cet': SBSDefaults.cet,
       'ecz': SBSDefaults.ecz,
       'czi': SBSDefaults.czi,
-      'cr': _inst.config.requiresConsent,
+      // 'cr': _inst.config.requiresConsent, // NOT SUPPORTED
       'scui': SBSDefaults.scui,
       'rcz': SBSDefaults.rcz,
       'dort': SBSDefaults.dort,

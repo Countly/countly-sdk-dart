@@ -30,7 +30,7 @@ class CountlyInstance {
   final List<Map<String, dynamic>> _requestQueue = [];
   Map<String, dynamic> _userPropertiesNamedCache = {};
   Map<String, dynamic> _customUserPropertiesCache = {};
-  final Set<ConsentType> _grantedConsents = {};
+  bool _consentGranted = false;
 
   // Health check counters
   int _logErrorCount = 0;
@@ -100,18 +100,13 @@ class CountlyInstance {
     await _sbs!.init();
 
     L.i('init: instanceKey=[$instanceKey] appKey=[${config.appKey}] serverUrl=[${config.serverUrl}]');
-    L.d('config: deviceIdProvided=[${config.deviceId != null}] requiresConsent=[${_sbs?.isConsentRequired ?? false}] giveAllConsents=[${config.giveAllConsents}] initialConsents=[${config.initialEnabledConsents.map((e) => e.name).join(',')}]');
+    L.d('config: deviceIdProvided=[${config.deviceId != null}] consentGiven=[${config.giveConsent}]');
     L.d('config: internalTimerInterval=[${_sbs?.internalTimerInterval}s] eventQueueSize=[${_sbs?.eventQueueSize}] requestQueueSize=[${_sbs?.requestQueueSize}]');
     L.d('config: storageMode=[${config.storageMode.name}] customStorageOverrides=[${config.storageMethods?.hasAny == true}]');
     L.d('config: loggingEnabled=[${config.enableSDKLogs}] logLevel=[${config.logLevel.name}] customLogger=[${config.logger != null}]');
 
-    if (config.requiresConsent) {
-      if (config.giveAllConsents) {
-        _grantedConsents.addAll(ConsentType.values);
-      } else {
-        _grantedConsents.addAll(config.initialEnabledConsents);
-      }
-      L.i('Initial consents: [${_grantedConsents.map((e) => e.name).join(', ')}]');
+    if (config.giveConsent) {
+      _consentGranted = true;
     }
 
     _eventsModule = EventsModule(this);
@@ -129,7 +124,7 @@ class CountlyInstance {
     await _viewsModule?.recoverView(); // TODO: should use old device id
 
     // Initial user properties if any and consent given.
-    if (config.userProperties != null && config.userProperties!.isNotEmpty && hasConsentInternal(ConsentType.users)) {
+    if (config.userProperties != null && config.userProperties!.isNotEmpty && _consentGranted) {
       _ingestUserProperties(config.userProperties!);
       await _enqueueUserPropertiesCache();
     }
@@ -138,10 +133,8 @@ class CountlyInstance {
     _startTimer();
     _startServerConfigTimer();
 
-    // Record initial consent status if consent required
-    if (config.requiresConsent) {
-      _recordConsentRequest();
-    }
+    // Record initial consent status
+    _recordConsentRequest();
     // Record location request
     _addToRequestQueue(_prepareRequest({'location': ''}));
 
@@ -276,7 +269,7 @@ class CountlyInstance {
     L.d('Triggered processing event and request queues');
     _bundleEventQueue();
     if ((_userPropertiesNamedCache.isNotEmpty || _customUserPropertiesCache.isNotEmpty) &&
-        hasConsentInternal(ConsentType.users)) {
+        _consentGranted) {
       L.d('Enqueuing user properties request cache: named=${_userPropertiesNamedCache.keys.length} custom=${_customUserPropertiesCache.keys.length}');
       await _enqueueUserPropertiesCache();
     }
@@ -478,24 +471,9 @@ class CountlyInstance {
     return false;
   }
 
-  /// Checks if consent of given type is granted.
-  bool hasConsentInternal(ConsentType type) {
-    final consentRequired = _sbs?.isConsentRequired == true;
-
-    if (!consentRequired && !config.requiresConsent) {
-      L.d('Consent not required sbs:[$consentRequired], config: [${config.requiresConsent}], treating as granted for type [${type.name}]');
-      return true;
-    }
-    if (_disposed) {
-      L.w('Instance disposed, treating consent as not granted for type [${type.name}]');
-      return false;
-    }
-    if (_grantedConsents.contains(type)) {
-      L.d('Consent granted for type [${type.name}]');
-      return true;
-    }
-    L.d('Consent not granted for type [${type.name}]');
-    return false;
+  /// Checks if consent is granted.
+  bool hasConsentInternal() {
+    return _consentGranted;
   }
 
   /// Bundles event queue and then adds user properties request to request queue if any.
@@ -590,8 +568,15 @@ class CountlyInstance {
 
   void _recordConsentRequest() {
     final consentMap = <String, bool>{};
-    for (final c in ConsentType.values) {
-      consentMap[c.name] = _grantedConsents.contains(c);
+    final consentTypes = [ 'events', 'users', 'feedback', 'metrics', 'views' ];
+    if (_consentGranted) {
+      for (final ct in consentTypes) {
+        consentMap[ct] = true;
+      }
+    } else {
+      for (final ct in consentTypes) {
+        consentMap[ct] = false;
+      }
     }
     final req = _prepareRequest({'consent': consentMap});
     _addToRequestQueue(req);
