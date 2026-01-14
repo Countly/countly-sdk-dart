@@ -607,17 +607,33 @@ class CountlyInstance {
     L.d('Recorded consent request:[$consentMap]');
   }
 
-  void _getOutOfUnknownConsentState() {
+  void _getOutOfUnknownConsentState(bool granted) {
     if (!_isInUnknownConsentState) {
       L.v('Not in unknown consent state, nothing to do');
       return;
     }
     L.i('Exiting unknown consent state');
     _isInUnknownConsentState = false;
+    // ignore: discarded_futures
     _sbs?.fetchAndApply();
+    // ignore: discarded_futures
     _attemptHealthCheck();
+    if (granted) {
+      L.i('Consent granted upon exiting unknown consent state, resuming normal operations');
     _viewsModule?._persistActiveViewState();
     processEventsAndRequests();
+    } else {
+      L.i('Consent not granted upon exiting unknown consent state, data will be removed');
+      _eventQueue.clear();
+      _requestQueue.clear();
+      _userPropertiesNamedCache.clear();
+      _customUserPropertiesCache.clear();
+      _persistEventQueue();
+      _persistRequestQueue(); 
+    }
+
+    // At the end we want to report consent status regardless.
+    _recordConsentRequest();
   }
 
   bool _disposed = false;
