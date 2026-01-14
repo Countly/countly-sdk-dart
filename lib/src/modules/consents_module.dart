@@ -8,7 +8,11 @@ class ConsentsModule {
     if (_inst._guardDisposed('consents.giveConsent')) return;
     _inst._consentGranted = true;
     _inst.L.i('Consents granted');
-    _inst._recordConsentRequest();
+    if (!_inst._isInUnknownConsentState) {
+      _inst._recordConsentRequest();
+    } else {
+      _inst._getOutOfUnknownConsentState();
+    }
   }
 
   void revokeConsent() {

@@ -44,8 +44,7 @@ Future<CountlyInstance> _createInstance({bool requiresConsent = false}) async {
     serverUrl: 'https://example.com',
     enableSDKLogs: true,
     logger: logger,
-    requiresConsent: requiresConsent,
-    giveAllConsents: true,
+    giveConsent: true,
     storageMode: StorageMode.memory,
   );
   final inst = await Countly.init(cfg, instanceKey: 'test-${DateTime.now().microsecondsSinceEpoch}');

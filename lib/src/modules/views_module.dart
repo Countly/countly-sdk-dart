@@ -53,10 +53,7 @@ class ViewsModule {
     final now = DateTime.now();
     final start = _inst._activeViewStart!;
     int durMs;
-    final segmentation = <String, dynamic>{
-      'name': _inst._activeViewName,
-      'visit': 1
-    };
+    final segmentation = <String, dynamic>{'name': _inst._activeViewName, 'visit': 1};
     durMs = now.difference(start).inMilliseconds;
     if (durMs < 0) durMs = 0;
 
@@ -85,8 +82,11 @@ class ViewsModule {
       final name = _inst._activeViewName;
       final start = _inst._activeViewStart;
       if (name == null || start == null) return;
-      _inst._storage.writeJson('COUNTLY_ACTIVE_VIEW',
-          {'n': name, 'ts': start.millisecondsSinceEpoch, 'd': _viewTime});
+      if (_inst._isInUnknownConsentState) {
+        _inst.L.v('In unknown consent state, skipping persisting active view state');
+        return;
+      }
+      _inst._storage.writeJson('COUNTLY_ACTIVE_VIEW', {'n': name, 'ts': start.millisecondsSinceEpoch, 'd': _viewTime});
     } catch (_) {}
   }
 

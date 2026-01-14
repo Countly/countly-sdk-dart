@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:meta/meta.dart';
-import 'package:countly_sdk_dart/src/constants.dart';
 
 /// Storage mode for the SDK. Persistent uses platform storage, memory is ephemeral.
 enum StorageMode { persistent, memory }
@@ -59,6 +58,9 @@ class CountlyConfig {
   /// If true, consent will be given to SDK to enable features requiring consent. (default: false)
   final bool giveConsent;
 
+  /// If true, SDK will start with consent granted however it will restrain from sending data until explicit consent is given. (default: false)
+  final bool startWithUnknownConsent;
+
   /// Optional custom request headers to be applied to every network request.
   /// Header names are case-insensitive per HTTP spec. Values must be String.
   /// SDK will merge these with its own required headers (Content-Type, Accept)
@@ -83,6 +85,7 @@ class CountlyConfig {
     required this.userProperties,
     required this.storageMode,
     required this.storageMethods,
+    required this.startWithUnknownConsent,
     required this.logLevel,
     required this.logger,
     required this.giveConsent,
@@ -100,6 +103,7 @@ class CountlyConfig {
     Map<String, dynamic>? userProperties,
     StorageMode storageMode = StorageMode.persistent,
     CustomStorageMethods? storageMethods,
+    bool startWithUnknownConsent = false,
     LogLevel logLevel = LogLevel.verbose,
     Map<String, dynamic>? deviceMetricOverrides,
     SdkLogger? logger,
@@ -140,6 +144,7 @@ class CountlyConfig {
         userProperties: userProperties == null ? null : Map.unmodifiable(Map.of(userProperties)),
         storageMode: storageMode,
         storageMethods: storageMethods,
+        startWithUnknownConsent: startWithUnknownConsent,
         logLevel: logLevel,
         logger: logger,
         giveConsent: giveConsent,

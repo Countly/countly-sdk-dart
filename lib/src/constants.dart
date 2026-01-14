@@ -55,7 +55,7 @@ class SBSDefaults {
   static const cet = true; // Allow custom event tracking
   static const ecz = false; // Enter Content Zone after init
   static const czi = 30; // Content Zone request interval (seconds)
-  static const cr = false; // Consent required
+  // static const cr = false; // Consent required - NOT SUPPORTED
   static const scui = 4 * 60 * 60; // Server config update interval (seconds, 4 hours)
   static const rcz = true; // Allow Refresh Content Zone
   static const dort = 0; // Drop old request time (disabled)

@@ -68,6 +68,7 @@ class CountlyInstance {
   String? _lastClosedViewName; // for autoRestartViews
   late final DateTime _sdkStartTime;
   bool _isInBackground = false;
+  bool _isInUnknownConsentState = false;
 
   CountlyInstance._(this.config, this.instanceKey);
 
@@ -100,12 +101,12 @@ class CountlyInstance {
     await _sbs!.init();
 
     L.i('init: instanceKey=[$instanceKey] appKey=[${config.appKey}] serverUrl=[${config.serverUrl}]');
-    L.d('config: deviceIdProvided=[${config.deviceId != null}] consentGiven=[${config.giveConsent}]');
+    L.d('config: deviceIdProvided=[${config.deviceId != null}] consentGiven=[${config.giveConsent}] startWithUnknownConsent=[${config.startWithUnknownConsent}]');
     L.d('config: internalTimerInterval=[${_sbs?.internalTimerInterval}s] eventQueueSize=[${_sbs?.eventQueueSize}] requestQueueSize=[${_sbs?.requestQueueSize}]');
     L.d('config: storageMode=[${config.storageMode.name}] customStorageOverrides=[${config.storageMethods?.hasAny == true}]');
     L.d('config: loggingEnabled=[${config.enableSDKLogs}] logLevel=[${config.logLevel.name}] customLogger=[${config.logger != null}]');
 
-    if (config.giveConsent) {
+    if (config.giveConsent || config.startWithUnknownConsent) {
       _consentGranted = true;
     }
 
@@ -122,6 +123,13 @@ class CountlyInstance {
     await _loadPersistedState();
     await _initializeDeviceId();
     await _viewsModule?.recoverView(); // TODO: should use old device id
+
+    // Here we send all data we have from past state before proceeding.
+    await processEventsAndRequests();
+    if (config.startWithUnknownConsent) {
+      _isInUnknownConsentState = true;
+      L.i('SDK started in unknown consent state, restraining from sending data until explicit consent is given');
+    }
 
     // Initial user properties if any and consent given.
     if (config.userProperties != null && config.userProperties!.isNotEmpty && _consentGranted) {
@@ -159,13 +167,18 @@ class CountlyInstance {
       );
     } catch (_) {}
 
+    Map<String, dynamic> deviceMetrics = {};
     if (config.deviceMetricOverrides?.isNotEmpty == true) {
-      _eventsModule?.recordMetrics(metricOverride: config.deviceMetricOverrides);
+      deviceMetrics = config.deviceMetricOverrides!;
     }
-    // ignore: discarded_futures
-    _sbs!.fetchAndApply();
-    // ignore: discarded_futures
-    _attemptHealthCheck();
+    _eventsModule?.recordMetrics(metricOverride: deviceMetrics);
+
+    if (!_isInUnknownConsentState) {
+      // ignore: discarded_futures
+      _sbs!.fetchAndApply();
+      // ignore: discarded_futures
+      _attemptHealthCheck();
+    }
   }
 
   /// Checks storage for data from previous runs and loads into memory.
@@ -268,8 +281,7 @@ class CountlyInstance {
   Future<void> processEventsAndRequests() async {
     L.d('Triggered processing event and request queues');
     _bundleEventQueue();
-    if ((_userPropertiesNamedCache.isNotEmpty || _customUserPropertiesCache.isNotEmpty) &&
-        _consentGranted) {
+    if ((_userPropertiesNamedCache.isNotEmpty || _customUserPropertiesCache.isNotEmpty) && _consentGranted) {
       L.d('Enqueuing user properties request cache: named=${_userPropertiesNamedCache.keys.length} custom=${_customUserPropertiesCache.keys.length}');
       await _enqueueUserPropertiesCache();
     }
@@ -278,11 +290,19 @@ class CountlyInstance {
 
   /// Persists event queue to storage if enabled.
   void _persistEventQueue() {
+    if (_isInUnknownConsentState) {
+      L.v('In unknown consent state, skipping persisting event queue');
+      return;
+    }
     _storage.writeJson(StorageSubKeys.eventQueue, _eventQueue);
   }
 
   /// Persists request queue to storage if enabled.
   void _persistRequestQueue() {
+    if (_isInUnknownConsentState) {
+      L.v('In unknown consent state, skipping persisting request queue');
+      return;
+    }
     _storage.writeJson(StorageSubKeys.requestQueue, _requestQueue);
   }
 
@@ -420,6 +440,10 @@ class CountlyInstance {
 
   /// Sends a single request and returns true if successful.
   Future<bool> _sendRequest(Map<String, dynamic> req) async {
+    if (_isInUnknownConsentState) {
+      L.v('In unknown consent state, skipping sending request');
+      return false;
+    }
     try {
       _attachDynamicRequestMeta(req, includeRR: true);
       final resp = await _network.makeSelectiveRequest(req);
@@ -568,7 +592,7 @@ class CountlyInstance {
 
   void _recordConsentRequest() {
     final consentMap = <String, bool>{};
-    final consentTypes = [ 'events', 'users', 'feedback', 'metrics', 'views' ];
+    final consentTypes = ['events', 'users', 'feedback', 'metrics', 'views'];
     if (_consentGranted) {
       for (final ct in consentTypes) {
         consentMap[ct] = true;
@@ -581,6 +605,19 @@ class CountlyInstance {
     final req = _prepareRequest({'consent': consentMap});
     _addToRequestQueue(req);
     L.d('Recorded consent request:[$consentMap]');
+  }
+
+  void _getOutOfUnknownConsentState() {
+    if (!_isInUnknownConsentState) {
+      L.v('Not in unknown consent state, nothing to do');
+      return;
+    }
+    L.i('Exiting unknown consent state');
+    _isInUnknownConsentState = false;
+    _sbs?.fetchAndApply();
+    _attemptHealthCheck();
+    _viewsModule?._persistActiveViewState();
+    processEventsAndRequests();
   }
 
   bool _disposed = false;

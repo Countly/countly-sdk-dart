@@ -140,6 +140,10 @@ class BehaviorModule {
   /// Persists the full response for future use.
   Future<void> fetchAndApply() async {
     if (_inst._guardDisposed('behaviorModule.fetchLatest')) return;
+    if (_inst._isInUnknownConsentState) {
+      _inst.L.v('In unknown consent state, skipping fetching SBS from server');
+      return;
+    }
     try {
       final data = _inst._prepareRequest({})..['method'] = 'sc';
       final resp = await _inst._network.makeRequest(data, Endpoints.sdk);
