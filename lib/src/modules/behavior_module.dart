@@ -35,15 +35,14 @@ class BehaviorModule {
   int get backoffMechanismRequestAge => _sbs['bom_ra'] as int; // default 24 hours
   int get backoffMechanismDuration => _sbs['bom_d'] as int; // default 60
   int get userPropertiesCacheLimit => _sbs['upcl'] as int; // default 100
-  List get eventBlacklist => _sbs['eb'] as List; // default []
-  List get userPropertiesBlacklist => _sbs['upb'] as List; // default []
-  List get segmentationBlacklist => _sbs['sb'] as List; // default []
-  Map get eventSegmentationBlacklist => _sbs['esb'] as Map; // default {}
-  List get eventWhitelist => _sbs['ew'] as List; // default []
-  List get userPropertiesWhitelist => _sbs['upw'] as List; // default []
-  List get segmentationWhitelist => _sbs['sw'] as List; // default []
-  Map get eventSegmentationWhitelist => _sbs['esw'] as Map; // default {}
-
+  List<String> get eventBlacklist => _sbs['eb'] as List<String>; // default []
+  List<String> get userPropertiesBlacklist => _sbs['upb'] as List<String>; // default []
+  List<String> get segmentationBlacklist => _sbs['sb'] as List<String>; // default []
+  Map<String, dynamic> get eventSegmentationBlacklist => _sbs['esb'] as Map<String, dynamic>; // default {}
+  List<String> get eventWhitelist => _sbs['ew'] as List<String>; // default []
+  List<String> get userPropertiesWhitelist => _sbs['upw'] as List<String>; // default []
+  List<String> get segmentationWhitelist => _sbs['sw'] as List<String>; // default []
+  Map<String, dynamic> get eventSegmentationWhitelist => _sbs['esw'] as Map<String, dynamic>; // default {}
   @visibleForTesting
   Map<String, dynamic> get snapshot => Map.unmodifiable(_sbs);
 
@@ -104,9 +103,10 @@ class BehaviorModule {
     if (cfg.storageMode != StorageMode.persistent && !(cfg.storageMethods?.hasAny ?? false) && cfg.sbs.isEmpty) return;
     final stored = await _inst._storage.readJson<Map<String, dynamic>>(StorageSubKeys.behavior);
     if (stored == null) {
-      if (cfg.sbs.isNotEmpty && cfg.sbs['c'] is Map<String, dynamic>) {
+      final configOverrides = cfg.sbs['c'] as Map<String, dynamic>?;
+      if (cfg.sbs.isNotEmpty && configOverrides != null) {
         _inst.L.i('BehaviorModule: loaded given SBS object=[${cfg.sbs.toString()}]');
-        _applyOverrides(cfg.sbs['c'], source: 'config');
+        _applyOverrides(configOverrides, source: 'config');
       }
       return;
     }

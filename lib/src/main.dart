@@ -689,11 +689,14 @@ class CountlyInstance {
       }
       // nested map or list
       if (value is Map || value is List) {
-        if (value.length > _sbs!.segmentationValuesLimit) {
-          L.w('Segmentation value for key [$key] too long, truncating');
-          if (value is Map) {
+        if (value is Map) {
+          if (value.length > _sbs!.segmentationValuesLimit) {
+            L.w('Segmentation value for key [$key] too long, truncating');
             value = _truncateValueIfNeeded(value.toString()); // TODO: too much?
-          } else if (value is List) {
+          }
+        } else if (value is List) {
+          if (value.length > _sbs!.segmentationValuesLimit) {
+            L.w('Segmentation value for key [$key] too long, truncating');
             value = value.sublist(0, _sbs!.segmentationValuesLimit);
           }
         }

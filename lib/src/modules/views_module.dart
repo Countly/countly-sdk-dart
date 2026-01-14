@@ -95,11 +95,11 @@ class ViewsModule {
       final data = await _inst._storage.readJson<Map<String, dynamic>>('COUNTLY_ACTIVE_VIEW');
       if (data == null) return;
       _inst.L.d('Recovered view data: [$data]');
-      final name = data['n'];
-      final startMs = data['ts'];
-      final time = data['d'];
+      final name = data['n'] as String;
+      final startMs = data['ts'] as int;
+      final time = data['d'] as int;
       final start = DateTime.fromMillisecondsSinceEpoch(startMs);
-      int durMs = time as int;
+      int durMs = time;
       if (durMs < 0) durMs = 0;
 
       final evt = <String, dynamic>{
