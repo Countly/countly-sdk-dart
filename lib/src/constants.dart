@@ -68,9 +68,9 @@ class SBSDefaults {
   static const eb = []; // Event blacklist
   static const upb = []; // User properties blacklist
   static const sb = []; // Segmentation blacklist
-  static const esb = {}; // Event segmentation blacklist
+  static const esb = <String, dynamic>{}; // Event segmentation blacklist
   static const ew = []; // Event whitelist
   static const upw = []; // User property whitelist
   static const sw = []; // Segment whitelist
-  static const esw = {}; // Event segment whitelist
+  static const esw = <String, dynamic>{}; // Event segment whitelist
 }

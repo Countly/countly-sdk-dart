@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:countly_sdk_dart/countly.dart';
+import 'package:countly_sdk_dart/src/constants.dart';
 import 'package:http/http.dart' as http;
 import 'package:countly_sdk_dart/src/networking.dart';
 
@@ -20,12 +21,25 @@ class FakeResponseSuccess extends http.Response {
 
 class FakeNetworkClient extends NetworkClient {
   final List<Map<String, dynamic>> sent = [];
+  final List<String> endpoints = [];
   FakeNetworkClient(String baseUrl) : super(baseUrl);
   @override
   Future<http.Response> makeRequest(Map<String, dynamic> data, String endPoint) async {
     sent.add({...data});
+    endpoints.add(endPoint);
     return FakeResponseSuccess();
   }
+}
+
+class RecordingStorage {
+  final Map<String, String> writes = {};
+
+  Future<String?> read(String key) async => writes[key];
+  Future<void> write(String key, String value) async {
+    writes[key] = value;
+  }
+
+  Future<void> remove(String key) async => writes.remove(key);
 }
 
 Future<CountlyInstance> _createInstanceWithUnknownConsent({
@@ -43,6 +57,32 @@ Future<CountlyInstance> _createInstanceWithUnknownConsent({
   );
   final inst = await Countly.init(cfg, instanceKey: 'test-unknown-${DateTime.now().microsecondsSinceEpoch}');
   inst.debugOverrideNetworkClient = networkClient;
+  addTearDown(() async {
+    await Countly.disposeAll();
+  });
+  return inst;
+}
+
+Future<CountlyInstance> _createInstance({
+  required FakeNetworkClient networkClient,
+  bool giveConsent = false,
+  bool startWithUnknownConsent = false,
+  StorageMode storageMode = StorageMode.memory,
+  CustomStorageMethods? storageMethods,
+}) async {
+  final logger = TestLogger();
+  final cfg = CountlyConfig(
+    appKey: 'app-key',
+    serverUrl: 'https://example.com',
+    enableSDKLogs: true,
+    logLevel: LogLevel.verbose,
+    giveConsent: giveConsent,
+    startWithUnknownConsent: startWithUnknownConsent,
+    storageMode: storageMode,
+    storageMethods: storageMethods,
+    networkClientOverride: networkClient,
+  );
+  final inst = await Countly.init(cfg, instanceKey: 'test-generic-${DateTime.now().microsecondsSinceEpoch}');
   addTearDown(() async {
     await Countly.disposeAll();
   });
@@ -259,6 +299,156 @@ void main() {
 
       // Still no requests sent
       expect(network.sent.length, 0);
+    });
+  });
+
+  group('Consent Behavior Tests', () {
+    test('Default configuration requires consent for tracked data', () async {
+      final network = FakeNetworkClient('https://example.com');
+      final sdk = await _createInstance(networkClient: network);
+
+      sdk.events.record(key: 'should_drop');
+      sdk.users.setProperties({'name': 'NoConsent'});
+      await sdk.processEventsAndRequests();
+
+      expect(sdk.debugEventQueueLength, 0, reason: 'Events must be dropped when consent is missing');
+      expect(network.sent.where((r) => r.containsKey('events')).length, 0,
+          reason: 'No event requests should be sent without consent');
+      expect(network.sent.where((r) => r.containsKey('user_details')).length, 0,
+          reason: 'User properties should be ignored without consent');
+    });
+
+    test('Consent provided at init enables all tracking flows', () async {
+      final network = FakeNetworkClient('https://example.com');
+      final sdk = await _createInstance(networkClient: network, giveConsent: true);
+
+      sdk.events.record(key: 'with_consent');
+      sdk.users.setProperties({'name': 'Alice'});
+      await sdk.processEventsAndRequests();
+
+      final eventRequests = network.sent.where((r) => r.containsKey('events')).toList();
+      expect(eventRequests.length, greaterThan(0), reason: 'Events should be enqueued and sent when consent is given');
+
+      final userRequests = network.sent.where((r) => r.containsKey('user_details')).toList();
+      expect(userRequests.length, greaterThan(0), reason: 'User properties should be processed when consent is given');
+    });
+
+    test('Consent-excluded requests are still sent without consent', () async {
+      final network = FakeNetworkClient('https://example.com');
+      final sdk = await _createInstance(networkClient: network);
+
+      await sdk.processEventsAndRequests();
+      await Future.delayed(const Duration(milliseconds: 150));
+
+      expect(network.sent.any((r) => r.containsKey('consent')), true,
+          reason: 'Consent status request should be sent regardless of consent');
+      expect(network.sent.any((r) => r.containsKey('hc')), true,
+          reason: 'Health check should be sent regardless of consent');
+      expect(network.sent.any((r) => r['method'] == 'sc'), true,
+          reason: 'Behavior settings fetch should be sent regardless of consent');
+    });
+
+    test('Unknown consent mode keeps data in memory only', () async {
+      final network = FakeNetworkClient('https://example.com');
+      final storage = RecordingStorage();
+      final sdk = await _createInstance(
+        networkClient: network,
+        startWithUnknownConsent: true,
+        storageMode: StorageMode.persistent,
+        storageMethods: CustomStorageMethods(
+          read: storage.read,
+          write: storage.write,
+          remove: storage.remove,
+        ),
+      );
+
+      sdk.events.record(key: 'mem_event');
+      sdk.views.startAutoStoppedView('MemView');
+      await sdk.processEventsAndRequests();
+
+      expect(storage.writes.containsKey(StorageSubKeys.eventQueue), false,
+          reason: 'Event queue should not be persisted in unknown consent mode');
+      expect(storage.writes.containsKey(StorageSubKeys.requestQueue), false,
+          reason: 'Request queue should not be persisted in unknown consent mode');
+      expect(network.sent.isEmpty, true, reason: 'No requests should be sent while consent is unknown');
+      expect(sdk.debugEventQueueLength + sdk.debugRequestQueueLength, greaterThan(0),
+          reason: 'Data should be kept in memory during unknown consent mode');
+    });
+
+    test('Unknown consent mode still sends previously saved data', () async {
+      final network = FakeNetworkClient('https://example.com');
+      final storage = RecordingStorage();
+
+      storage.writes[StorageSubKeys.requestQueue] = jsonEncode([
+        {
+          'app_key': 'app-key',
+          'device_id': 'stored-device',
+          'sdk_version': '1.0.0',
+          'sdk_name': 'countly-sdk-dart',
+          'offline': true,
+        }
+      ]);
+      storage.writes[StorageSubKeys.deviceId] = 'stored-device';
+      storage.writes[StorageSubKeys.deviceIdType] = DeviceIdType.generated.toString();
+
+      await _createInstance(
+        networkClient: network,
+        startWithUnknownConsent: true,
+        storageMode: StorageMode.persistent,
+        storageMethods: CustomStorageMethods(
+          read: storage.read,
+          write: storage.write,
+          remove: storage.remove,
+        ),
+      );
+
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      expect(network.sent.any((r) => r['offline'] == true), true,
+          reason: 'Data stored from previous usage should be sent before entering unknown consent state');
+    });
+
+    test('Revoking consent in unknown mode clears collected data', () async {
+      final network = FakeNetworkClient('https://example.com');
+      final storage = RecordingStorage();
+      final sdk = await _createInstance(
+        networkClient: network,
+        startWithUnknownConsent: true,
+        storageMode: StorageMode.persistent,
+        storageMethods: CustomStorageMethods(
+          read: storage.read,
+          write: storage.write,
+          remove: storage.remove,
+        ),
+      );
+
+      sdk.events.record(key: 'to_be_cleared');
+      sdk.views.startAutoStoppedView('ToBeCleared');
+      await sdk.processEventsAndRequests();
+
+      expect(sdk.debugEventQueueLength, 0, reason: 'Event queue should be empty after processing');
+      // consent, events, location, metrics requests
+      expect(sdk.debugRequestQueueLength, 4, reason: 'Data should exist before consent is revoked');
+      expect(sdk.debugRequestQueueSnapshot[0]['consent'], isNotNull);
+      expect(sdk.debugRequestQueueSnapshot[1]['location'], isNotNull);
+      expect(sdk.debugRequestQueueSnapshot[2]['metrics'], isNotNull);
+      expect(sdk.debugRequestQueueSnapshot[3]['events'], isNotNull);
+
+      sdk.consents.revokeConsent();
+
+      expect(sdk.debugEventQueueLength, 0, reason: 'Event queue should be cleared after revoking consent');
+      expect(sdk.debugRequestQueueLength, 1, reason: 'There should be consent request');
+      expect(network.sent.length, 2, reason: 'HC and SBS requests should be sent after revoking consent');
+      expect(network.sent.any((r) => r.containsKey('hc')), true);
+      expect(network.sent.any((r) => r['method'] == 'sc'), true);
+
+      sdk.events.record(key: 'to_be_cleared');
+      sdk.views.startAutoStoppedView('ToBeCleared');
+      await sdk.processEventsAndRequests();
+      expect(sdk.debugEventQueueLength, 0, reason: 'Event queue should be empty after processing');
+      expect(sdk.debugRequestQueueLength, 1,
+          reason: 'Consent request should be the only request after revoking consent');
+      expect(sdk.debugRequestQueueSnapshot[0]['consent'], isNotNull);
     });
   });
 }

@@ -293,6 +293,7 @@ class CountlyInstance {
   }
 
   /// Flushes events to request queue then attempts sending.
+  @visibleForTesting
   Future<void> processEventsAndRequests() async {
     L.d('Triggered processing event and request queues');
     _bundleEventQueue();
