@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:meta/meta.dart';
 
+import 'networking.dart';
+
 /// Storage mode for the SDK. Persistent uses platform storage, memory is ephemeral.
 enum StorageMode { persistent, memory }
 
@@ -78,6 +80,10 @@ class CountlyConfig {
   /// SBS data to be used in first init.
   final Map<String, dynamic> sbs;
 
+  /// Testing related network client injection used for SDK tests only.
+  @visibleForTesting
+  final NetworkClient? networkClientOverride;
+
   const CountlyConfig._({
     required this.appKey,
     required this.serverUrl,
@@ -94,6 +100,7 @@ class CountlyConfig {
     required this.deviceMetricOverrides,
     required this.autoRestartViews,
     required this.sbs,
+    required this.networkClientOverride,
   });
 
   factory CountlyConfig({
@@ -112,6 +119,7 @@ class CountlyConfig {
     Map<String, String>? customRequestHeaders,
     bool autoRestartViews = true,
     Map<String, dynamic> sbs = const {},
+    @visibleForTesting NetworkClient? networkClientOverride,
   }) {
     if (appKey.isEmpty) {
       throw ArgumentError('app_key cannot be empty');
@@ -152,7 +160,8 @@ class CountlyConfig {
         customRequestHeaders: customRequestHeaders == null ? null : Map.unmodifiable(Map.of(customRequestHeaders)),
         deviceMetricOverrides: deviceMetricOverrides == null ? null : Map.unmodifiable(Map.of(deviceMetricOverrides)),
         autoRestartViews: autoRestartViews,
-        sbs: Map.of(sbs));
+        sbs: Map.of(sbs),
+        networkClientOverride: networkClientOverride);
   }
 }
 

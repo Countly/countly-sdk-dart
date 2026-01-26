@@ -20,6 +20,7 @@ part 'modules/users_module.dart';
 part 'modules/consents_module.dart';
 part 'modules/views_module.dart';
 part 'modules/behavior_module.dart';
+part 'modules/device_id_module.dart';
 part 'testing_utils.dart';
 
 class CountlyInstance {
@@ -61,6 +62,7 @@ class CountlyInstance {
   ConsentsModule? _consentsModule;
   ViewsModule? _viewsModule;
   BehaviorModule? _sbs;
+  DeviceIdModule? _deviceIdModule;
 
   String? _activeViewName;
   DateTime? _activeViewStart;
@@ -93,7 +95,9 @@ class CountlyInstance {
     );
 
     _storage = StorageFacade(config, L: L);
-    _network = NetworkClient(config.serverUrl, L: L, customHeaders: config.customRequestHeaders);
+    // ignore: invalid_use_of_visible_for_testing_member
+    _network = config.networkClientOverride ??
+        NetworkClient(config.serverUrl, L: L, customHeaders: config.customRequestHeaders);
     _migration = MigrationService(_storage,
         enabled: instanceKey == 'default' && config.storageMode == StorageMode.persistent, L: L);
 
@@ -114,6 +118,7 @@ class CountlyInstance {
     _usersModule = UsersModule(this);
     _consentsModule = ConsentsModule(this);
     _viewsModule = ViewsModule(this);
+    _deviceIdModule = DeviceIdModule(this);
 
     // Migration only for default instance
     if (instanceKey == 'default') {
@@ -243,12 +248,22 @@ class CountlyInstance {
       L.d('Generated new deviceId: [$_deviceId]');
     }
 
-    /// Save device id if storage enabled.
+    await _persistDeviceIdState();
+  }
+
+  /// Updates in-memory device id and type, then persists when storage is available.
+  Future<void> _setDeviceIdInternal(String newDeviceId, {required int type}) async {
+    _deviceId = newDeviceId;
+    _deviceIdType = type;
+    await _persistDeviceIdState();
+  }
+
+  /// Persists the current device id and type if storage is enabled.
+  Future<void> _persistDeviceIdState() async {
     if (config.storageMode == StorageMode.memory && !(config.storageMethods?.hasAny ?? false)) return;
-    if (_deviceId != null) {
-      await _storage.writeString(StorageSubKeys.deviceId, _deviceId!);
-      await _storage.writeString(StorageSubKeys.deviceIdType, _deviceIdType.toString());
-    }
+    if (_deviceId == null || _deviceIdType == null) return;
+    await _storage.writeString(StorageSubKeys.deviceId, _deviceId!);
+    await _storage.writeString(StorageSubKeys.deviceIdType, _deviceIdType.toString());
   }
 
   /// Starts the internal timer for periodic processing.
@@ -562,6 +577,7 @@ class CountlyInstance {
 
   /// HC request
   Future<void> _attemptHealthCheck() async {
+    L.d('Attempting health check request');
     if (_didSendHealthCheckThisInit) return;
     _didSendHealthCheckThisInit = true;
     try {
@@ -607,6 +623,17 @@ class CountlyInstance {
     L.d('Recorded consent request:[$consentMap]');
   }
 
+  /// Clears all in-memory data queues and caches and persists the empty state.
+  /// Used when data for the current device/user must be fully discarded.
+  void _clearAllDataQueuesAndCaches() {
+    _eventQueue.clear();
+    _requestQueue.clear();
+    _userPropertiesNamedCache.clear();
+    _customUserPropertiesCache.clear();
+    _persistEventQueue();
+    _persistRequestQueue();
+  }
+
   void _getOutOfUnknownConsentState(bool granted) {
     if (!_isInUnknownConsentState) {
       L.v('Not in unknown consent state, nothing to do');
@@ -620,16 +647,11 @@ class CountlyInstance {
     _attemptHealthCheck();
     if (granted) {
       L.i('Consent granted upon exiting unknown consent state, resuming normal operations');
-    _viewsModule?._persistActiveViewState();
-    processEventsAndRequests();
+      _viewsModule?._persistActiveViewState();
+      processEventsAndRequests();
     } else {
       L.i('Consent not granted upon exiting unknown consent state, data will be removed');
-      _eventQueue.clear();
-      _requestQueue.clear();
-      _userPropertiesNamedCache.clear();
-      _customUserPropertiesCache.clear();
-      _persistEventQueue();
-      _persistRequestQueue(); 
+      _clearAllDataQueuesAndCaches();
     }
 
     // At the end we want to report consent status regardless.
@@ -675,6 +697,7 @@ class CountlyInstance {
   UsersModule get users => _usersModule ??= UsersModule(this);
   ConsentsModule get consents => _consentsModule ??= ConsentsModule(this);
   ViewsModule get views => _viewsModule ??= ViewsModule(this);
+  DeviceIdModule get id => _deviceIdModule ??= DeviceIdModule(this);
 
   Map<String, dynamic> _sanitizeSegmentation(Map<String, dynamic> input) {
     final out = <String, dynamic>{};

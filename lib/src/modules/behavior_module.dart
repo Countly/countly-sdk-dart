@@ -35,16 +35,24 @@ class BehaviorModule {
   int get backoffMechanismRequestAge => _sbs['bom_ra'] as int; // default 24 hours
   int get backoffMechanismDuration => _sbs['bom_d'] as int; // default 60
   int get userPropertiesCacheLimit => _sbs['upcl'] as int; // default 100
-  List<String> get eventBlacklist => _sbs['eb'] as List<String>; // default []
-  List<String> get userPropertiesBlacklist => _sbs['upb'] as List<String>; // default []
-  List<String> get segmentationBlacklist => _sbs['sb'] as List<String>; // default []
+  List<String> get eventBlacklist => _stringList('eb'); // default []
+  List<String> get userPropertiesBlacklist => _stringList('upb'); // default []
+  List<String> get segmentationBlacklist => _stringList('sb'); // default []
   Map<String, dynamic> get eventSegmentationBlacklist => _sbs['esb'] as Map<String, dynamic>; // default {}
-  List<String> get eventWhitelist => _sbs['ew'] as List<String>; // default []
-  List<String> get userPropertiesWhitelist => _sbs['upw'] as List<String>; // default []
-  List<String> get segmentationWhitelist => _sbs['sw'] as List<String>; // default []
+  List<String> get eventWhitelist => _stringList('ew'); // default []
+  List<String> get userPropertiesWhitelist => _stringList('upw'); // default []
+  List<String> get segmentationWhitelist => _stringList('sw'); // default []
   Map<String, dynamic> get eventSegmentationWhitelist => _sbs['esw'] as Map<String, dynamic>; // default {}
   @visibleForTesting
   Map<String, dynamic> get snapshot => Map.unmodifiable(_sbs);
+
+  List<String> _stringList(String key) {
+    final v = _sbs[key];
+    if (v is List) {
+      return v.map((e) => e.toString()).toList();
+    }
+    return const <String>[];
+  }
 
   @visibleForTesting
   void debugApplyOverrides(Map<String, dynamic> overrides) => _applyOverrides(overrides, source: 'debug');
