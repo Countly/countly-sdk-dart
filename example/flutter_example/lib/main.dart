@@ -6,13 +6,7 @@ void main() async {
   final config = CountlyConfig(
     appKey: 'YOUR_APP_KEY',
     serverUrl: 'https://sth.com',
-    storageMode: StorageMode.persistent,
     enableSDKLogs: true,
-    logLevel: LogLevel.debug,
-    turnOnRemoteConfig: true,
-    requiresConsent: true,
-    giveAllConsents: true,
-    userProperties: const {'platform': 'flutter', 'build': '1.0.0'},
   );
   await Countly.init(config);
   runApp(const MyApp());
@@ -35,10 +29,9 @@ class _MyAppState extends State<MyApp> {
     setState(() {});
   }
 
-  Future<void> _refreshRemoteConfig() async {
+  void _startView() {
     final inst = Countly.defaultInstance!;
-    final ok = await inst.remoteConfig.fetch();
-    debugPrint('Remote config fetch success: $ok');
+    inst.views.startAutoStoppedView('main_screen');
   }
 
   @override
@@ -60,7 +53,7 @@ class _MyAppState extends State<MyApp> {
               const SizedBox(height: 16),
               ElevatedButton(onPressed: _increment, child: const Text('Record Event & Increment')),
               const SizedBox(height: 8),
-              ElevatedButton(onPressed: _refreshRemoteConfig, child: const Text('Fetch Remote Config')),
+              ElevatedButton(onPressed: _startView, child: const Text('Start View')),
               const SizedBox(height: 8),
               ElevatedButton(
                 onPressed: () async {

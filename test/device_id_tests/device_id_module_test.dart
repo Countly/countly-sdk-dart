@@ -151,7 +151,9 @@ void main() {
         giveConsent: false,
       );
 
+      await sdk.id.changeWithMerge('');
       await sdk.id.changeWithMerge('new-device');
+      await sdk.id.changeWithMerge('new-device'); // should be ignored
 
       expect(sdk.deviceId, 'new-device');
       expect(sdk.deviceIdType, DeviceIdType.provided);
@@ -209,10 +211,12 @@ void main() {
       expect(sdk.debugEventQueueLength, greaterThan(0));
 
       // CHANGE ID WITHOUT MERGE
+      await sdk.id.changeWithoutMerge('');
       await sdk.id.changeWithoutMerge('fresh-device');
+      await sdk.id.changeWithoutMerge('fresh-device'); // should be ignored
 
       // pre-ID-change requests after device ID change (pre_event, Home, Details view).
-      final preChangeRequests = List<Map<String, dynamic>>.from(network.sent); 
+      final preChangeRequests = List<Map<String, dynamic>>.from(network.sent);
 
       // Checking ID is changed correctly
       expect(sdk.deviceId, 'fresh-device');
@@ -245,7 +249,8 @@ void main() {
       final viewNames = viewEvents.map((e) => e['segmentation']?['name'] as String?).toList();
       expect(viewNames, contains('Home'), reason: 'Home view should be in pre-change requests');
       expect(viewNames, contains('Details'), reason: 'Details view should be in pre-change requests');
-      expect(preChangeRequests[2]['consent'], isNotNull, reason: 'Consent status should be included in pre-change requests');
+      expect(preChangeRequests[2]['consent'], isNotNull,
+          reason: 'Consent status should be included in pre-change requests');
       expect(preChangeRequests[3]['location'], "", reason: 'Empty location should be included in pre-change requests');
       expect(preChangeRequests[4]['metrics'], isNotNull, reason: 'Metrics should be included in pre-change requests');
 

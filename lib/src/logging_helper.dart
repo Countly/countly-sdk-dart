@@ -26,7 +26,8 @@ class InstanceLogger {
       if (level == LogLevel.error || level == LogLevel.warning) {
         message = '!!!!!\n $message';
       }
-      final formatted = '[${instanceKey.substring(0, 3)}] $message';
+      // trimmed instance key for brevity (to first 3 chars or less)
+      final formatted = '[${instanceKey.substring(0, instanceKey.length > 3 ? 3 : instanceKey.length)}] $message';
       _sdkLogger.log(level, formatted, error: error, stack: stack);
       if ((level == LogLevel.error || level == LogLevel.warning) && sdkToastAvailable) {
         try {

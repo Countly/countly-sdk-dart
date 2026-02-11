@@ -20,7 +20,7 @@ class ViewsModule {
     }
 
     if (viewName.isEmpty) {
-      _inst.L.w('views.startAutoStoppedView called with empty viewName');
+      _inst.L.e('views.startAutoStoppedView called with empty viewName');
       return;
     }
     if (!_inst.hasConsentInternal()) {
@@ -35,10 +35,15 @@ class ViewsModule {
     _inst._activeViewStart = now;
     _lastBeatTime = now;
     _viewTime = 0;
-    _inst._lastClosedViewName = null;
     _persistActiveViewState();
     _startHeartbeat();
     _inst.L.d('Started view name=[$viewName] at [$now]');
+  }
+
+  /// Ends currently active view if any.
+  void endActiveView() {
+    if (_inst._guardDisposed('views.endActiveView')) return;
+    _endIfActive();
   }
 
   /// Ends currently active view if any. Used on dispose.
@@ -154,4 +159,16 @@ class ViewsModule {
       _inst.L.v('Heartbeat view=[${_inst._activeViewName}] cumulative time=[${_viewTime}]');
     }
   }
+
+  @visibleForTesting
+  void testSetupActiveViewForHeartbeat(String name, {int startOffsetMs = 0}) {
+    _inst._activeViewName = _inst._truncateKeyIfNeeded(name);
+    _inst._activeViewStart = DateTime.now().subtract(Duration(milliseconds: startOffsetMs));
+    // leave _lastBeatTime null so the first heartbeat call sets it
+    _lastBeatTime = null;
+    _viewTime = 0;
+  }
+
+  @visibleForTesting
+  void testHeartbeatOnce() => _onHeartbeat();
 }

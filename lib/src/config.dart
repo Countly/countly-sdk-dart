@@ -73,10 +73,6 @@ class CountlyConfig {
   /// Optional override for SDK detected device metrics.
   final Map<String, dynamic>? deviceMetricOverrides;
 
-  /// If true, automatically restarts the last
-  /// view with the same name in bg -> fg. (default: true)
-  final bool autoRestartViews;
-
   /// SBS data to be used in first init.
   final Map<String, dynamic> sbs;
 
@@ -98,7 +94,6 @@ class CountlyConfig {
     required this.enableSDKLogs,
     required this.customRequestHeaders,
     required this.deviceMetricOverrides,
-    required this.autoRestartViews,
     required this.sbs,
     required this.networkClientOverride,
   });
@@ -108,8 +103,8 @@ class CountlyConfig {
     required String serverUrl,
     String? deviceId,
     Map<String, dynamic>? userProperties,
-    StorageMode storageMode = StorageMode.persistent,
-    CustomStorageMethods? storageMethods,
+    @visibleForTesting StorageMode storageMode = StorageMode.persistent,
+    @visibleForTesting CustomStorageMethods? storageMethods,
     bool startWithUnknownConsent = false,
     LogLevel logLevel = LogLevel.verbose,
     Map<String, dynamic>? deviceMetricOverrides,
@@ -117,7 +112,6 @@ class CountlyConfig {
     bool enableSDKLogs = false,
     bool giveConsent = false,
     Map<String, String>? customRequestHeaders,
-    bool autoRestartViews = true,
     Map<String, dynamic> sbs = const {},
     @visibleForTesting NetworkClient? networkClientOverride,
   }) {
@@ -159,7 +153,6 @@ class CountlyConfig {
         enableSDKLogs: enableSDKLogs,
         customRequestHeaders: customRequestHeaders == null ? null : Map.unmodifiable(Map.of(customRequestHeaders)),
         deviceMetricOverrides: deviceMetricOverrides == null ? null : Map.unmodifiable(Map.of(deviceMetricOverrides)),
-        autoRestartViews: autoRestartViews,
         sbs: Map.of(sbs),
         networkClientOverride: networkClientOverride);
   }

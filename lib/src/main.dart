@@ -29,8 +29,9 @@ class CountlyInstance {
 
   final List<Map<String, dynamic>> _eventQueue = [];
   final List<Map<String, dynamic>> _requestQueue = [];
-  Map<String, dynamic> _userPropertiesNamedCache = {};
-  Map<String, dynamic> _customUserPropertiesCache = {};
+  final Map<String, dynamic> _userPropertiesNamedCache = {};
+  final Map<String, dynamic> _customUserPropertiesCache = {};
+  Map<String, dynamic> deviceMetrics = {};
   bool _consentGranted = false;
 
   // Health check counters
@@ -47,6 +48,8 @@ class CountlyInstance {
   Timer? _serverConfigTimer;
   bool _suspended = false; // for request backoff
   DateTime? _suspendUntil;
+
+  Future<void> _queueLock = Future.value();
 
   static const _sdkVersion = SdkInternal.sdkVersion;
   static const _sdkName = SdkInternal.sdkName;
@@ -67,7 +70,6 @@ class CountlyInstance {
   String? _activeViewName;
   DateTime? _activeViewStart;
   String? _previousEventKey;
-  String? _lastClosedViewName; // for autoRestartViews
   late final DateTime _sdkStartTime;
   bool _isInBackground = false;
   bool _isInUnknownConsentState = false;
@@ -157,22 +159,14 @@ class CountlyInstance {
     try {
       listenToLifecycle(
         onBackground: () {
-          if (_activeViewName != null) {
-            _lastClosedViewName = _activeViewName;
-          }
-          _viewsModule?._endIfActive();
           _isInBackground = true;
         },
         onForeground: () {
-          if (config.autoRestartViews && _lastClosedViewName != null) {
-            _viewsModule?.startAutoStoppedView(_lastClosedViewName!);
-          }
           _isInBackground = false;
         },
       );
     } catch (_) {}
 
-    Map<String, dynamic> deviceMetrics = {};
     if (config.deviceMetricOverrides?.isNotEmpty == true) {
       deviceMetrics = config.deviceMetricOverrides!;
     }
@@ -295,13 +289,22 @@ class CountlyInstance {
   /// Flushes events to request queue then attempts sending.
   @visibleForTesting
   Future<void> processEventsAndRequests() async {
-    L.d('Triggered processing event and request queues');
-    _bundleEventQueue();
-    if ((_userPropertiesNamedCache.isNotEmpty || _customUserPropertiesCache.isNotEmpty) && _consentGranted) {
-      L.d('Enqueuing user properties request cache: named=${_userPropertiesNamedCache.keys.length} custom=${_customUserPropertiesCache.keys.length}');
-      await _enqueueUserPropertiesCache();
-    }
-    await _processRequestQueue();
+    await _runQueueLocked(() async {
+      L.d('Triggered processing event and request queues');
+      _bundleEventQueue();
+      if ((_userPropertiesNamedCache.isNotEmpty || _customUserPropertiesCache.isNotEmpty) && _consentGranted) {
+        L.d('Enqueuing user properties request cache: named=${_userPropertiesNamedCache.keys.length} custom=${_customUserPropertiesCache.keys.length}');
+        await _enqueueUserPropertiesCache();
+      }
+      await _processRequestQueue();
+    });
+  }
+
+  Future<void> _runQueueLocked(Future<void> Function() action) {
+    _queueLock = _queueLock.then((_) => action()).catchError((e, st) {
+      L.e('Queue lock action failed', error: e, stack: st as StackTrace);
+    });
+    return _queueLock;
   }
 
   /// Persists event queue to storage if enabled.
@@ -385,6 +388,10 @@ class CountlyInstance {
     }
 
     final max = _sbs?.requestQueueSize ?? SBSDefaults.rqs;
+    if (max <= 0) {
+      L.w('Request queue size is non-positive, dropping request');
+      return;
+    }
     if (_requestQueue.length >= max) {
       L.w('Request queue full, removing oldest request');
       _requestQueue.removeAt(0);
@@ -494,6 +501,12 @@ class CountlyInstance {
     _network.close();
     _network = client; // ignore: invalid_use_of_visible_for_testing_member
   }
+
+  @visibleForTesting
+  String? get debugActiveViewName => _activeViewName;
+
+  @visibleForTesting
+  bool get debugIsInBackground => _isInBackground;
 
   @visibleForTesting
   bool get isTimerActive => _internalTimer?.isActive == true;
@@ -627,12 +640,15 @@ class CountlyInstance {
   /// Clears all in-memory data queues and caches and persists the empty state.
   /// Used when data for the current device/user must be fully discarded.
   void _clearAllDataQueuesAndCaches() {
-    _eventQueue.clear();
-    _requestQueue.clear();
-    _userPropertiesNamedCache.clear();
-    _customUserPropertiesCache.clear();
-    _persistEventQueue();
-    _persistRequestQueue();
+    // ignore: discarded_futures
+    _runQueueLocked(() async {
+      _eventQueue.clear();
+      _requestQueue.clear();
+      _userPropertiesNamedCache.clear();
+      _customUserPropertiesCache.clear();
+      _persistEventQueue();
+      _persistRequestQueue();
+    });
   }
 
   void _getOutOfUnknownConsentState(bool granted) {

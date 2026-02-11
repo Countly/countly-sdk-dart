@@ -3,32 +3,29 @@
 import 'dart:async';
 import 'package:countly_sdk_dart/countly.dart';
 
-Future<void> main() async {
-  final config = CountlyConfig(
-    appKey: 'YOUR_APP_KEY',
-    serverUrl: 'https://sth.com',
-    storageMode: StorageMode.memory,
-    enableSDKLogs: true,
-    logLevel: LogLevel.verbose,
-    requiresConsent: true,
-    setConsentEnabled: const [
-      ConsentType.events,
-      ConsentType.users,
-      ConsentType.metrics,
-      ConsentType.views,
-    ],
-  );
-  final config2 = CountlyConfig(
-    appKey: 'YOUR_APP_KEY',
-    serverUrl: 'https://sth.com',
-    storageMode: StorageMode.memory,
-    enableSDKLogs: true,
-    logLevel: LogLevel.verbose,
-  );
+final config = CountlyConfig(
+  appKey: 'YOUR_APP_KEY',
+  serverUrl: 'https://sth.com',
+  storageMode: StorageMode.memory,
+  enableSDKLogs: true,
+  logLevel: LogLevel.debug,
+  deviceMetricOverrides: {
+    'platform': 'pure_dart',
+    '_os_version': '1.0.0',
+  },
+);
 
+final config2 = CountlyConfig(
+  appKey: 'YOUR_APP_KEY',
+  serverUrl: 'https://sth.com',
+  storageMode: StorageMode.memory,
+  enableSDKLogs: true,
+);
+
+Future<void> main() async {
   final sdk = await Countly.init(config);
 
-  sdk.consents.give([ConsentType.remoteConfig]);
+  sdk.consents.giveConsent();
   sdk.events.recordMetrics();
   sdk.views.startAutoStoppedView("home");
 
@@ -37,10 +34,13 @@ Future<void> main() async {
   sdk_2.views.startAutoStoppedView("home");
 
   sdk.events.record(key: 'session_start');
-  sdk.events.record(key: 'button_click', segmentation: {'id': 'start', 'color': 'blue'});
-  final fetched = await sdk.remoteConfig.fetch();
-  print('Remote config fetch success: $fetched');
+  await Future<void>.delayed(const Duration(seconds: 5));
 
+  List<String> customSeg = ['a', 'b', 'c'];
+  sdk.events.record(key: 'button_click', segmentation: {'id': 'start', 'color': 'blue', 'custom': customSeg});
+  sdk.events.record(key: 'd', segmentation: {'id': 'start', 'color': 'blue', 'custom': customSeg});
+  sdk.users.pushToArray("a", ['1', 2, 3.0, true]);
+  sdk.users.setProperties({"a": '1', "b": 2, "c": 3.0, "d": true, "e": null});
   sdk.users.setProperties({NamedUserProperty.name: 'Alice'});
   await sdk.processEventsAndRequests();
 

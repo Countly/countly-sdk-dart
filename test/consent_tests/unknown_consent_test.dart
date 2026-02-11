@@ -138,7 +138,6 @@ void main() {
     test('2. Events are tracked in memory during unknown consent mode', () async {
       final network = FakeNetworkClient('https://example.com');
       final sdk = await _createInstanceWithUnknownConsent(networkClient: network);
-      sdk.debugOverrideBehaviorSettings(eventQueueSize: 100); // Prevent auto-bundling
 
       // Record events
       sdk.events.record(key: 'event_a');
@@ -159,7 +158,6 @@ void main() {
     test('3. Views are tracked in memory during unknown consent mode', () async {
       final network = FakeNetworkClient('https://example.com');
       final sdk = await _createInstanceWithUnknownConsent(networkClient: network);
-      sdk.debugOverrideBehaviorSettings(eventQueueSize: 100);
 
       // Start and switch views
       sdk.views.startAutoStoppedView('HomePage');
@@ -177,7 +175,6 @@ void main() {
     test('4. Giving consent exits unknown consent mode and sends queued data', () async {
       final network = FakeNetworkClient('https://example.com');
       final sdk = await _createInstanceWithUnknownConsent(networkClient: network);
-      sdk.debugOverrideBehaviorSettings(eventQueueSize: 100);
 
       // Record events while in unknown consent mode
       sdk.events.record(key: 'pre_consent_event_1');
@@ -277,7 +274,6 @@ void main() {
     test('8. Multiple event types tracked correctly in unknown consent mode', () async {
       final network = FakeNetworkClient('https://example.com');
       final sdk = await _createInstanceWithUnknownConsent(networkClient: network);
-      sdk.debugOverrideBehaviorSettings(eventQueueSize: 100);
 
       // Record various types of events
       sdk.events.record(key: 'custom_event', count: 5, sum: 10.5);

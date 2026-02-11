@@ -9,14 +9,12 @@ class EventsModule {
   /// The [count] defaults to 1 if not provided.
   /// The [sum] and [dur] are optional double values.
   /// The [segmentation] is an optional map of key-value pairs (String to primitive types).
-  /// The [timestamp] can be provided to record past events; if omitted, current time is used.
   void record(
       {required String key,
       int? count,
       double? sum,
       double? dur,
-      Map<String, dynamic>? segmentation,
-      DateTime? timestamp}) {
+      Map<String, dynamic>? segmentation}) {
     if (_i._guardDisposed('events.record')) return;
     if (!_i.hasConsentInternal()) {
       _i.L.w('Event ["$key"] dropped: missing consent');
@@ -42,7 +40,7 @@ class EventsModule {
 
     segmentation = _i.removeGraylistedSegmentation(segmentation, key); // both whitelist and blacklist
     key = _i._truncateKeyIfNeeded(key);
-    final ts = timestamp ?? DateTime.now(); // Can record past events with custom timestamp
+    final ts = DateTime.now();
     Map<String, dynamic> segOut = {};
     if (segmentation != null && segmentation.isNotEmpty) {
       segOut.addAll(_i._sanitizeSegmentation(segmentation));

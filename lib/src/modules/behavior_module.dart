@@ -14,26 +14,26 @@ class BehaviorModule {
   int get internalTimerInterval => _sbs['sui'] as int; // default 60
   // bool get isSessionTrackingAllowed => (_sbs['st'] as bool? ?? true); // default 1 - NOT SUPPORTED
   // bool get isCrashTrackingAllowed => (_sbs['crt'] as bool? ?? true); // default 1 - NOT SUPPORTED
-  bool get isLocationTrackingAllowed => (_sbs['lt'] as bool? ?? true); // default 1
+  // bool get isLocationTrackingAllowed => (_sbs['lt'] as bool? ?? true); // default 1 - NOT SUPPORTED
   bool get isViewTrackingAllowed => (_sbs['vt'] as bool? ?? true); // default 1
   int get keyLengthLimit => _sbs['lkl'] as int; // default 128
   int get valueSizeLimit => _sbs['lvs'] as int; // default 256
   int get segmentationValuesLimit => _sbs['lsv'] as int; // default 100
-  int get breadcrumbCountLimit => _sbs['lbc'] as int; // default 100
-  int get stackTraceLineCountLimit => _sbs['ltlpt'] as int; // default 30
-  int get stackTraceLineLengthLimit => _sbs['ltl'] as int; // default 200
+  // int get breadcrumbCountLimit => _sbs['lbc'] as int; // default 100 - NOT SUPPORTED
+  // int get stackTraceLineCountLimit => _sbs['ltlpt'] as int; // default 30 - NOT SUPPORTED
+  // int get stackTraceLineLengthLimit => _sbs['ltl'] as int; // default 200 - NOT SUPPORTED
   bool get isCustomEventTrackingAllowed => (_sbs['cet'] as bool? ?? true); // default 1
-  bool get enterContentZoneAfterInit => (_sbs['ecz'] as bool? ?? false); // default 0
-  int get contentZoneRequestInterval => _sbs['czi'] as int; // default 30
+  // bool get enterContentZoneAfterInit => (_sbs['ecz'] as bool? ?? false); // default 0 - NOT SUPPORTED
+  // int get contentZoneRequestInterval => _sbs['czi'] as int; // default 30 - NOT SUPPORTED
   // bool get isConsentRequired => (_sbs['cr'] as bool? ?? false); // default 0 - NOT SUPPORTED
   int get serverConfigUpdateInterval => _sbs['scui'] as int; // default 4 hours
-  bool get isRefreshContentZoneAllowed => (_sbs['rcz'] as bool? ?? true); // default 1
-  int get dropOldRequestTime => _sbs['dort'] as int; // default 0 (disabled)
-  bool get isBackoffMechanismEnabled => (_sbs['bom'] as bool? ?? true); // default 1
-  int get backoffMechanismAcceptedTimeout => _sbs['bom_at'] as int; // default 10
-  double get backoffMechanismRequestQueuePercent => _sbs['bom_rqp'] as double; // default 0.5
-  int get backoffMechanismRequestAge => _sbs['bom_ra'] as int; // default 24 hours
-  int get backoffMechanismDuration => _sbs['bom_d'] as int; // default 60
+  // bool get isRefreshContentZoneAllowed => (_sbs['rcz'] as bool? ?? true); // default 1 - NOT SUPPORTED
+  // int get dropOldRequestTime => _sbs['dort'] as int; // default 0 (disabled) - NOT SUPPORTED
+  // bool get isBackoffMechanismEnabled => (_sbs['bom'] as bool? ?? true); // default 1 - NOT SUPPORTED
+  // int get backoffMechanismAcceptedTimeout => _sbs['bom_at'] as int; // default 10 - NOT SUPPORTED
+  // double get backoffMechanismRequestQueuePercent => _sbs['bom_rqp'] as double; // default 0.5 - NOT SUPPORTED
+  // int get backoffMechanismRequestAge => _sbs['bom_ra'] as int; // default 24 hours - NOT SUPPORTED
+  // int get backoffMechanismDuration => _sbs['bom_d'] as int; // default 60 minutes - NOT SUPPORTED
   int get userPropertiesCacheLimit => _sbs['upcl'] as int; // default 100
   List<String> get eventBlacklist => _stringList('eb'); // default []
   List<String> get userPropertiesBlacklist => _stringList('upb'); // default []
@@ -44,7 +44,7 @@ class BehaviorModule {
   List<String> get segmentationWhitelist => _stringList('sw'); // default []
   Map<String, dynamic> get eventSegmentationWhitelist => _sbs['esw'] as Map<String, dynamic>; // default {}
   @visibleForTesting
-  Map<String, dynamic> get snapshot => Map.unmodifiable(_sbs);
+  Map<String, dynamic> get sbsSnapshot => Map.unmodifiable(_sbs);
 
   List<String> _stringList(String key) {
     final v = _sbs[key];
@@ -72,26 +72,26 @@ class BehaviorModule {
       'sui': SBSDefaults.sui,
       // 'st': SBSDefaults.st, // NOT SUPPORTED
       // 'crt': SBSDefaults.crt, // NOT SUPPORTED
-      'lt': SBSDefaults.lt,
+      // 'lt': SBSDefaults.lt, // NOT SUPPORTED
       'vt': SBSDefaults.vt,
       'lkl': SBSDefaults.lkl,
       'lvs': SBSDefaults.lvs,
       'lsv': SBSDefaults.lsv,
-      'lbc': SBSDefaults.lbc,
-      'ltlpt': SBSDefaults.ltlpt,
-      'ltl': SBSDefaults.ltl,
+      // 'lbc': SBSDefaults.lbc, // NOT SUPPORTED
+      // 'ltlpt': SBSDefaults.ltlpt, // NOT SUPPORTED
+      // 'ltl': SBSDefaults.ltl, // NOT SUPPORTED
       'cet': SBSDefaults.cet,
-      'ecz': SBSDefaults.ecz,
-      'czi': SBSDefaults.czi,
+      // 'ecz': SBSDefaults.ecz, // NOT SUPPORTED
+      // 'czi': SBSDefaults.czi, // NOT SUPPORTED
       // 'cr': _inst.config.requiresConsent, // NOT SUPPORTED
       'scui': SBSDefaults.scui,
-      'rcz': SBSDefaults.rcz,
-      'dort': SBSDefaults.dort,
-      'bom': SBSDefaults.bom,
-      'bom_at': SBSDefaults.bom_at,
-      'bom_rqp': SBSDefaults.bom_rqp,
-      'bom_ra': SBSDefaults.bom_ra,
-      'bom_d': SBSDefaults.bom_d,
+      // 'rcz': SBSDefaults.rcz, // NOT SUPPORTED
+      // 'dort': SBSDefaults.dort, // NOT SUPPORTED
+      // 'bom': SBSDefaults.bom, // NOT SUPPORTED
+      // 'bom_at': SBSDefaults.bom_at, // NOT SUPPORTED
+      // 'bom_rqp': SBSDefaults.bom_rqp, // NOT SUPPORTED
+      // 'bom_ra': SBSDefaults.bom_ra, // NOT SUPPORTED
+      // 'bom_d': SBSDefaults.bom_d, // NOT SUPPORTED
       'upcl': SBSDefaults.upcl,
       'eb': SBSDefaults.eb,
       'upb': SBSDefaults.upb,
