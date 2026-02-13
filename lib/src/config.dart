@@ -71,6 +71,7 @@ class CountlyConfig {
   final Map<String, String>? customRequestHeaders;
 
   /// Optional override for SDK detected device metrics.
+  /// Used only during initial metrics collection on SDK init.
   final Map<String, dynamic>? deviceMetricOverrides;
 
   /// SBS data to be used in first init.

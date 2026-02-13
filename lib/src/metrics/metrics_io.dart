@@ -12,7 +12,6 @@ Map<String, dynamic> getCurrentMetrics() {
   };
 }
 
-String? getOrientation() => null;
 
 String _platformName() {
   if (Platform.isLinux) return 'Linux';
@@ -24,7 +23,7 @@ String _platformName() {
   return Platform.operatingSystem;
 }
 
-String _platformVersion() => Platform.version;
+String _platformVersion() => Platform.version.split(' ').first; // we want version until first space
 String _inferDeviceType() => (Platform.isAndroid || Platform.isIOS) ? 'mobile' : 'desktop';
 String _locale() {
   try {

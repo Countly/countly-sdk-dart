@@ -178,6 +178,7 @@ class CountlyInstance {
       // ignore: discarded_futures
       _attemptHealthCheck();
     }
+    L.v('SDK init time: ${DateTime.now().difference(_sdkStartTime).inMilliseconds} ms');
   }
 
   /// Checks storage for data from previous runs and loads into memory.

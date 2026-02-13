@@ -18,6 +18,7 @@ Map<String, dynamic> getCurrentMetrics() {
     '_device': 'browser',
     '_device_type': deviceType,
     '_resolution': '${width}x$height',
+    if (height != 0 && width != 0) '_orientation': height >= width ? 'portrait' : 'landscape',
     '_density': pixelRatio,
     '_browser': browser.name,
     '_browser_version': browser.version,
@@ -27,15 +28,6 @@ Map<String, dynamic> getCurrentMetrics() {
   };
 }
 
-String? getOrientation() {
-  try {
-    final s = web.window.screen;
-    if (s.width == 0 || s.height == 0) return null;
-    return s.height >= s.width ? 'portrait' : 'landscape';
-  } catch (_) {
-    return null;
-  }
-}
 
 String _locale() {
   final l = web.window.navigator.language;

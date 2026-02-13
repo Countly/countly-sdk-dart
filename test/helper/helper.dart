@@ -75,6 +75,7 @@ final metricsRequest = {
     '_device_type': isA<String>(),
     '_resolution': isA<String>(),
     '_density': isA<num>(),
+    '_orientation': isA<String>(),
     '_locale': isA<String>(),
     '_app_version': '1.0.0'
   },
