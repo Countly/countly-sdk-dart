@@ -55,7 +55,7 @@ Future<CountlyInstance> _createInstanceWithUnknownConsent({
     startWithUnknownConsent: true,
     storageMode: StorageMode.memory,
   );
-  final inst = await Countly.init(cfg, instanceKey: 'test-unknown-${DateTime.now().microsecondsSinceEpoch}');
+  final inst = await Countly.init(cfg);
   inst.debugOverrideNetworkClient = networkClient;
   addTearDown(() async {
     await Countly.disposeAll();
@@ -82,7 +82,7 @@ Future<CountlyInstance> _createInstance({
     storageMethods: storageMethods,
     networkClientOverride: networkClient,
   );
-  final inst = await Countly.init(cfg, instanceKey: 'test-generic-${DateTime.now().microsecondsSinceEpoch}');
+  final inst = await Countly.init(cfg);
   addTearDown(() async {
     await Countly.disposeAll();
   });
@@ -101,7 +101,7 @@ Future<CountlyInstance> _createNormalInstance({
     giveConsent: true,
     storageMode: StorageMode.memory,
   );
-  final inst = await Countly.init(cfg, instanceKey: 'test-normal-${DateTime.now().microsecondsSinceEpoch}');
+  final inst = await Countly.init(cfg);
   inst.debugOverrideNetworkClient = networkClient;
   addTearDown(() async {
     await Countly.disposeAll();
@@ -116,8 +116,8 @@ void main() {
       final sdk = await _createInstanceWithUnknownConsent(networkClient: network);
 
       // Record some events
-      sdk.events.record(key: 'test_event_1');
-      sdk.events.record(key: 'test_event_2');
+      await sdk.events.record(key: 'test_event_1');
+      await sdk.events.record(key: 'test_event_2');
 
       // Start a view
       sdk.views.startAutoStoppedView('TestView');
@@ -140,9 +140,9 @@ void main() {
       final sdk = await _createInstanceWithUnknownConsent(networkClient: network);
 
       // Record events
-      sdk.events.record(key: 'event_a');
-      sdk.events.record(key: 'event_b');
-      sdk.events.record(key: 'event_c');
+      await sdk.events.record(key: 'event_a');
+      await sdk.events.record(key: 'event_b');
+      await sdk.events.record(key: 'event_c');
 
       // Verify events are in the event queue
       expect(sdk.debugEventQueueLength, 3);
@@ -177,14 +177,14 @@ void main() {
       final sdk = await _createInstanceWithUnknownConsent(networkClient: network);
 
       // Record events while in unknown consent mode
-      sdk.events.record(key: 'pre_consent_event_1');
-      sdk.events.record(key: 'pre_consent_event_2');
+      await sdk.events.record(key: 'pre_consent_event_1');
+      await sdk.events.record(key: 'pre_consent_event_2');
 
       // Verify no requests sent yet
       expect(network.sent.length, 0);
 
       // Give consent - this should exit unknown consent mode
-      sdk.consents.giveConsent();
+      await sdk.consents.giveConsent();
 
       // Allow async operations to complete
       await Future.delayed(Duration(milliseconds: 100));
@@ -215,9 +215,9 @@ void main() {
       sdk.debugOverrideBehaviorSettings(eventQueueSize: 2); // Force early bundling
 
       // Record enough events to trigger bundling
-      sdk.events.record(key: 'e1');
-      sdk.events.record(key: 'e2');
-      sdk.events.record(key: 'e3'); // This should trigger bundling
+      await sdk.events.record(key: 'e1');
+      await sdk.events.record(key: 'e2');
+      await sdk.events.record(key: 'e3'); // This should trigger bundling
 
       // Request queue should have requests
       expect(sdk.debugRequestQueueLength, greaterThan(0), reason: 'Events should be bundled into request queue');
@@ -235,7 +235,7 @@ void main() {
       final sdk = await _createNormalInstance(networkClient: network);
 
       // Record events
-      sdk.events.record(key: 'normal_event');
+      await sdk.events.record(key: 'normal_event');
 
       // Process
       await sdk.processEventsAndRequests();
@@ -249,14 +249,13 @@ void main() {
       final sdk = await _createInstanceWithUnknownConsent(networkClient: network);
 
       // Give consent first
-      sdk.consents.giveConsent();
-      await Future.delayed(Duration(milliseconds: 50));
+      await sdk.consents.giveConsent();
 
       // Clear any sent requests from consent transition
       network.sent.clear();
 
       // Record new events after consent
-      sdk.events.record(key: 'post_consent_event');
+      await sdk.events.record(key: 'post_consent_event');
       await sdk.processEventsAndRequests();
 
       // New events should be sent
@@ -276,8 +275,8 @@ void main() {
       final sdk = await _createInstanceWithUnknownConsent(networkClient: network);
 
       // Record various types of events
-      sdk.events.record(key: 'custom_event', count: 5, sum: 10.5);
-      sdk.events.record(key: 'event_with_segmentation', segmentation: {'category': 'test', 'value': 42});
+      await sdk.events.record(key: 'custom_event', count: 5, sum: 10.5);
+      await sdk.events.record(key: 'event_with_segmentation', segmentation: {'category': 'test', 'value': 42});
       sdk.views.startAutoStoppedView('TestPage');
 
       // All should be tracked in memory
@@ -303,7 +302,7 @@ void main() {
       final network = FakeNetworkClient('https://example.com');
       final sdk = await _createInstance(networkClient: network);
 
-      sdk.events.record(key: 'should_drop');
+      await sdk.events.record(key: 'should_drop');
       sdk.users.setProperties({'name': 'NoConsent'});
       await sdk.processEventsAndRequests();
 
@@ -318,7 +317,7 @@ void main() {
       final network = FakeNetworkClient('https://example.com');
       final sdk = await _createInstance(networkClient: network, giveConsent: true);
 
-      sdk.events.record(key: 'with_consent');
+      await sdk.events.record(key: 'with_consent');
       sdk.users.setProperties({'name': 'Alice'});
       await sdk.processEventsAndRequests();
 
@@ -358,7 +357,7 @@ void main() {
         ),
       );
 
-      sdk.events.record(key: 'mem_event');
+      await sdk.events.record(key: 'mem_event');
       sdk.views.startAutoStoppedView('MemView');
       await sdk.processEventsAndRequests();
 
@@ -375,7 +374,7 @@ void main() {
       final network = FakeNetworkClient('https://example.com');
       final storage = RecordingStorage();
 
-      storage.writes[StorageSubKeys.requestQueue] = jsonEncode([
+      storage.writes['default_${StorageSubKeys.requestQueue}'] = jsonEncode([
         {
           'app_key': 'app-key',
           'device_id': 'stored-device',
@@ -384,8 +383,8 @@ void main() {
           'offline': true,
         }
       ]);
-      storage.writes[StorageSubKeys.deviceId] = 'stored-device';
-      storage.writes[StorageSubKeys.deviceIdType] = DeviceIdType.generated.toString();
+      storage.writes['default_${StorageSubKeys.deviceId}'] = 'stored-device';
+      storage.writes['default_${StorageSubKeys.deviceIdType}'] = DeviceIdType.generated.toString();
 
       await _createInstance(
         networkClient: network,
@@ -418,7 +417,7 @@ void main() {
         ),
       );
 
-      sdk.events.record(key: 'to_be_cleared');
+      await sdk.events.record(key: 'to_be_cleared');
       sdk.views.startAutoStoppedView('ToBeCleared');
       await sdk.processEventsAndRequests();
 
@@ -430,7 +429,7 @@ void main() {
       expect(sdk.debugRequestQueueSnapshot[2]['metrics'], isNotNull);
       expect(sdk.debugRequestQueueSnapshot[3]['events'], isNotNull);
 
-      sdk.consents.revokeConsent();
+      await sdk.consents.revokeConsent();
 
       expect(sdk.debugEventQueueLength, 0, reason: 'Event queue should be cleared after revoking consent');
       expect(sdk.debugRequestQueueLength, 1, reason: 'There should be consent request');
@@ -438,7 +437,7 @@ void main() {
       expect(network.sent.any((r) => r.containsKey('hc')), true);
       expect(network.sent.any((r) => r['method'] == 'sc'), true);
 
-      sdk.events.record(key: 'to_be_cleared');
+      await sdk.events.record(key: 'to_be_cleared');
       sdk.views.startAutoStoppedView('ToBeCleared');
       await sdk.processEventsAndRequests();
       expect(sdk.debugEventQueueLength, 0, reason: 'Event queue should be empty after processing');

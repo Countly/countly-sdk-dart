@@ -76,7 +76,7 @@ Future<CountlyInstance> _createInstance({
     logLevel: LogLevel.verbose,
     networkClientOverride: networkClient,
   );
-  final inst = await Countly.init(cfg, instanceKey: 'device-${DateTime.now().microsecondsSinceEpoch}');
+  final inst = await Countly.init(cfg);
   if (networkClient == null) {
     // Fallback override for tests that only need post-init capture.
     inst.debugOverrideNetworkClient = client;
@@ -91,8 +91,8 @@ void main() {
   group('Device ID initialization', () {
     test('uses stored device ID in preference to provided config ID', () async {
       final backing = <String, String>{
-        StorageSubKeys.deviceId: 'stored-id-123',
-        StorageSubKeys.deviceIdType: DeviceIdType.generated.toString(),
+        'default_${StorageSubKeys.deviceId}': 'stored-id-123',
+        'default_${StorageSubKeys.deviceIdType}': DeviceIdType.generated.toString(),
       };
 
       final sdk = await _createInstance(
@@ -105,8 +105,8 @@ void main() {
 
       expect(sdk.deviceId, 'stored-id-123');
       expect(sdk.deviceIdType, DeviceIdType.generated);
-      expect(backing[StorageSubKeys.deviceId], 'stored-id-123');
-      expect(backing[StorageSubKeys.deviceIdType], DeviceIdType.generated.toString());
+      expect(backing['default_${StorageSubKeys.deviceId}'], 'stored-id-123');
+      expect(backing['default_${StorageSubKeys.deviceIdType}'], DeviceIdType.generated.toString());
     });
 
     test('falls back to provided device ID when no stored ID exists', () async {
@@ -121,8 +121,8 @@ void main() {
 
       expect(sdk.deviceId, 'provided-abc');
       expect(sdk.deviceIdType, DeviceIdType.provided);
-      expect(backing[StorageSubKeys.deviceId], 'provided-abc');
-      expect(backing[StorageSubKeys.deviceIdType], DeviceIdType.provided.toString());
+      expect(backing['default_${StorageSubKeys.deviceId}'], 'provided-abc');
+      expect(backing['default_${StorageSubKeys.deviceIdType}'], DeviceIdType.provided.toString());
     });
 
     test('generates device ID when neither stored nor provided', () async {
@@ -137,8 +137,8 @@ void main() {
       expect(sdk.deviceId, isNotNull);
       expect(sdk.deviceId!.isNotEmpty, isTrue);
       expect(sdk.deviceIdType, DeviceIdType.generated);
-      expect(backing[StorageSubKeys.deviceId], sdk.deviceId);
-      expect(backing[StorageSubKeys.deviceIdType], DeviceIdType.generated.toString());
+      expect(backing['default_${StorageSubKeys.deviceId}'], sdk.deviceId);
+      expect(backing['default_${StorageSubKeys.deviceIdType}'], DeviceIdType.generated.toString());
     });
   });
 
@@ -204,7 +204,7 @@ void main() {
       expect(hasQueuedMetricsInit, isTrue, reason: 'Metrics request should be enqueued after init');
 
       // PRE-ID-CHANGE tracking
-      sdk.events.record(key: 'pre_event');
+      await sdk.events.record(key: 'pre_event');
       sdk.views.startAutoStoppedView('Home');
       await Future.delayed(const Duration(milliseconds: 10));
       sdk.views.startAutoStoppedView('Details');
@@ -258,11 +258,11 @@ void main() {
 
       // 3) Check post-ID-change requests at the end.
       // Consent should be reset to allow recording under unknown-consent gating.
-      sdk.events.record(key: 'post_change_event');
+      await sdk.events.record(key: 'post_change_event');
       expect(sdk.debugEventQueueLength, 1);
 
       // Exit unknown consent so data can be sent, then verify payload uses new device id.
-      sdk.consents.giveConsent();
+      await sdk.consents.giveConsent();
       await Future.delayed(const Duration(milliseconds: 50));
       final postChangeRequests = List<Map<String, dynamic>>.from(network.sent);
       expect(postChangeRequests, isNotEmpty, reason: 'Post-change requests should be sent after consent is restored');
@@ -285,7 +285,7 @@ void main() {
       expect(postEventKeys, isNot(contains('pre_event')));
 
       // Consent status should be recorded in the request queue.
-      final hasQueuedConsent = sdk.debugRequestQueueSnapshot.any((r) => r.containsKey('consent'));
+      final hasQueuedConsent = postChangeRequests.any((r) => r.containsKey('consent'));
       expect(hasQueuedConsent, isTrue, reason: 'Consent request should be enqueued after exiting unknown state');
 
       // SBS fetch should run after consent; health check may already have run during init, so skip asserting it here.
@@ -307,8 +307,8 @@ void main() {
 
       await sdk.id.changeWithoutMerge('new-persisted-id');
 
-      expect(backing[StorageSubKeys.deviceId], 'new-persisted-id');
-      expect(backing[StorageSubKeys.deviceIdType], DeviceIdType.provided.toString());
+      expect(backing['default_${StorageSubKeys.deviceId}'], 'new-persisted-id');
+      expect(backing['default_${StorageSubKeys.deviceIdType}'], DeviceIdType.provided.toString());
       expect(sdk.deviceId, 'new-persisted-id');
       expect(sdk.deviceIdType, DeviceIdType.provided);
     });

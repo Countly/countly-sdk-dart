@@ -66,7 +66,7 @@ Future<CountlyInstance> _createInstance({
     networkClientOverride: client,
     sbs: sbs ?? {},
   );
-  final inst = await Countly.init(cfg, instanceKey: 'metrics-${DateTime.now().microsecondsSinceEpoch}');
+  final inst = await Countly.init(cfg);
   addTearDown(() async {
     await Countly.disposeAll();
   });
@@ -143,7 +143,7 @@ void main() {
 
       final initialCount = sdk.debugRequestQueueSnapshot.where((r) => r.containsKey('metrics')).length;
 
-      sdk.events.recordMetrics();
+      await sdk.events.recordMetrics();
 
       final newCount = sdk.debugRequestQueueSnapshot.where((r) => r.containsKey('metrics')).length;
       expect(newCount, initialCount + 1);
@@ -152,7 +152,7 @@ void main() {
     test('recordMetrics with override merges custom data', () async {
       final sdk = await _createInstance();
 
-      sdk.events.recordMetrics(metricOverride: {
+      await sdk.events.recordMetrics(metricOverride: {
         '_os': 'CustomOS',
         '_os_version': '15.0',
         '_device': 'CustomDevice',
@@ -187,7 +187,7 @@ void main() {
       );
 
       // takes precedence over init overrides
-      sdk.events.recordMetrics(metricOverride: {
+      await sdk.events.recordMetrics(metricOverride: {
         '_os': 'CustomOS',
         '_os_version': '15.0',
         '_device': 'CustomDevice',
@@ -223,7 +223,7 @@ void main() {
       );
 
       // takes precedence over init overrides
-      sdk.events.recordMetrics(metricOverride: {
+      await sdk.events.recordMetrics(metricOverride: {
         'battery_level': 85,
         'screen_brightness': 0.7,
         '_custom_metric': 'test_value',
@@ -246,18 +246,15 @@ void main() {
     });
 
     test('recordMetrics with override merges custom data + init overrides', () async {
-      final sdk = await _createInstance(
-        deviceMetricOverrides: {
-          '_os': 'InitOS',
-          '_os_version': '14.0',
-          '_device': 'InitDevice',
-          'battery_level': 80,
-        },
-        startWithUnknownConsent: true
-      );
+      final sdk = await _createInstance(deviceMetricOverrides: {
+        '_os': 'InitOS',
+        '_os_version': '14.0',
+        '_device': 'InitDevice',
+        'battery_level': 80,
+      }, startWithUnknownConsent: true);
 
       // takes precedence over init overrides
-      sdk.events.recordMetrics(metricOverride: {
+      await sdk.events.recordMetrics(metricOverride: {
         'battery_level': 85,
         'screen_brightness': 0.7,
         '_custom_metric': 'test_value',
@@ -290,7 +287,7 @@ void main() {
       network.sent.clear();
 
       // Record metrics - should flush UP cache first
-      sdk.events.recordMetrics();
+      await sdk.events.recordMetrics();
 
       await sdk.processEventsAndRequests();
 
@@ -305,7 +302,7 @@ void main() {
       final initialEventCount = sdk.debugEventQueueLength;
       final initialReqCount = sdk.debugRequestQueueLength;
 
-      sdk.events.recordMetrics();
+      await sdk.events.recordMetrics();
 
       expect(sdk.debugEventQueueLength, initialEventCount, reason: 'Metrics should not go to event queue');
       expect(sdk.debugRequestQueueLength, greaterThan(initialReqCount), reason: 'Metrics should go to request queue');
@@ -319,7 +316,7 @@ void main() {
 
       final initialCount = sdk.debugRequestQueueSnapshot.where((r) => r.containsKey('metrics')).length;
 
-      sdk.events.recordMetrics();
+      await sdk.events.recordMetrics();
 
       final newCount = sdk.debugRequestQueueSnapshot.where((r) => r.containsKey('metrics')).length;
       expect(initialCount, 0);
@@ -341,9 +338,10 @@ void main() {
       final metricsReqs = sdk.debugRequestQueueSnapshot.where((r) => r.containsKey('metrics')).toList();
       expect(metricsReqs.length, greaterThan(0), reason: 'Metrics should be queued in unknown consent mode');
 
-      sdk.events.recordMetrics();
+      await sdk.events.recordMetrics();
       final newMetricsReqs = sdk.debugRequestQueueSnapshot.where((r) => r.containsKey('metrics')).toList();
-      expect(newMetricsReqs.length, greaterThan(metricsReqs.length), reason: 'Metrics should be added in unknown consent mode');
+      expect(newMetricsReqs.length, greaterThan(metricsReqs.length),
+          reason: 'Metrics should be added in unknown consent mode');
     });
   });
 
@@ -352,7 +350,7 @@ void main() {
       final sdk = await _createInstance();
 
       final longValue = 'x' * 500; // Longer than default 256 limit
-      sdk.events.recordMetrics(metricOverride: {'long_metric': longValue});
+      await sdk.events.recordMetrics(metricOverride: {'long_metric': longValue});
 
       final metricsReq = sdk.debugRequestQueueSnapshot.lastWhere((r) => r.containsKey('metrics'));
       final metrics = metricsReq['metrics'] as Map<String, dynamic>;
@@ -364,7 +362,7 @@ void main() {
       final sdk = await _createInstance();
 
       final longKey = 'k' * 200; // Longer than default 128 limit
-      sdk.events.recordMetrics(metricOverride: {longKey: 'value'});
+      await sdk.events.recordMetrics(metricOverride: {longKey: 'value'});
 
       final metricsReq = sdk.debugRequestQueueSnapshot.lastWhere((r) => r.containsKey('metrics'));
       final metrics = metricsReq['metrics'] as Map<String, dynamic>;
@@ -386,11 +384,11 @@ void main() {
         enableSDKLogs: true,
         logger: logger,
       );
-      final sdk = await Countly.init(cfg, instanceKey: 'dispose-metrics-${DateTime.now().microsecondsSinceEpoch}');
+      final sdk = await Countly.init(cfg);
 
       await sdk.dispose(flush: false);
 
-      sdk.events.recordMetrics();
+      await sdk.events.recordMetrics();
 
       expect(logger.logs.any((log) => log.contains('disposed')), true);
     });
@@ -402,9 +400,9 @@ void main() {
 
       final initialCount = sdk.debugRequestQueueSnapshot.where((r) => r.containsKey('metrics')).length;
 
-      sdk.events.recordMetrics(metricOverride: {'call': 1});
-      sdk.events.recordMetrics(metricOverride: {'call': 2});
-      sdk.events.recordMetrics(metricOverride: {'call': 3});
+      await sdk.events.recordMetrics(metricOverride: {'call': 1});
+      await sdk.events.recordMetrics(metricOverride: {'call': 2});
+      await sdk.events.recordMetrics(metricOverride: {'call': 3});
 
       final newCount = sdk.debugRequestQueueSnapshot.where((r) => r.containsKey('metrics')).length;
       expect(newCount, initialCount + 3);
@@ -419,8 +417,8 @@ void main() {
       final network = FakeNetworkClient('https://example.com');
       final sdk = await _createInstance(networkClient: network);
 
-      sdk.events.recordMetrics(metricOverride: {'manual': true});
-      sdk.events.record(key: 'test_event');
+      await sdk.events.recordMetrics(metricOverride: {'manual': true});
+      await sdk.events.record(key: 'test_event');
 
       await sdk.processEventsAndRequests();
 

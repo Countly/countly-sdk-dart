@@ -61,11 +61,10 @@ Future<CountlyInstance> _createInstance({
     storageMethods: storageBacking != null ? MemoryBackedStorage(storageBacking).toMethods() : null,
     startWithUnknownConsent: startWithUnknownConsent,
     giveConsent: giveConsent,
-    enableSDKLogs: true,
     deviceMetricOverrides: deviceMetricOverrides != null ? Map<String, dynamic>.from(deviceMetricOverrides) : {},
     networkClientOverride: client,
   );
-  final inst = await Countly.init(cfg, instanceKey: 'consent-${DateTime.now().microsecondsSinceEpoch}');
+  final inst = await Countly.init(cfg);
   addTearDown(() async {
     await Countly.disposeAll();
   });
@@ -78,11 +77,11 @@ void main() {
       final network = FakeNetworkClient('https://example.com');
       final sdk = await _createInstance(networkClient: network);
 
-      sdk.events.record(key: 'no_consent_event');
+      await sdk.events.record(key: 'no_consent_event');
       sdk.views.startAutoStoppedView('NoConsentView');
       sdk.views.startAutoStoppedView('Next');
       sdk.users.setProperties({'name': 'NoConsent'});
-      sdk.events.recordMetrics();
+      await sdk.events.recordMetrics();
 
       expect(network.sent, equals([helper.sdkBehaviorRequest, helper.healthCheckRequest]));
 
@@ -97,11 +96,11 @@ void main() {
       final network = FakeNetworkClient('https://example.com');
       final sdk = await _createInstance(networkClient: network, giveConsent: true);
 
-      sdk.events.record(key: 'consent_event');
+      await sdk.events.record(key: 'consent_event');
       sdk.views.startAutoStoppedView('ConsentView');
       sdk.views.startAutoStoppedView('Next'); // wont be sent (single view requests)
       sdk.users.setProperties({'name': 'Consent'});
-      sdk.events.recordMetrics();
+      await sdk.events.recordMetrics();
 
       final events =
           helper.deconstructEventsRequest(sdk.debugRequestQueueSnapshot.firstWhere((r) => r.containsKey('events')));
@@ -143,13 +142,13 @@ void main() {
       final network = FakeNetworkClient('https://example.com');
       final sdk = await _createInstance(networkClient: network);
 
-      sdk.consents.giveConsent();
+      await sdk.consents.giveConsent();
 
-      sdk.events.record(key: 'consent_event');
+      await sdk.events.record(key: 'consent_event');
       sdk.views.startAutoStoppedView('ConsentView');
       sdk.views.startAutoStoppedView('Next'); // wont be sent (single view requests)
       sdk.users.setProperties({'name': 'Consent'});
-      sdk.events.recordMetrics();
+      await sdk.events.recordMetrics();
 
       final events =
           helper.deconstructEventsRequest(sdk.debugRequestQueueSnapshot.firstWhere((r) => r.containsKey('events')));
@@ -190,7 +189,7 @@ void main() {
       final network = FakeNetworkClient('https://example.com');
       final sdk = await _createInstance(networkClient: network, deviceMetricOverrides: {'_custom_metric': 42});
 
-      sdk.consents.giveConsent();
+      await sdk.consents.giveConsent();
 
       // init requests
       expect(network.sent, equals([helper.sdkBehaviorRequest, helper.healthCheckRequest]));
@@ -218,12 +217,12 @@ void main() {
       final network = FakeNetworkClient('https://example.com');
       final sdk = await _createInstance(giveConsent: true, networkClient: network);
 
-      sdk.consents.revokeConsent();
-      sdk.events.record(key: 'consent_event');
+      await sdk.consents.revokeConsent();
+      await sdk.events.record(key: 'consent_event');
       sdk.views.startAutoStoppedView('ConsentView');
       sdk.views.startAutoStoppedView('Next'); // wont be sent (single view requests)
       sdk.users.setProperties({'name': 'Consent'});
-      sdk.events.recordMetrics();
+      await sdk.events.recordMetrics();
 
       expect(network.sent, equals([helper.sdkBehaviorRequest, helper.healthCheckRequest]));
 
@@ -241,9 +240,9 @@ void main() {
       final network = FakeNetworkClient('https://example.com');
       final sdk = await _createInstance(networkClient: network);
 
-      sdk.consents.giveConsent();
-      sdk.consents.giveConsent();
-      sdk.consents.giveConsent();
+      await sdk.consents.giveConsent();
+      await sdk.consents.giveConsent();
+      await sdk.consents.giveConsent();
 
       // init requests
       expect(network.sent, equals([helper.sdkBehaviorRequest, helper.healthCheckRequest]));
@@ -265,9 +264,9 @@ void main() {
       final network = FakeNetworkClient('https://example.com');
       final sdk = await _createInstance(giveConsent: true, networkClient: network);
 
-      sdk.consents.revokeConsent();
-      sdk.consents.revokeConsent();
-      sdk.consents.revokeConsent();
+      await sdk.consents.revokeConsent();
+      await sdk.consents.revokeConsent();
+      await sdk.consents.revokeConsent();
 
       // init requests
       expect(network.sent, equals([helper.sdkBehaviorRequest, helper.healthCheckRequest])); // direct requests
@@ -289,10 +288,10 @@ void main() {
       final network = FakeNetworkClient('https://example.com');
       final sdk = await _createInstance(giveConsent: true, networkClient: network);
 
-      sdk.events.record(key: 'first_event');
-      sdk.consents.revokeConsent();
-      sdk.consents.giveConsent();
-      sdk.events.record(key: 'second_event');
+      await sdk.events.record(key: 'first_event');
+      await sdk.consents.revokeConsent();
+      await sdk.consents.giveConsent();
+      await sdk.events.record(key: 'second_event');
 
       expect(sdk.debugEventQueueLength, 2);
       expect(sdk.debugEventQueueSnapshot[0]['key'], 'first_event');
@@ -308,13 +307,13 @@ void main() {
         giveConsent: true,
         enableSDKLogs: true,
       );
-      final sdk = await Countly.init(cfg, instanceKey: 'dispose-consent-${DateTime.now().microsecondsSinceEpoch}');
+      final sdk = await Countly.init(cfg);
 
       await sdk.dispose(flush: false);
 
-      sdk.consents.giveConsent();
+      await sdk.consents.giveConsent();
 
-      sdk.consents.revokeConsent();
+      await sdk.consents.revokeConsent();
     });
   });
 }

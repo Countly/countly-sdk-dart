@@ -9,12 +9,12 @@ class EventsModule {
   /// The [count] defaults to 1 if not provided.
   /// The [sum] and [dur] are optional double values.
   /// The [segmentation] is an optional map of key-value pairs (String to primitive types).
-  void record(
+  Future<void> record(
       {required String key,
       int? count,
       double? sum,
       double? dur,
-      Map<String, dynamic>? segmentation}) {
+      Map<String, dynamic>? segmentation}) async {
     if (_i._guardDisposed('events.record')) return;
     if (!_i.hasConsentInternal()) {
       _i.L.w('Event ["$key"] dropped: missing consent');
@@ -58,14 +58,14 @@ class EventsModule {
     };
     _i.L.d(
         'Recording event key=[$key] count=[${count ?? 1}] sum=[${sum ?? 'n/a'}] dur=[${dur ?? 'n/a'}] segmentation=[${segmentation != null ? segmentation.toString() : 'n/a'}]');
-    _i._enqueueUserPropertiesCache();
+    await _i._enqueueUserPropertiesCache();
     _i._addToEventQueue(evt);
     _i._previousEventKey = key;
   }
 
   /// Collects device metrics and adds a request to request queue.
   /// The provided [metricOverride] map is shallow-merged onto collected values (overriding conflicts).
-  void recordMetrics({Map<String, dynamic>? metricOverride}) {
+  Future<void> recordMetrics({Map<String, dynamic>? metricOverride}) async {
     if (_i._guardDisposed('events.recordMetrics')) return;
     if (!_i.hasConsentInternal()) {
       _i.L.v('Metrics collection skipped: missing consent');
@@ -76,7 +76,7 @@ class EventsModule {
       metrics.addAll(_i._sanitizeSegmentation(metricOverride));
     }
     final req = _i._prepareRequest({'metrics': metrics});
-    _i._enqueueUserPropertiesCache();
+    await _i._enqueueUserPropertiesCache();
     _i._addToRequestQueue(req);
     _i.L.d('Recorded metrics request: [${metrics.toString()}');
   }

@@ -25,20 +25,20 @@ final config2 = CountlyConfig(
 Future<void> main() async {
   final sdk = await Countly.init(config);
 
-  sdk.consents.giveConsent();
-  sdk.events.recordMetrics();
+  await sdk.consents.giveConsent();
+  await sdk.events.recordMetrics();
   sdk.views.startAutoStoppedView("home");
 
   final sdk_2 = await Countly.init(config2, instanceKey: 'secondary');
   sdk_2.events.record(key: 'instance_2_event');
   sdk_2.views.startAutoStoppedView("home");
 
-  sdk.events.record(key: 'session_start');
+  await sdk.events.record(key: 'session_start');
   await Future<void>.delayed(const Duration(seconds: 5));
 
   List<String> customSeg = ['a', 'b', 'c'];
-  sdk.events.record(key: 'button_click', segmentation: {'id': 'start', 'color': 'blue', 'custom': customSeg});
-  sdk.events.record(key: 'd', segmentation: {'id': 'start', 'color': 'blue', 'custom': customSeg});
+  await sdk.events.record(key: 'button_click', segmentation: {'id': 'start', 'color': 'blue', 'custom': customSeg});
+  await sdk.events.record(key: 'd', segmentation: {'id': 'start', 'color': 'blue', 'custom': customSeg});
   sdk.users.pushToArray("a", ['1', 2, 3.0, true]);
   sdk.users.setProperties({"a": '1', "b": 2, "c": 3.0, "d": true, "e": null});
   sdk.users.setProperties({NamedUserProperty.name: 'Alice'});

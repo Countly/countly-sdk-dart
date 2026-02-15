@@ -79,7 +79,7 @@ StorageFacade createTestStorage(Map<String, String> backing) {
     serverUrl: 'https://test.com',
     storageMethods: MemoryBackedStorage(backing).toMethods(),
   );
-  return StorageFacade(config);
+  return StorageFacade(config, '');
 }
 
 void main() {

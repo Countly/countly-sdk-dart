@@ -52,7 +52,7 @@ class DeviceIdModule {
     _inst._viewsModule?._endIfActive();
 
     await _inst.processEventsAndRequests();
-    _inst._clearAllDataQueuesAndCaches();
+    await _inst._clearAllDataQueuesAndCaches();
 
     await _inst._setDeviceIdInternal(newDeviceId, type: DeviceIdType.provided);
     _inst._consentGranted = true; // To allow tracking.

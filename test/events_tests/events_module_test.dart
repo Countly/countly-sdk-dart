@@ -61,7 +61,7 @@ Future<CountlyInstance> _createInstance({
     networkClientOverride: client,
     sbs: sbs ?? {},
   );
-  final inst = await Countly.init(cfg, instanceKey: 'events-${DateTime.now().microsecondsSinceEpoch}');
+  final inst = await Countly.init(cfg);
   addTearDown(() async {
     await Countly.disposeAll();
   });
@@ -73,7 +73,7 @@ void main() {
     test('record event with only key (mandatory parameter)', () async {
       final sdk = await _createInstance();
 
-      sdk.events.record(key: 'test_event');
+      await sdk.events.record(key: 'test_event');
 
       expect(sdk.debugEventQueueLength, 1);
       final event = sdk.debugEventQueueSnapshot.first;
@@ -90,7 +90,7 @@ void main() {
     test('record event with all optional parameters', () async {
       final sdk = await _createInstance();
 
-      sdk.events.record(
+      await sdk.events.record(
         key: 'full_event',
         count: 5,
         sum: 99.99,
@@ -113,7 +113,7 @@ void main() {
     test('record event with count only', () async {
       final sdk = await _createInstance();
 
-      sdk.events.record(key: 'count_event', count: 10);
+      await sdk.events.record(key: 'count_event', count: 10);
 
       final event = sdk.debugEventQueueSnapshot.first;
       expect(event['key'], 'count_event');
@@ -125,7 +125,7 @@ void main() {
     test('record event with sum only', () async {
       final sdk = await _createInstance();
 
-      sdk.events.record(key: 'sum_event', sum: 49.99);
+      await sdk.events.record(key: 'sum_event', sum: 49.99);
 
       final event = sdk.debugEventQueueSnapshot.first;
       expect(event['key'], 'sum_event');
@@ -137,7 +137,7 @@ void main() {
     test('record event with duration only', () async {
       final sdk = await _createInstance();
 
-      sdk.events.record(key: 'dur_event', dur: 60.0);
+      await sdk.events.record(key: 'dur_event', dur: 60.0);
 
       final event = sdk.debugEventQueueSnapshot.first;
       expect(event['key'], 'dur_event');
@@ -149,7 +149,7 @@ void main() {
     test('record event with segmentation only', () async {
       final sdk = await _createInstance();
 
-      sdk.events.record(key: 'seg_event', segmentation: {'level': 5, 'score': 1000.5, 'name': 'player1'});
+      await sdk.events.record(key: 'seg_event', segmentation: {'level': 5, 'score': 1000.5, 'name': 'player1'});
 
       final event = sdk.debugEventQueueSnapshot.first;
       expect(event['key'], 'seg_event');
@@ -164,7 +164,7 @@ void main() {
     test('empty key is rejected', () async {
       final sdk = await _createInstance();
 
-      sdk.events.record(key: '');
+      await sdk.events.record(key: '');
 
       expect(sdk.debugEventQueueLength, 0, reason: 'Empty key event should be rejected');
     });
@@ -172,9 +172,9 @@ void main() {
     test('events are ordered correctly in queue', () async {
       final sdk = await _createInstance();
 
-      sdk.events.record(key: 'first');
-      sdk.events.record(key: 'second');
-      sdk.events.record(key: 'third');
+      await sdk.events.record(key: 'first');
+      await sdk.events.record(key: 'second');
+      await sdk.events.record(key: 'third');
 
       expect(sdk.debugEventQueueLength, 3);
       final keys = sdk.debugEventQueueSnapshot.map((e) => e['key']).toList();
@@ -186,9 +186,9 @@ void main() {
     test('SDK does not block internal [CLY] prefixed events', () async {
       final sdk = await _createInstance();
 
-      sdk.events.record(key: '[CLY]_custom_internal');
-      sdk.events.record(key: '[CLY]_view');
-      sdk.events.record(key: '[CLY]_action');
+      await sdk.events.record(key: '[CLY]_custom_internal');
+      await sdk.events.record(key: '[CLY]_view');
+      await sdk.events.record(key: '[CLY]_action');
 
       expect(sdk.debugEventQueueLength, 3, reason: 'Internal [CLY] events should not be filtered');
       final keys = sdk.debugEventQueueSnapshot.map((e) => e['key']).toList();
@@ -201,13 +201,13 @@ void main() {
       final sdk = await _createInstance();
 
       // Various edge case keys
-      sdk.events.record(key: '[CLY]_reserved');
-      sdk.events.record(key: 'normal_event');
-      sdk.events.record(key: 'event-with-dashes');
-      sdk.events.record(key: 'event.with.dots');
-      sdk.events.record(key: 'event_with_123_numbers');
-      sdk.events.record(key: 'UPPERCASE_EVENT');
-      sdk.events.record(key: 'ключ_в_юникоде');
+      await sdk.events.record(key: '[CLY]_reserved');
+      await sdk.events.record(key: 'normal_event');
+      await sdk.events.record(key: 'event-with-dashes');
+      await sdk.events.record(key: 'event.with.dots');
+      await sdk.events.record(key: 'event_with_123_numbers');
+      await sdk.events.record(key: 'UPPERCASE_EVENT');
+      await sdk.events.record(key: 'ключ_в_юникоде');
 
       expect(sdk.debugEventQueueLength, 7, reason: 'All event keys should be accepted');
     });
@@ -218,7 +218,7 @@ void main() {
       final logger = TestLogger();
       final sdk = await _createInstance(giveConsent: false, startWithUnknownConsent: false, logger: logger);
 
-      sdk.events.record(key: 'should_drop');
+      await sdk.events.record(key: 'should_drop');
 
       expect(sdk.debugEventQueueLength, 0, reason: 'Events should be dropped without consent');
       expect(
@@ -229,7 +229,7 @@ void main() {
     test('events are recorded with consent given at init', () async {
       final sdk = await _createInstance(giveConsent: true);
 
-      sdk.events.record(key: 'with_consent');
+      await sdk.events.record(key: 'with_consent');
 
       expect(sdk.debugEventQueueLength, 1);
     });
@@ -237,7 +237,7 @@ void main() {
     test('events are recorded in unknown consent mode (kept in memory)', () async {
       final sdk = await _createInstance(giveConsent: false, startWithUnknownConsent: true);
 
-      sdk.events.record(key: 'unknown_consent_event');
+      await sdk.events.record(key: 'unknown_consent_event');
 
       expect(sdk.debugEventQueueLength, 1);
     });
@@ -249,13 +249,13 @@ void main() {
       sdk.debugOverrideBehaviorSettings(eventQueueSize: 3);
 
       // Record events up to the limit - should not trigger bundling yet
-      sdk.events.record(key: 'event1');
-      sdk.events.record(key: 'event2');
-      sdk.events.record(key: 'event3');
+      await sdk.events.record(key: 'event1');
+      await sdk.events.record(key: 'event2');
+      await sdk.events.record(key: 'event3');
       expect(sdk.debugEventQueueLength, 3);
 
       // This should trigger bundling since we're at the limit
-      sdk.events.record(key: 'event4');
+      await sdk.events.record(key: 'event4');
 
       // After bundling, event queue should have only the new event
       // The 4th event triggers bundling of the first 3, then adds itself
@@ -266,9 +266,9 @@ void main() {
       final network = FakeNetworkClient('https://example.com');
       final sdk = await _createInstance(networkClient: network);
 
-      sdk.events.record(key: 'first', count: 1);
-      sdk.events.record(key: 'second', count: 2, sum: 10.0);
-      sdk.events.record(key: 'third', count: 3, segmentation: {'a': 'b'});
+      await sdk.events.record(key: 'first', count: 1);
+      await sdk.events.record(key: 'second', count: 2, sum: 10.0);
+      await sdk.events.record(key: 'third', count: 3, segmentation: {'a': 'b'});
 
       await sdk.processEventsAndRequests();
 
@@ -300,7 +300,7 @@ void main() {
       sdk.users.setProperties({'name': 'TestUser', 'email': 'test@example.com'});
 
       // Record event - this should flush UP cache first
-      sdk.events.record(key: 'test_event');
+      await sdk.events.record(key: 'test_event');
 
       await sdk.processEventsAndRequests();
 
@@ -319,7 +319,7 @@ void main() {
       final sdk = await _createInstance();
 
       final beforeRecord = DateTime.now();
-      sdk.events.record(key: 'auto_timestamp');
+      await sdk.events.record(key: 'auto_timestamp');
       final afterRecord = DateTime.now();
 
       final event = sdk.debugEventQueueSnapshot.first;
@@ -335,8 +335,8 @@ void main() {
       final logger = TestLogger();
       final sdk = await _createInstance(logger: logger);
 
-      sdk.events.record(key: 'duplicate_key');
-      sdk.events.record(key: 'duplicate_key');
+      await sdk.events.record(key: 'duplicate_key');
+      await sdk.events.record(key: 'duplicate_key');
 
       expect(
           logger.logs
@@ -349,9 +349,9 @@ void main() {
       final logger = TestLogger();
       final sdk = await _createInstance(logger: logger);
 
-      sdk.events.record(key: 'key_a');
-      sdk.events.record(key: 'key_b');
-      sdk.events.record(key: 'key_a'); // Not consecutive duplicate
+      await sdk.events.record(key: 'key_a');
+      await sdk.events.record(key: 'key_b');
+      await sdk.events.record(key: 'key_a'); // Not consecutive duplicate
 
       // Count warnings about duplicate
       final duplicateWarnings = logger.logs.where((log) => log.contains('Duplicate')).length;
@@ -364,7 +364,7 @@ void main() {
       final sdk = await _createInstance();
 
       final longKey = 'x' * 200; // Longer than default 128 limit
-      sdk.events.record(key: longKey);
+      await sdk.events.record(key: longKey);
 
       final event = sdk.debugEventQueueSnapshot.first;
       expect((event['key'] as String).length, 128, reason: 'Key should be truncated to 128 chars');
@@ -374,7 +374,7 @@ void main() {
       final sdk = await _createInstance();
 
       final longValue = 'y' * 500; // Longer than default 256 limit
-      sdk.events.record(key: 'test', segmentation: {'long_val': longValue});
+      await sdk.events.record(key: 'test', segmentation: {'long_val': longValue});
 
       final event = sdk.debugEventQueueSnapshot.first;
       expect((event['segmentation']['long_val'] as String).length, 256,
@@ -394,9 +394,9 @@ void main() {
         },
       );
 
-      sdk.events.record(key: 'blocked_event');
-      sdk.events.record(key: 'another_blocked');
-      sdk.events.record(key: 'allowed_event');
+      await sdk.events.record(key: 'blocked_event');
+      await sdk.events.record(key: 'another_blocked');
+      await sdk.events.record(key: 'allowed_event');
 
       expect(sdk.debugEventQueueLength, 1);
       expect(sdk.debugEventQueueSnapshot.first['key'], 'allowed_event');
@@ -414,8 +414,8 @@ void main() {
         },
       );
 
-      sdk.events.record(key: 'not_allowed');
-      sdk.events.record(key: 'allowed_event');
+      await sdk.events.record(key: 'not_allowed');
+      await sdk.events.record(key: 'allowed_event');
 
       expect(sdk.debugEventQueueLength, 1);
       expect(sdk.debugEventQueueSnapshot.first['key'], 'allowed_event');
@@ -431,7 +431,7 @@ void main() {
         },
       );
 
-      sdk.events.record(key: 'test', segmentation: {'secret_field': 'hidden', 'public_field': 'visible'});
+      await sdk.events.record(key: 'test', segmentation: {'secret_field': 'hidden', 'public_field': 'visible'});
 
       final event = sdk.debugEventQueueSnapshot.first;
       expect(event['segmentation'].containsKey('secret_field'), false);
@@ -449,8 +449,8 @@ void main() {
         },
       );
 
-      sdk.events.record(key: 'purchase', segmentation: {'credit_card': '1234', 'cvv': '999', 'amount': 50});
-      sdk.events.record(key: 'other_event', segmentation: {'credit_card': '1234', 'cvv': '999', 'amount': 50});
+      await sdk.events.record(key: 'purchase', segmentation: {'credit_card': '1234', 'cvv': '999', 'amount': 50});
+      await sdk.events.record(key: 'other_event', segmentation: {'credit_card': '1234', 'cvv': '999', 'amount': 50});
 
       final events = sdk.debugEventQueueSnapshot;
 
@@ -476,7 +476,7 @@ void main() {
         },
       );
 
-      sdk.events.record(key: 'disabled_event');
+      await sdk.events.record(key: 'disabled_event');
 
       expect(sdk.debugEventQueueLength, 0);
       expect(logger.logs.any((log) => log.contains('Event tracking disabled')), true);
@@ -488,7 +488,7 @@ void main() {
       final sdk = await _createInstance();
 
       final initialRQLength = sdk.debugRequestQueueLength;
-      sdk.events.recordMetrics();
+      await sdk.events.recordMetrics();
 
       expect(sdk.debugRequestQueueLength, greaterThan(initialRQLength));
 
@@ -500,7 +500,7 @@ void main() {
     test('recordMetrics with override merges data', () async {
       final sdk = await _createInstance();
 
-      sdk.events.recordMetrics(metricOverride: {'custom_metric': 'custom_value', '_os': 'OverriddenOS'});
+      await sdk.events.recordMetrics(metricOverride: {'custom_metric': 'custom_value', '_os': 'OverriddenOS'});
 
       final metricsReq = sdk.debugRequestQueueSnapshot.lastWhere((r) => r.containsKey('metrics'));
       final metrics = metricsReq['metrics'] as Map<String, dynamic>;
@@ -513,7 +513,7 @@ void main() {
       final sdk = await _createInstance(networkClient: network);
 
       sdk.users.setProperties({'name': 'Test'});
-      sdk.events.recordMetrics();
+      await sdk.events.recordMetrics();
 
       await sdk.processEventsAndRequests();
 
@@ -531,7 +531,7 @@ void main() {
       final sdk = await _createInstance(giveConsent: false, startWithUnknownConsent: false, logger: logger);
 
       final initialRQLength = sdk.debugRequestQueueLength;
-      sdk.events.recordMetrics();
+      await sdk.events.recordMetrics();
 
       expect(sdk.debugRequestQueueLength, initialRQLength, reason: 'Metrics should not be added without consent');
     });
@@ -550,11 +550,11 @@ void main() {
         logLevel: LogLevel.verbose,
         logger: logger,
       );
-      final sdk = await Countly.init(cfg, instanceKey: 'dispose-test-${DateTime.now().microsecondsSinceEpoch}');
+      final sdk = await Countly.init(cfg);
 
       await sdk.dispose(flush: false);
-      sdk.events.record(key: 'after_dispose');
-      sdk.events.recordMetrics();
+      await sdk.events.record(key: 'after_dispose');
+      await sdk.events.recordMetrics();
 
       expect(logger.logs.any((log) => log.contains('disposed')), true);
     });

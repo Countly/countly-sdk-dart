@@ -71,6 +71,7 @@ class ViewsModule {
       'hour': start.hour,
       'dow': start.weekday % 7
     };
+    _inst._enqueueUserPropertiesCache();
     _inst._addToEventQueue(evt);
     _inst.L.d('Ended view name=[${_inst._activeViewName}] durMs=[$durMs] mode=direct-diff');
     _inst._activeViewName = null;

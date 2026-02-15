@@ -82,7 +82,7 @@ Future<CountlyInstance> _createInstance({
     logger: logger,
     networkClientOverride: client,
   );
-  final inst = await Countly.init(cfg, instanceKey: 'debug-${DateTime.now().microsecondsSinceEpoch}');
+  final inst = await Countly.init(cfg, instanceKey: 'debug');
   addTearDown(() async {
     await Countly.disposeAll();
   });
@@ -95,9 +95,9 @@ void main() {
       final logger = TestLogger();
       final sdk = await _createInstance(logger: logger, logLevel: LogLevel.verbose, giveConsent: false);
 
-      sdk.events.record(key: 'test_event'); // triggers warning due to no consent
-      sdk.consents.giveConsent();
-      sdk.events.record(key: ''); // empty key triggers error
+      await sdk.events.record(key: 'test_event'); // triggers warning due to no consent
+      await sdk.consents.giveConsent();
+      await sdk.events.record(key: ''); // empty key triggers error
 
       expect(logger.logs.length, greaterThan(0));
       // Should have verbose, debug, info, warning, and error level logs
@@ -132,7 +132,7 @@ void main() {
         giveConsent: false,
       );
 
-      sdk.events.record(key: 'no_consent'); // Should trigger warning
+      await sdk.events.record(key: 'no_consent'); // Should trigger warning
 
       expect(logger.logs.where((log) => log.startsWith('[verbose]')).length, 0);
       expect(logger.logs.where((log) => log.startsWith('[debug]')).length, 0);
@@ -145,7 +145,7 @@ void main() {
       final logger = FilteredTestLogger(LogLevel.error);
       final sdk = await _createInstance(logger: logger, logLevel: LogLevel.error);
 
-      sdk.events.record(key: ''); // Empty key triggers error
+      await sdk.events.record(key: ''); // Empty key triggers error
 
       expect(logger.logs.where((log) => log.startsWith('[verbose]')).length, 0);
       expect(logger.logs.where((log) => log.startsWith('[debug]')).length, 0);
@@ -177,7 +177,7 @@ void main() {
       final logger = TestLogger();
       final sdk = await _createInstance(logger: logger);
 
-      sdk.events.record(key: 'test_event');
+      await sdk.events.record(key: 'test_event');
 
       expect(logger.logs.length, greaterThan(0));
       expect(logger.logs.any((log) => log.contains('test_event')), true);
@@ -188,7 +188,7 @@ void main() {
       final sdk = await _createInstance(logger: logger);
 
       // Trigger an error condition
-      sdk.events.record(key: ''); // Empty key
+      await sdk.events.record(key: ''); // Empty key
 
       expect(logger.logs.any((log) => log.contains('error') && log.contains('empty key')), true);
     });
@@ -208,8 +208,8 @@ void main() {
       final logger = TestLogger();
       final sdk = await _createInstance(logger: logger);
 
-      sdk.events.record(key: 'same_event');
-      sdk.events.record(key: 'same_event');
+      await sdk.events.record(key: 'same_event');
+      await sdk.events.record(key: 'same_event');
 
       expect(
           logger.logs.any((log) => log.contains('warning') && log.contains('Duplicate') && log.contains('same_event')),
@@ -220,9 +220,9 @@ void main() {
       final logger = TestLogger();
       final sdk = await _createInstance(logger: logger);
 
-      sdk.events.record(key: 'event_a');
-      sdk.events.record(key: 'event_b');
-      sdk.events.record(key: 'event_a'); // Not consecutive
+      await sdk.events.record(key: 'event_a');
+      await sdk.events.record(key: 'event_b');
+      await sdk.events.record(key: 'event_a'); // Not consecutive
 
       final duplicateWarnings = logger.logs.where((log) => log.contains('Duplicate')).length;
       expect(duplicateWarnings, 0);
@@ -232,8 +232,8 @@ void main() {
       final logger = TestLogger();
       final sdk = await _createInstance(logger: logger);
 
-      sdk.events.record(key: 'purchase_button');
-      sdk.events.record(key: 'purchase_button');
+      await sdk.events.record(key: 'purchase_button');
+      await sdk.events.record(key: 'purchase_button');
 
       expect(logger.logs.any((log) => log.contains('purchase_button')), true);
     });
@@ -246,9 +246,9 @@ void main() {
       final sdk = await _createInstance(logger: logger, networkClient: network, startWithUnknownConsent: true);
 
       // Trigger errors
-      sdk.events.record(key: ''); // Empty key error
-      sdk.events.record(key: ''); // Another error
-      sdk.consents.giveConsent();
+      await sdk.events.record(key: ''); // Empty key error
+      await sdk.events.record(key: ''); // Another error
+      await sdk.consents.giveConsent();
 
       // Check health check request
       final hcReq = network.sent.firstWhere((r) => r.containsKey('hc'));
@@ -262,9 +262,9 @@ void main() {
       final logger = TestLogger();
       final sdk = await _createInstance(logger: logger, networkClient: network, startWithUnknownConsent: true);
 
-      sdk.events.record(key: 'dupe');
-      sdk.events.record(key: 'dupe');
-      sdk.consents.giveConsent();
+      await sdk.events.record(key: 'dupe');
+      await sdk.events.record(key: 'dupe');
+      await sdk.consents.giveConsent();
 
       final hcReq = network.sent.firstWhere((r) => r.containsKey('hc'));
 
@@ -287,7 +287,7 @@ void main() {
       final logger = TestLogger();
       final sdk = await _createInstance(logger: logger);
 
-      sdk.events.record(key: ''); // Trigger error
+      await sdk.events.record(key: ''); // Trigger error
 
       expect(logger.logs.any((log) => log.contains('!!!!!')), true,
           reason: 'Error/warning logs should have special marker');
@@ -308,7 +308,7 @@ void main() {
       final logger = TestLogger();
       final sdk = await _createInstance(logger: logger);
 
-      sdk.events.record(key: 'purchase', count: 5, sum: 99.99);
+      await sdk.events.record(key: 'purchase', count: 5, sum: 99.99);
 
       expect(logger.logs.any((log) => log.contains('purchase')), true);
       expect(logger.logs.any((log) => log.contains('5')), true);
@@ -331,7 +331,7 @@ void main() {
       final sdk = await _createInstance(enableSDKLogs: true);
 
       // Should not throw
-      sdk.events.record(key: 'test');
+      await sdk.events.record(key: 'test');
       expect(sdk.debugEventQueueLength, 1);
     });
   });
@@ -341,7 +341,7 @@ void main() {
       final logger = TestLogger();
       final sdk = await _createInstance(logger: logger, giveConsent: false);
 
-      sdk.events.record(key: 'blocked');
+      await sdk.events.record(key: 'blocked');
 
       expect(logger.logs.any((log) => log.contains('warning') && log.contains('consent')), true);
     });
@@ -364,12 +364,12 @@ void main() {
           }
         },
       );
-      final sdk = await Countly.init(cfg, instanceKey: 'debug-bl-${DateTime.now().microsecondsSinceEpoch}');
+      final sdk = await Countly.init(cfg);
       addTearDown(() async {
         await Countly.disposeAll();
       });
 
-      sdk.events.record(key: 'blocked_event');
+      await sdk.events.record(key: 'blocked_event');
 
       expect(logger.logs.any((log) => log.contains('blacklisted')), true);
     });
@@ -390,12 +390,12 @@ void main() {
           }
         },
       );
-      final sdk = await Countly.init(cfg, instanceKey: 'debug-wl-${DateTime.now().microsecondsSinceEpoch}');
+      final sdk = await Countly.init(cfg);
       addTearDown(() async {
         await Countly.disposeAll();
       });
 
-      sdk.events.record(key: 'not_allowed');
+      await sdk.events.record(key: 'not_allowed');
 
       expect(logger.logs.any((log) => log.contains('not in whitelist')), true);
     });
@@ -407,7 +407,7 @@ void main() {
       final sdk = await _createInstance(logger: logger);
 
       final longKey = 'x' * 200;
-      sdk.events.record(key: longKey);
+      await sdk.events.record(key: longKey);
 
       expect(logger.logs.any((log) => log.contains('warning') && log.contains('truncating')), true);
     });
@@ -417,7 +417,7 @@ void main() {
       final sdk = await _createInstance(logger: logger);
 
       final longValue = 'y' * 500;
-      sdk.events.record(key: 'test', segmentation: {'val': longValue});
+      await sdk.events.record(key: 'test', segmentation: {'val': longValue});
 
       expect(logger.logs.any((log) => log.contains('warning') && log.contains('truncating')), true);
     });

@@ -96,7 +96,7 @@ class CountlyInstance {
       },
     );
 
-    _storage = StorageFacade(config, L: L);
+    _storage = StorageFacade(config, instanceKey, L: L);
     // ignore: invalid_use_of_visible_for_testing_member
     _network = config.networkClientOverride ??
         NetworkClient(config.serverUrl, L: L, customHeaders: config.customRequestHeaders);
@@ -175,7 +175,7 @@ class CountlyInstance {
     if (config.deviceMetricOverrides?.isNotEmpty == true) {
       deviceMetrics = config.deviceMetricOverrides!;
     }
-    _eventsModule?.recordMetrics(metricOverride: deviceMetrics);
+    await _eventsModule?.recordMetrics(metricOverride: deviceMetrics);
 
     if (!_isInUnknownConsentState) {
       // ignore: discarded_futures
@@ -386,9 +386,7 @@ class CountlyInstance {
   /// final req = _prepareRequest({'user_details': inner});
   /// ```
   void _addToRequestQueue(Map<String, dynamic> request) {
-    // ab enroll does not count
-    final isEnrollRequest = request['method'] == 'ab';
-    if (!(_sbs?.trackingEnabled ?? true) && !isEnrollRequest) {
+    if (!(_sbs?.trackingEnabled ?? true)) {
       L.d('Tracking disabled (SBS), dropping request');
       return;
     }
@@ -645,9 +643,8 @@ class CountlyInstance {
 
   /// Clears all in-memory data queues and caches and persists the empty state.
   /// Used when data for the current device/user must be fully discarded.
-  void _clearAllDataQueuesAndCaches() {
-    // ignore: discarded_futures
-    _runQueueLocked(() async {
+  Future<void> _clearAllDataQueuesAndCaches() async {
+    await _runQueueLocked(() async {
       _eventQueue.clear();
       _requestQueue.clear();
       _userPropertiesNamedCache.clear();
@@ -657,7 +654,7 @@ class CountlyInstance {
     });
   }
 
-  void _getOutOfUnknownConsentState(bool granted) {
+  Future<void> _getOutOfUnknownConsentState(bool granted) async {
     if (!_isInUnknownConsentState) {
       L.v('Not in unknown consent state, nothing to do');
       return;
@@ -674,7 +671,7 @@ class CountlyInstance {
       processEventsAndRequests();
     } else {
       L.i('Consent not granted upon exiting unknown consent state, data will be removed');
-      _clearAllDataQueuesAndCaches();
+      await _clearAllDataQueuesAndCaches();
     }
 
     // At the end we want to report consent status regardless.
