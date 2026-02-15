@@ -4,8 +4,8 @@ import 'package:countly_sdk_dart/countly.dart';
 import 'package:countly_sdk_dart/src/constants.dart';
 import 'package:countly_sdk_dart/src/networking.dart';
 import '../helper/helper.dart' as helper;
-import 'package:countly_sdk_dart/src/lifecycle_stub.dart'
-    if (dart.library.ui) 'package:countly_sdk_dart/src/lifecycle_flutter.dart';
+import 'package:countly_sdk_dart/src/lifecycle/lifecycle_stub.dart'
+    if (dart.library.ui) 'package:countly_sdk_dart/src/lifecycle/lifecycle_flutter.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -82,7 +82,7 @@ Future<CountlyInstance> _createInstance({
     networkClientOverride: client,
     sbs: sbs ?? {},
   );
-  final inst = await Countly.init(cfg, instanceKey: 'views-${DateTime.now().microsecondsSinceEpoch}');
+  final inst = await Countly.init(cfg, instanceKey: 'views');
   addTearDown(() async {
     await Countly.disposeAll();
     clearLifecycleListeners();
@@ -118,9 +118,8 @@ void main() {
       final sdk = await _createInstance(logger: logger);
 
       sdk.views.startAutoStoppedView('');
-
-      expect(logger.logs.any((log) => log.contains('warning') && log.contains('empty')), true,
-          reason: 'Empty view name should trigger warning');
+      expect(logger.logs.any((log) => log.contains('error') && log.contains('empty')), true,
+          reason: 'Empty view name should trigger error log');
       expect(sdk.debugActiveViewName, isNull, reason: 'No active view should be set for empty name');
     });
 
@@ -331,25 +330,25 @@ void main() {
 
       // Simulate app crash - view data should be persisted
       // Note: dispose() would end the view, so we just check the persisted state before dispose
-      expect(backing.containsKey('COUNTLY_ACTIVE_VIEW'), true);
-      expect(jsonDecode(backing['COUNTLY_ACTIVE_VIEW']!)['n'], 'RecoverableView');
-      expect(jsonDecode(backing['COUNTLY_ACTIVE_VIEW']!)['d'], 0); // less than 15 seconds of heartbeat time
-      final ts = jsonDecode(backing['COUNTLY_ACTIVE_VIEW']!)['ts'];
-      expect(jsonDecode(backing['COUNTLY_ACTIVE_VIEW']!)['ts'], isA<int>());
+      expect(backing.containsKey('v1_COUNTLY_ACTIVE_VIEW'), true);
+      expect(jsonDecode(backing['v1_COUNTLY_ACTIVE_VIEW']!)['n'], 'RecoverableView');
+      expect(jsonDecode(backing['v1_COUNTLY_ACTIVE_VIEW']!)['d'], 0); // less than 15 seconds of heartbeat time
+      final ts = jsonDecode(backing['v1_COUNTLY_ACTIVE_VIEW']!)['ts'];
+      expect(jsonDecode(backing['v1_COUNTLY_ACTIVE_VIEW']!)['ts'], isA<int>());
 
       await Future.delayed(const Duration(milliseconds: 10000));
 
-      expect(backing.containsKey('COUNTLY_ACTIVE_VIEW'), true);
-      expect(jsonDecode(backing['COUNTLY_ACTIVE_VIEW']!)['n'], 'RecoverableView');
-      expect(jsonDecode(backing['COUNTLY_ACTIVE_VIEW']!)['d'],
+      expect(backing.containsKey('v1_COUNTLY_ACTIVE_VIEW'), true);
+      expect(jsonDecode(backing['v1_COUNTLY_ACTIVE_VIEW']!)['n'], 'RecoverableView');
+      expect(jsonDecode(backing['v1_COUNTLY_ACTIVE_VIEW']!)['d'],
           inInclusiveRange(15000, 15100)); // less than 15 seconds of heartbeat time
-      expect(jsonDecode(backing['COUNTLY_ACTIVE_VIEW']!)['ts'], ts);
+      expect(jsonDecode(backing['v1_COUNTLY_ACTIVE_VIEW']!)['ts'], ts);
 
       // Now clean up sdk1 - this will end the view but we've already verified it was persisted
       await sdk1.dispose(flush: false);
 
       // For the recovery test, manually restore the view data as if app crashed
-      backing['COUNTLY_ACTIVE_VIEW'] = jsonEncode({
+      backing['v1_COUNTLY_ACTIVE_VIEW'] = jsonEncode({
         'n': 'RecoverableView',
         'ts': DateTime.now().subtract(const Duration(seconds: 15)).millisecondsSinceEpoch,
         'd': 15000, // 15 seconds of heartbeat time
@@ -367,7 +366,7 @@ void main() {
         enableSDKLogs: true,
         networkClientOverride: network2,
       );
-      final sdk2 = await Countly.init(cfg2, instanceKey: 'v2');
+      final sdk2 = await Countly.init(cfg2, instanceKey: 'v1');
       addTearDown(() async {
         await Countly.disposeAll();
       });
@@ -474,11 +473,11 @@ void main() {
     test('view events go to event queue with other events', () async {
       final sdk = await _createInstance();
 
-      sdk.events.record(key: 'before_view');
+      await sdk.events.record(key: 'before_view');
       sdk.views.startAutoStoppedView('TestView');
-      sdk.events.record(key: 'during_view');
+      await sdk.events.record(key: 'during_view');
       sdk.views.startAutoStoppedView('NextView'); // Ends TestView
-      sdk.events.record(key: 'after_view');
+      await sdk.events.record(key: 'after_view');
 
       final events = sdk.debugEventQueueSnapshot;
       expect(events.length, 4);
@@ -494,10 +493,10 @@ void main() {
       final network = FakeNetworkClient('https://example.com');
       final sdk = await _createInstance(networkClient: network);
 
-      sdk.events.record(key: 'event1');
+      await sdk.events.record(key: 'event1');
       sdk.views.startAutoStoppedView('View1');
       sdk.views.startAutoStoppedView('View2');
-      sdk.events.record(key: 'event2');
+      await sdk.events.record(key: 'event2');
 
       await sdk.processEventsAndRequests();
 
@@ -557,7 +556,7 @@ void main() {
       final invalid = jsonEncode({'n': 123});
       final network = FakeNetworkClient('https://example.com');
       final sdk = await _createInstance(
-          logger: logger, storageBacking: {'COUNTLY_ACTIVE_VIEW': invalid}, networkClient: network);
+          logger: logger, storageBacking: {'views_COUNTLY_ACTIVE_VIEW': invalid}, networkClient: network);
       await sdk.views.recoverView();
       expect(logger.logs.any((l) => l.contains('Error recovering view')), true);
       sdk.dispose();
