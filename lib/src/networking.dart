@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'logging_helper.dart';
+import 'logging/logging_helper.dart';
 import 'constants.dart';
 
 class NetworkClient {

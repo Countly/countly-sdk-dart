@@ -77,6 +77,9 @@ class CountlyConfig {
   /// SBS data to be used in first init.
   final Map<String, dynamic> sbs;
 
+  /// Disable migration of data from legacy native SDKs (Android/iOS).
+  final bool disableOldDataMigration;
+
   /// Testing related network client injection used for SDK tests only.
   @visibleForTesting
   final NetworkClient? networkClientOverride;
@@ -96,6 +99,7 @@ class CountlyConfig {
     required this.customRequestHeaders,
     required this.deviceMetricOverrides,
     required this.sbs,
+    required this.disableOldDataMigration,
     required this.networkClientOverride,
   });
 
@@ -114,6 +118,7 @@ class CountlyConfig {
     bool giveConsent = false,
     Map<String, String>? customRequestHeaders,
     Map<String, dynamic> sbs = const {},
+    bool disableOldDataMigration = false,
     @visibleForTesting NetworkClient? networkClientOverride,
   }) {
     if (appKey.isEmpty) {
@@ -155,6 +160,7 @@ class CountlyConfig {
         customRequestHeaders: customRequestHeaders == null ? null : Map.unmodifiable(Map.of(customRequestHeaders)),
         deviceMetricOverrides: deviceMetricOverrides == null ? null : Map.unmodifiable(Map.of(deviceMetricOverrides)),
         sbs: Map.of(sbs),
+        disableOldDataMigration: disableOldDataMigration,
         networkClientOverride: networkClientOverride);
   }
 }

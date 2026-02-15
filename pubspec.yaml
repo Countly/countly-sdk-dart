@@ -16,6 +16,15 @@ dependencies:
   shared_preferences: ^2.3.2 
   web: ^0.5.1 
 
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: ly.count.dart.countly_sdk_dart
+        pluginClass: CountlySdkDartPlugin
+      ios:
+        pluginClass: CountlySdkDartPlugin
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

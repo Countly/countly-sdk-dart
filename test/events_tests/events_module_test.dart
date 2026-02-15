@@ -113,7 +113,6 @@ void main() {
     test('record event with count only', () async {
       final sdk = await _createInstance();
 
-
       sdk.events.record(key: 'count_event', count: 10);
 
       final event = sdk.debugEventQueueSnapshot.first;
@@ -125,7 +124,6 @@ void main() {
 
     test('record event with sum only', () async {
       final sdk = await _createInstance();
-
 
       sdk.events.record(key: 'sum_event', sum: 49.99);
 
@@ -139,7 +137,6 @@ void main() {
     test('record event with duration only', () async {
       final sdk = await _createInstance();
 
-
       sdk.events.record(key: 'dur_event', dur: 60.0);
 
       final event = sdk.debugEventQueueSnapshot.first;
@@ -151,7 +148,6 @@ void main() {
 
     test('record event with segmentation only', () async {
       final sdk = await _createInstance();
-
 
       sdk.events.record(key: 'seg_event', segmentation: {'level': 5, 'score': 1000.5, 'name': 'player1'});
 
@@ -176,7 +172,6 @@ void main() {
     test('events are ordered correctly in queue', () async {
       final sdk = await _createInstance();
 
-
       sdk.events.record(key: 'first');
       sdk.events.record(key: 'second');
       sdk.events.record(key: 'third');
@@ -191,7 +186,6 @@ void main() {
     test('SDK does not block internal [CLY] prefixed events', () async {
       final sdk = await _createInstance();
 
-
       sdk.events.record(key: '[CLY]_custom_internal');
       sdk.events.record(key: '[CLY]_view');
       sdk.events.record(key: '[CLY]_action');
@@ -205,7 +199,6 @@ void main() {
 
     test('SDK is agnostic to event key content', () async {
       final sdk = await _createInstance();
-
 
       // Various edge case keys
       sdk.events.record(key: '[CLY]_reserved');
@@ -225,7 +218,6 @@ void main() {
       final logger = TestLogger();
       final sdk = await _createInstance(giveConsent: false, startWithUnknownConsent: false, logger: logger);
 
-
       sdk.events.record(key: 'should_drop');
 
       expect(sdk.debugEventQueueLength, 0, reason: 'Events should be dropped without consent');
@@ -237,7 +229,6 @@ void main() {
     test('events are recorded with consent given at init', () async {
       final sdk = await _createInstance(giveConsent: true);
 
-
       sdk.events.record(key: 'with_consent');
 
       expect(sdk.debugEventQueueLength, 1);
@@ -245,7 +236,6 @@ void main() {
 
     test('events are recorded in unknown consent mode (kept in memory)', () async {
       final sdk = await _createInstance(giveConsent: false, startWithUnknownConsent: true);
-
 
       sdk.events.record(key: 'unknown_consent_event');
 
@@ -275,7 +265,6 @@ void main() {
     test('bundled events preserve order and content in request', () async {
       final network = FakeNetworkClient('https://example.com');
       final sdk = await _createInstance(networkClient: network);
-
 
       sdk.events.record(key: 'first', count: 1);
       sdk.events.record(key: 'second', count: 2, sum: 10.0);
@@ -307,7 +296,6 @@ void main() {
       final network = FakeNetworkClient('https://example.com');
       final sdk = await _createInstance(networkClient: network);
 
-
       // Set user properties (this queues them in cache)
       sdk.users.setProperties({'name': 'TestUser', 'email': 'test@example.com'});
 
@@ -330,7 +318,6 @@ void main() {
     test('event uses current time when timestamp not provided', () async {
       final sdk = await _createInstance();
 
-
       final beforeRecord = DateTime.now();
       sdk.events.record(key: 'auto_timestamp');
       final afterRecord = DateTime.now();
@@ -348,7 +335,6 @@ void main() {
       final logger = TestLogger();
       final sdk = await _createInstance(logger: logger);
 
-
       sdk.events.record(key: 'duplicate_key');
       sdk.events.record(key: 'duplicate_key');
 
@@ -362,7 +348,6 @@ void main() {
     test('no warning for non-consecutive duplicate keys', () async {
       final logger = TestLogger();
       final sdk = await _createInstance(logger: logger);
-
 
       sdk.events.record(key: 'key_a');
       sdk.events.record(key: 'key_b');
@@ -378,7 +363,6 @@ void main() {
     test('long event key is truncated to limit', () async {
       final sdk = await _createInstance();
 
-
       final longKey = 'x' * 200; // Longer than default 128 limit
       sdk.events.record(key: longKey);
 
@@ -388,7 +372,6 @@ void main() {
 
     test('long segmentation value is truncated to limit', () async {
       final sdk = await _createInstance();
-
 
       final longValue = 'y' * 500; // Longer than default 256 limit
       sdk.events.record(key: 'test', segmentation: {'long_val': longValue});
@@ -411,7 +394,6 @@ void main() {
         },
       );
 
-
       sdk.events.record(key: 'blocked_event');
       sdk.events.record(key: 'another_blocked');
       sdk.events.record(key: 'allowed_event');
@@ -432,7 +414,6 @@ void main() {
         },
       );
 
-
       sdk.events.record(key: 'not_allowed');
       sdk.events.record(key: 'allowed_event');
 
@@ -449,7 +430,6 @@ void main() {
           }
         },
       );
-
 
       sdk.events.record(key: 'test', segmentation: {'secret_field': 'hidden', 'public_field': 'visible'});
 
@@ -468,7 +448,6 @@ void main() {
           }
         },
       );
-
 
       sdk.events.record(key: 'purchase', segmentation: {'credit_card': '1234', 'cvv': '999', 'amount': 50});
       sdk.events.record(key: 'other_event', segmentation: {'credit_card': '1234', 'cvv': '999', 'amount': 50});
@@ -496,7 +475,6 @@ void main() {
           'c': {'cet': false}
         },
       );
-
 
       sdk.events.record(key: 'disabled_event');
 

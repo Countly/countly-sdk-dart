@@ -9,11 +9,11 @@ import 'package:uuid/uuid.dart';
 
 import 'config.dart';
 import 'networking.dart';
-import 'storage.dart';
-import 'migration.dart';
-import 'logging_helper.dart';
+import 'storage/storage.dart';
+import 'migration/migration.dart';
+import 'logging/logging_helper.dart';
 import 'constants.dart';
-import 'lifecycle_stub.dart' if (dart.library.ui) 'lifecycle_flutter.dart';
+import 'lifecycle/lifecycle_stub.dart' if (dart.library.ui) 'lifecycle/lifecycle_flutter.dart';
 
 part 'modules/events_module.dart';
 part 'modules/users_module.dart';
@@ -100,8 +100,12 @@ class CountlyInstance {
     // ignore: invalid_use_of_visible_for_testing_member
     _network = config.networkClientOverride ??
         NetworkClient(config.serverUrl, L: L, customHeaders: config.customRequestHeaders);
-    _migration = MigrationService(_storage,
-        enabled: instanceKey == 'default' && config.storageMode == StorageMode.persistent, L: L);
+    _migration = MigrationService(
+      _storage,
+      enabled:
+          instanceKey == 'default' && config.storageMode == StorageMode.persistent && !config.disableOldDataMigration,
+      L: L,
+    );
 
     _sbs = BehaviorModule(this);
     await _sbs!.init();
@@ -110,6 +114,7 @@ class CountlyInstance {
     L.d('config: deviceIdProvided=[${config.deviceId != null}] consentGiven=[${config.giveConsent}] startWithUnknownConsent=[${config.startWithUnknownConsent}]');
     L.d('config: internalTimerInterval=[${_sbs?.internalTimerInterval}s] eventQueueSize=[${_sbs?.eventQueueSize}] requestQueueSize=[${_sbs?.requestQueueSize}]');
     L.d('config: storageMode=[${config.storageMode.name}] customStorageOverrides=[${config.storageMethods?.hasAny == true}]');
+    L.d('config: disableOldDataMigration=[${config.disableOldDataMigration}]');
     L.d('config: loggingEnabled=[${config.enableSDKLogs}] logLevel=[${config.logLevel.name}] customLogger=[${config.logger != null}]');
 
     if (config.giveConsent || config.startWithUnknownConsent) {

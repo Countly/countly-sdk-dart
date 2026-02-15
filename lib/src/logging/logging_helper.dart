@@ -1,4 +1,4 @@
-import 'config.dart';
+import '../config.dart';
 import 'toast_stub.dart' if (dart.library.ui) 'toast_flutter.dart';
 
 class InstanceLogger {

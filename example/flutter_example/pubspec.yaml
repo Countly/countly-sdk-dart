@@ -12,7 +12,7 @@ dependencies:
     sdk: flutter
   countly_sdk_dart:
     path: ../..
-  countly_flutter_np: ^25.4.1
+  countly_flutter_np: ^25.4.3
 
 dev_dependencies:
   flutter_test:

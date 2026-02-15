@@ -31,6 +31,7 @@ tool/
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
+android/.gradle/
 build/
 sdk_dart.iml
 example/flutter_example/.dart_tool/
