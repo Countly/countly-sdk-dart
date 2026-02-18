@@ -4,37 +4,36 @@ class ConsentsModule {
   final CountlyInstance _inst;
   ConsentsModule(this._inst);
 
-  void give(Iterable<ConsentType> types) {
-    if (_inst._guardDisposed('consents.give')) return;
-    if (!_inst.config.requiresConsent) return;
-    _inst._grantedConsents.addAll(types);
-    _inst.L.i('Given consents: ${types.map((e) => e.name).join(', ')}');
-    _inst._recordConsentRequest();
-  }
-
-  void revoke(Iterable<ConsentType> types) {
-    if (_inst._guardDisposed('consents.revoke')) return;
-    if (!_inst.config.requiresConsent) return;
-    for (final t in types) {
-      _inst._grantedConsents.remove(t);
+  Future<void> giveConsent() async {
+    if (_inst._guardDisposed('consents.giveConsent')) return;
+    final wasInUnknownState = _inst._isInUnknownConsentState;
+    if (_inst._consentGranted == true && !wasInUnknownState) {
+      _inst.L.i('Consents already granted, skipping.');
+      return;
     }
-    _inst.L.i('Revoked consents: ${types.map((e) => e.name).join(', ')}');
-    _inst._recordConsentRequest();
+    _inst._consentGranted = true;
+    _inst.L.i('Consents granted');
+    // Only record consent if not in unknown state (unknown state handles its own recording)
+    await _inst._getOutOfUnknownConsentState(true);
+    if (!wasInUnknownState) {
+      await _inst._recordConsentRequest();
+      await _inst.events.recordMetrics(metricOverride: _inst.deviceMetrics);
+    }
   }
 
-  void giveAll() {
-    if (_inst._guardDisposed('consents.giveAll')) return;
-    if (!_inst.config.requiresConsent) return;
-    _inst._grantedConsents.addAll(ConsentType.values);
-    _inst.L.i('All consents granted');
-    _inst._recordConsentRequest();
-  }
-
-  void revokeAll() {
-    if (_inst._guardDisposed('consents.revokeAll')) return;
-    if (!_inst.config.requiresConsent) return;
-    _inst._grantedConsents.clear();
-    _inst.L.i('All consents revoked');
-    _inst._recordConsentRequest();
+  Future<void> revokeConsent() async {
+    if (_inst._guardDisposed('consents.revokeConsent')) return;
+    if (_inst._consentGranted == false) {
+      _inst.L.i('Consents already revoked, skipping.');
+      return;
+    }
+    _inst._consentGranted = false;
+    _inst.L.i('Consents revoked');
+    // Only record consent if not in unknown state (unknown state handles its own recording)
+    final wasInUnknownState = _inst._isInUnknownConsentState;
+    await _inst._getOutOfUnknownConsentState(false);
+    if (!wasInUnknownState) {
+      await _inst._recordConsentRequest();
+    }
   }
 }

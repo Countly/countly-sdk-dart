@@ -9,20 +9,18 @@ import 'package:uuid/uuid.dart';
 
 import 'config.dart';
 import 'networking.dart';
-import 'storage.dart';
-import 'migration.dart';
-import 'logging_helper.dart';
+import 'storage/storage.dart';
+import 'migration/migration.dart';
+import 'logging/logging_helper.dart';
 import 'constants.dart';
-import 'lifecycle_stub.dart' if (dart.library.ui) 'lifecycle_flutter.dart';
+import 'lifecycle/lifecycle_stub.dart' if (dart.library.ui) 'lifecycle/lifecycle_flutter.dart';
 
 part 'modules/events_module.dart';
 part 'modules/users_module.dart';
 part 'modules/consents_module.dart';
-part 'modules/remote_config_module.dart';
 part 'modules/views_module.dart';
 part 'modules/behavior_module.dart';
-part 'modules/sessions_module.dart';
-part 'modules/crashes_module.dart';
+part 'modules/device_id_module.dart';
 part 'testing_utils.dart';
 
 class CountlyInstance {
@@ -31,10 +29,10 @@ class CountlyInstance {
 
   final List<Map<String, dynamic>> _eventQueue = [];
   final List<Map<String, dynamic>> _requestQueue = [];
-  Map<String, dynamic> _remoteConfigValues = {};
-  Map<String, dynamic> _userPropertiesNamedCache = {};
-  Map<String, dynamic> _customUserPropertiesCache = {};
-  final Set<ConsentType> _grantedConsents = {};
+  final Map<String, dynamic> _userPropertiesNamedCache = {};
+  final Map<String, dynamic> _customUserPropertiesCache = {};
+  Map<String, dynamic> deviceMetrics = {};
+  bool _consentGranted = false;
 
   // Health check counters
   int _logErrorCount = 0;
@@ -51,6 +49,8 @@ class CountlyInstance {
   bool _suspended = false; // for request backoff
   DateTime? _suspendUntil;
 
+  Future<void> _queueLock = Future.value();
+
   static const _sdkVersion = SdkInternal.sdkVersion;
   static const _sdkName = SdkInternal.sdkName;
 
@@ -63,19 +63,16 @@ class CountlyInstance {
   EventsModule? _eventsModule;
   UsersModule? _usersModule;
   ConsentsModule? _consentsModule;
-  RemoteConfigModule? _remoteConfigModule;
   ViewsModule? _viewsModule;
   BehaviorModule? _sbs;
-  SessionsModule? _sessionsModule;
-  CrashesModule? _crashesModule;
+  DeviceIdModule? _deviceIdModule;
 
   String? _activeViewName;
   DateTime? _activeViewStart;
   String? _previousEventKey;
-  String? _previousViewName;
-  String? _lastClosedViewName; // for autoRestartViews
   late final DateTime _sdkStartTime;
   bool _isInBackground = false;
+  bool _isInUnknownConsentState = false;
 
   CountlyInstance._(this.config, this.instanceKey);
 
@@ -91,6 +88,7 @@ class CountlyInstance {
     L = InstanceLogger(
       _logger,
       enabled: config.enableSDKLogs,
+      enableVisualWarnings: config.enableVisualWarnings,
       instanceKey: instanceKey,
       onLog: (lvl) {
         if (lvl == LogLevel.error)
@@ -99,35 +97,37 @@ class CountlyInstance {
       },
     );
 
-    _storage = StorageFacade(config, L: L);
-    _network = NetworkClient(config.serverUrl, L: L, customHeaders: config.customRequestHeaders);
-    _migration = MigrationService(_storage,
-        enabled: instanceKey == 'default' && config.storageMode == StorageMode.persistent, L: L);
+    _storage = StorageFacade(config, instanceKey, L: L);
+    // ignore: invalid_use_of_visible_for_testing_member
+    _network = config.networkClientOverride ??
+        NetworkClient(config.serverUrl, L: L, customHeaders: config.customRequestHeaders);
+    // Default instance only migration
+    _migration = MigrationService(
+      _storage,
+      enabled:
+          instanceKey == 'default' && config.storageMode == StorageMode.persistent && !config.disableOldDataMigration,
+      L: L,
+    );
 
     _sbs = BehaviorModule(this);
     await _sbs!.init();
 
     L.i('init: instanceKey=[$instanceKey] appKey=[${config.appKey}] serverUrl=[${config.serverUrl}]');
-    L.d('config: deviceIdProvided=[${config.deviceId != null}] requiresConsent=[${_sbs?.isConsentRequired ?? false}] giveAllConsents=[${config.giveAllConsents}] initialConsents=[${config.initialEnabledConsents.map((e) => e.name).join(',')}]');
-    L.d('config: remoteConfig=[${config.turnOnRemoteConfig}] internalTimerInterval=[${_sbs?.internalTimerInterval}s] eventQueueSize=[${_sbs?.eventQueueSize}] requestQueueSize=[${_sbs?.requestQueueSize}]');
+    L.d('config: deviceIdProvided=[${config.deviceId != null}] consentGiven=[${config.giveConsent}] startWithUnknownConsent=[${config.startWithUnknownConsent}]');
+    L.d('config: internalTimerInterval=[${_sbs?.internalTimerInterval}s] eventQueueSize=[${_sbs?.eventQueueSize}] requestQueueSize=[${_sbs?.requestQueueSize}]');
     L.d('config: storageMode=[${config.storageMode.name}] customStorageOverrides=[${config.storageMethods?.hasAny == true}]');
+    L.d('config: disableOldDataMigration=[${config.disableOldDataMigration}]');
     L.d('config: loggingEnabled=[${config.enableSDKLogs}] logLevel=[${config.logLevel.name}] customLogger=[${config.logger != null}]');
 
-    if (config.requiresConsent) {
-      if (config.giveAllConsents) {
-        _grantedConsents.addAll(ConsentType.values);
-      } else {
-        _grantedConsents.addAll(config.initialEnabledConsents);
-      }
-      L.i('Initial consents: [${_grantedConsents.map((e) => e.name).join(', ')}]');
+    if (config.giveConsent || config.startWithUnknownConsent) {
+      _consentGranted = true;
     }
 
     _eventsModule = EventsModule(this);
     _usersModule = UsersModule(this);
     _consentsModule = ConsentsModule(this);
-    _remoteConfigModule = RemoteConfigModule(this);
     _viewsModule = ViewsModule(this);
-    _sessionsModule = SessionsModule(this);
+    _deviceIdModule = DeviceIdModule(this);
 
     // Migration only for default instance
     if (instanceKey == 'default') {
@@ -138,27 +138,27 @@ class CountlyInstance {
     await _initializeDeviceId();
     await _viewsModule?.recoverView(); // TODO: should use old device id
 
-    // Initial user properties if any and consent given.
-    if (config.userProperties != null && config.userProperties!.isNotEmpty && hasConsentInternal(ConsentType.users)) {
-      _ingestUserProperties(config.userProperties!);
-      await _enqueueUserPropertiesCache();
+    // Here we send all data we have from past state before proceeding.
+    await processEventsAndRequests();
+    if (config.startWithUnknownConsent) {
+      _isInUnknownConsentState = true;
+      L.i('SDK started in unknown consent state, restraining from sending data until explicit consent is given');
     }
 
-    // Fetch remote config if enabled and consent given.
-    if (config.turnOnRemoteConfig && hasConsentInternal(ConsentType.remoteConfig)) {
-      await _remoteConfigModule!.fetch();
+    // Initial user properties if any and consent given.
+    if (config.userProperties != null && config.userProperties!.isNotEmpty && _consentGranted) {
+      _ingestUserProperties(config.userProperties!);
+      await _enqueueUserPropertiesCache();
     }
 
     // Timers
     _startTimer();
     _startServerConfigTimer();
 
-    // Record initial consent status if consent required
-    if (config.requiresConsent) {
-      _recordConsentRequest();
-    }
+    // Record initial consent status
+    await _recordConsentRequest();
     // Record location request
-    _addToRequestQueue(_prepareRequest({'location': ''}));
+    await _addToRequestQueue(_prepareRequest({'location': ''}));
 
     L.i('SDK instance initialized successfully');
 
@@ -166,24 +166,26 @@ class CountlyInstance {
     try {
       listenToLifecycle(
         onBackground: () {
-          if (_activeViewName != null) {
-            _lastClosedViewName = _activeViewName;
-          }
-          _viewsModule?._endIfActive();
           _isInBackground = true;
         },
         onForeground: () {
-          if (config.autoRestartViews && _lastClosedViewName != null) {
-            _viewsModule?.startAutoStoppedView(_lastClosedViewName!);
-          }
           _isInBackground = false;
         },
       );
     } catch (_) {}
-    // ignore: discarded_futures
-    _sbs!.fetchAndApply();
-    // ignore: discarded_futures
-    _attemptHealthCheck();
+
+    if (config.deviceMetricOverrides?.isNotEmpty == true) {
+      deviceMetrics = config.deviceMetricOverrides!;
+    }
+    await _eventsModule?.recordMetrics(metricOverride: deviceMetrics);
+
+    if (!_isInUnknownConsentState) {
+      // ignore: discarded_futures
+      _sbs!.fetchAndApply();
+      // ignore: discarded_futures
+      _attemptHealthCheck();
+    }
+    L.v('SDK init time: ${DateTime.now().difference(_sdkStartTime).inMilliseconds} ms');
   }
 
   /// Checks storage for data from previous runs and loads into memory.
@@ -224,8 +226,6 @@ class CountlyInstance {
     } else {
       L.v('No persisted event queue found');
     }
-    final rc = await _storage.readJson<Map<String, dynamic>>(StorageSubKeys.remoteConfig);
-    if (rc is Map<String, dynamic>) _remoteConfigValues = rc;
   }
 
   /// Initializes device id: loads from storage if any, else uses provided or generates new.
@@ -250,12 +250,22 @@ class CountlyInstance {
       L.d('Generated new deviceId: [$_deviceId]');
     }
 
-    /// Save device id if storage enabled.
+    await _persistDeviceIdState();
+  }
+
+  /// Updates in-memory device id and type, then persists when storage is available.
+  Future<void> _setDeviceIdInternal(String newDeviceId, {required int type}) async {
+    _deviceId = newDeviceId;
+    _deviceIdType = type;
+    await _persistDeviceIdState();
+  }
+
+  /// Persists the current device id and type if storage is enabled.
+  Future<void> _persistDeviceIdState() async {
     if (config.storageMode == StorageMode.memory && !(config.storageMethods?.hasAny ?? false)) return;
-    if (_deviceId != null) {
-      await _storage.writeString(StorageSubKeys.deviceId, _deviceId!);
-      await _storage.writeString(StorageSubKeys.deviceIdType, _deviceIdType.toString());
-    }
+    if (_deviceId == null || _deviceIdType == null) return;
+    await _storage.writeString(StorageSubKeys.deviceId, _deviceId!);
+    await _storage.writeString(StorageSubKeys.deviceIdType, _deviceIdType.toString());
   }
 
   /// Starts the internal timer for periodic processing.
@@ -265,7 +275,6 @@ class CountlyInstance {
     _internalTimer = Timer.periodic(Duration(seconds: interval), (_) async {
       L.d('Internal timer tick: processing events and requests');
       await processEventsAndRequests();
-      _sessionsModule?.sessionUpdate();
     });
   }
 
@@ -286,41 +295,58 @@ class CountlyInstance {
   }
 
   /// Flushes events to request queue then attempts sending.
+  @visibleForTesting
   Future<void> processEventsAndRequests() async {
-    L.d('Triggered processing event and request queues');
-    _bundleEventQueue();
-    if ((_userPropertiesNamedCache.isNotEmpty || _customUserPropertiesCache.isNotEmpty) &&
-        hasConsentInternal(ConsentType.users)) {
-      L.d('Enqueuing user properties request cache: named=${_userPropertiesNamedCache.keys.length} custom=${_customUserPropertiesCache.keys.length}');
-      await _enqueueUserPropertiesCache();
-    }
-    await _processRequestQueue();
+    await _runQueueLocked(() async {
+      L.d('Triggered processing event and request queues');
+      await _bundleEventQueue();
+      if ((_userPropertiesNamedCache.isNotEmpty || _customUserPropertiesCache.isNotEmpty) && _consentGranted) {
+        L.d('Enqueuing user properties request cache: named=${_userPropertiesNamedCache.keys.length} custom=${_customUserPropertiesCache.keys.length}');
+        await _enqueueUserPropertiesCache();
+      }
+      await _processRequestQueue();
+    });
+  }
+
+  Future<void> _runQueueLocked(Future<void> Function() action) {
+    _queueLock = _queueLock.then((_) => action()).catchError((e, st) {
+      L.e('Queue lock action failed', error: e, stack: st as StackTrace);
+    });
+    return _queueLock;
   }
 
   /// Persists event queue to storage if enabled.
-  void _persistEventQueue() {
-    _storage.writeJson(StorageSubKeys.eventQueue, _eventQueue);
+  Future<void> _persistEventQueue() async {
+    if (_isInUnknownConsentState) {
+      L.v('In unknown consent state, skipping persisting event queue');
+      return;
+    }
+    await _storage.writeJson(StorageSubKeys.eventQueue, _eventQueue);
   }
 
   /// Persists request queue to storage if enabled.
-  void _persistRequestQueue() {
-    _storage.writeJson(StorageSubKeys.requestQueue, _requestQueue);
+  Future<void> _persistRequestQueue() async {
+    if (_isInUnknownConsentState) {
+      L.v('In unknown consent state, skipping persisting request queue');
+      return;
+    }
+    await _storage.writeJson(StorageSubKeys.requestQueue, _requestQueue);
   }
 
   /// Converts batched events into a request and sends to request queue.
-  void _bundleEventQueue() {
+  Future<void> _bundleEventQueue() async {
     if (_eventQueue.isEmpty) {
       L.v('Event Bundler: No events to bundle');
       return;
     }
     final batch = List<Map<String, dynamic>>.from(_eventQueue);
     _eventQueue.clear();
-    _persistEventQueue();
+    await _persistEventQueue();
 
     final payload = jsonEncode(batch);
     final request = _prepareRequest({'events': payload});
     L.d('Event Bundler: Flushed events to request queue');
-    _addToRequestQueue(request);
+    await _addToRequestQueue(request);
   }
 
   /// Adds necessary common fields to request data.
@@ -361,26 +387,28 @@ class CountlyInstance {
   /// final inner = <String,dynamic>{'name': 'Alice'};
   /// final req = _prepareRequest({'user_details': inner});
   /// ```
-  void _addToRequestQueue(Map<String, dynamic> request) {
-    // ab enroll does not count
-    final isEnrollRequest = request['method'] == 'ab';
-    if (!(_sbs?.trackingEnabled ?? true) && !isEnrollRequest) {
+  Future<void> _addToRequestQueue(Map<String, dynamic> request) async {
+    if (!(_sbs?.trackingEnabled ?? true)) {
       L.d('Tracking disabled (SBS), dropping request');
       return;
     }
 
     final max = _sbs?.requestQueueSize ?? SBSDefaults.rqs;
+    if (max <= 0) {
+      L.w('Request queue size is non-positive, dropping request');
+      return;
+    }
     if (_requestQueue.length >= max) {
       L.w('Request queue full, removing oldest request');
       _requestQueue.removeAt(0);
     }
     L.d('To request queue: Enqueuing request');
     _requestQueue.add(request);
-    _persistRequestQueue();
+    await _persistRequestQueue();
   }
 
   /// Adds an event to the event queue with bundling handling.
-  void _addToEventQueue(Map<String, dynamic> event) {
+  Future<void> _addToEventQueue(Map<String, dynamic> event) async {
     if (!(_sbs?.trackingEnabled ?? true)) {
       L.d('Tracking disabled (SBS), dropping event');
       return;
@@ -388,7 +416,7 @@ class CountlyInstance {
     final max = _sbs?.eventQueueSize ?? SBSDefaults.eqs;
     if (_eventQueue.length >= max) {
       L.d('Event queue full, bundling events');
-      _bundleEventQueue();
+      await _bundleEventQueue();
     }
     final key = event['key'];
     if (key is String && _previousEventKey == key) {
@@ -396,7 +424,7 @@ class CountlyInstance {
     }
     L.d('To event queue: Enqueuing event');
     _eventQueue.add(event);
-    _persistEventQueue();
+    await _persistEventQueue();
   }
 
   /// Attempts sending requests in the request queue with backoff handling.
@@ -434,13 +462,17 @@ class CountlyInstance {
       } else {
         L.i('Request sent successfully, removing from queue');
         _requestQueue.removeAt(0);
-        _persistRequestQueue();
+        await _persistRequestQueue();
       }
     }
   }
 
   /// Sends a single request and returns true if successful.
   Future<bool> _sendRequest(Map<String, dynamic> req) async {
+    if (_isInUnknownConsentState) {
+      L.v('In unknown consent state, skipping sending request');
+      return false;
+    }
     try {
       _attachDynamicRequestMeta(req, includeRR: true);
       final resp = await _network.makeSelectiveRequest(req);
@@ -477,6 +509,12 @@ class CountlyInstance {
   }
 
   @visibleForTesting
+  String? get debugActiveViewName => _activeViewName;
+
+  @visibleForTesting
+  bool get debugIsInBackground => _isInBackground;
+
+  @visibleForTesting
   bool get isTimerActive => _internalTimer?.isActive == true;
 
   /// Exposes current device id (read-only public accessor).
@@ -492,24 +530,9 @@ class CountlyInstance {
     return false;
   }
 
-  /// Checks if consent of given type is granted.
-  bool hasConsentInternal(ConsentType type) {
-    final consentRequired = _sbs?.isConsentRequired == true;
-
-    if (!consentRequired && !config.requiresConsent) {
-      L.d('Consent not required sbs:[$consentRequired], config: [${config.requiresConsent}], treating as granted for type [${type.name}]');
-      return true;
-    }
-    if (_disposed) {
-      L.w('Instance disposed, treating consent as not granted for type [${type.name}]');
-      return false;
-    }
-    if (_grantedConsents.contains(type)) {
-      L.d('Consent granted for type [${type.name}]');
-      return true;
-    }
-    L.d('Consent not granted for type [${type.name}]');
-    return false;
+  /// Checks if consent is granted.
+  bool hasConsentInternal() {
+    return _consentGranted;
   }
 
   /// Bundles event queue and then adds user properties request to request queue if any.
@@ -523,7 +546,7 @@ class CountlyInstance {
     if (_customUserPropertiesCache.isNotEmpty)
       userDetails['custom'] = Map<String, dynamic>.from(_customUserPropertiesCache);
     final request = _prepareRequest({'user_details': userDetails});
-    _addToRequestQueue(request);
+    await _addToRequestQueue(request);
     L.d('Enqueued user properties request: named=${_userPropertiesNamedCache.keys.length} custom=${_customUserPropertiesCache.keys.length}');
     _userPropertiesNamedCache.clear();
     _customUserPropertiesCache.clear();
@@ -561,7 +584,7 @@ class CountlyInstance {
           v = v.substring(0, limit);
         }
       } else if (v is Map) {
-        v = _sanitizeSegmentation(v as Map<String, dynamic>, forCrash: false);
+        v = _sanitizeSegmentation(v as Map<String, dynamic>);
       }
       if (named.contains(k)) {
         _userPropertiesNamedCache[k] = v;
@@ -574,7 +597,16 @@ class CountlyInstance {
 
   /// HC request
   Future<void> _attemptHealthCheck() async {
-    if (_didSendHealthCheckThisInit) return;
+    L.d('Attempting health check request');
+    if (_didSendHealthCheckThisInit) {
+      L.v('Did already sent HC request at init, skipping.');
+      return;
+    }
+    ;
+    if (!(_sbs?.networkingEnabled ?? true)) {
+      L.d('Networking disabled (SBS), skipping HC request');
+      return;
+    }
     _didSendHealthCheckThisInit = true;
     try {
       final hc = <String, dynamic>{
@@ -602,14 +634,58 @@ class CountlyInstance {
     }
   }
 
-  void _recordConsentRequest() {
+  Future<void> _recordConsentRequest() async {
     final consentMap = <String, bool>{};
-    for (final c in ConsentType.values) {
-      consentMap[c.name] = _grantedConsents.contains(c);
+    final consentTypes = ['events', 'users', 'feedback', 'metrics', 'views'];
+    if (_consentGranted) {
+      for (final ct in consentTypes) {
+        consentMap[ct] = true;
+      }
+    } else {
+      for (final ct in consentTypes) {
+        consentMap[ct] = false;
+      }
     }
     final req = _prepareRequest({'consent': consentMap});
-    _addToRequestQueue(req);
+    await _addToRequestQueue(req);
     L.d('Recorded consent request:[$consentMap]');
+  }
+
+  /// Clears all in-memory data queues and caches and persists the empty state.
+  /// Used when data for the current device/user must be fully discarded.
+  Future<void> _clearAllDataQueuesAndCaches() async {
+    await _runQueueLocked(() async {
+      _eventQueue.clear();
+      _requestQueue.clear();
+      _userPropertiesNamedCache.clear();
+      _customUserPropertiesCache.clear();
+      await _persistEventQueue();
+      await _persistRequestQueue();
+    });
+  }
+
+  Future<void> _getOutOfUnknownConsentState(bool granted) async {
+    if (!_isInUnknownConsentState) {
+      L.v('Not in unknown consent state, nothing to do');
+      return;
+    }
+    L.i('Exiting unknown consent state');
+    _isInUnknownConsentState = false;
+    // ignore: discarded_futures
+    _sbs?.fetchAndApply();
+    // ignore: discarded_futures
+    _attemptHealthCheck();
+    if (granted) {
+      L.i('Consent granted upon exiting unknown consent state, resuming normal operations');
+      _viewsModule?._persistActiveViewState();
+      await processEventsAndRequests();
+    } else {
+      L.i('Consent not granted upon exiting unknown consent state, data will be removed');
+      await _clearAllDataQueuesAndCaches();
+    }
+
+    // At the end we want to report consent status regardless.
+    await _recordConsentRequest();
   }
 
   bool _disposed = false;
@@ -624,7 +700,7 @@ class CountlyInstance {
 
     // End active view before flushing so duration is captured.
     try {
-      _viewsModule?._endIfActive();
+      await _viewsModule?._endIfActive();
     } catch (_) {}
     if (flush) {
       try {
@@ -650,12 +726,10 @@ class CountlyInstance {
   EventsModule get events => _eventsModule ??= EventsModule(this);
   UsersModule get users => _usersModule ??= UsersModule(this);
   ConsentsModule get consents => _consentsModule ??= ConsentsModule(this);
-  RemoteConfigModule get remoteConfig => _remoteConfigModule ??= RemoteConfigModule(this);
   ViewsModule get views => _viewsModule ??= ViewsModule(this);
-  SessionsModule get sessions => _sessionsModule ??= SessionsModule(this);
-  CrashesModule get crashes => _crashesModule ??= CrashesModule(this);
+  DeviceIdModule get id => _deviceIdModule ??= DeviceIdModule(this);
 
-  Map<String, dynamic> _sanitizeSegmentation(Map<String, dynamic> input, {required bool forCrash}) {
+  Map<String, dynamic> _sanitizeSegmentation(Map<String, dynamic> input) {
     final out = <String, dynamic>{};
     if (input.isEmpty) return out;
     int added = 0;
@@ -664,19 +738,18 @@ class CountlyInstance {
       var key = _truncateKeyIfNeeded(k);
       dynamic value = v;
       if (value is String) {
-        if (forCrash) {
-          value = _sanitizeStackTrace(value);
-        } else {
-          value = _truncateValueIfNeeded(value);
-        }
+        value = _truncateValueIfNeeded(value);
       }
       // nested map or list
       if (value is Map || value is List) {
-        if (value.length > _sbs!.segmentationValuesLimit) {
-          L.w('Segmentation value for key [$key] too long, truncating');
-          if (value is Map) {
+        if (value is Map) {
+          if (value.length > _sbs!.segmentationValuesLimit) {
+            L.w('Segmentation value for key [$key] too long, truncating');
             value = _truncateValueIfNeeded(value.toString()); // TODO: too much?
-          } else if (value is List) {
+          }
+        } else if (value is List) {
+          if (value.length > _sbs!.segmentationValuesLimit) {
+            L.w('Segmentation value for key [$key] too long, truncating');
             value = value.sublist(0, _sbs!.segmentationValuesLimit);
           }
         }
@@ -686,19 +759,6 @@ class CountlyInstance {
       added++;
     });
     return out;
-  }
-
-  String _sanitizeStackTrace(String stack) {
-    final lines = stack.split('\n');
-    final limited = <String>[];
-    for (var i = 0; i < lines.length && i < _sbs!.stackTraceLineCountLimit; i++) {
-      var ln = lines[i];
-      if (ln.length > _sbs!.stackTraceLineLengthLimit) {
-        ln = ln.substring(0, _sbs!.stackTraceLineLengthLimit);
-      }
-      limited.add(ln);
-    }
-    return limited.join('\n');
   }
 
   String _truncateKeyIfNeeded(String key) {

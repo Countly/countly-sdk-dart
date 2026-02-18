@@ -4,7 +4,6 @@ import 'package:meta/meta.dart';
 class StorageSubKeys {
   static const requestQueue = 'COUNTLY_DART_RQ';
   static const eventQueue = 'COUNTLY_DART_EQ';
-  static const remoteConfig = 'COUNTLY_DART_RC';
   static const deviceId = 'COUNTLY_DART_ID';
   static const deviceIdType = 'COUNTLY_DART_IDT';
   static const behavior = 'COUNTLY_DART_SBS';
@@ -42,9 +41,9 @@ class SBSDefaults {
   static const networking = true; // Allow sending requests
   static const rqs = 1000; // Request queue size (requests)
   static const eqs = 100; // Event queue size (events)
-  static const sui = 60; // Session update interval (seconds)
-  static const st = true; // Allow session tracking
-  static const crt = true; // Allow crash tracking
+  static const sui = 60; // Session update interval (seconds) // TODO: Check if this is the only internal timer flag
+  // static const st = true; // Allow session tracking - NOT SUPPORTED
+  // static const crt = true; // Allow crash tracking - NOT SUPPORTED
   static const lt = true; // Allow location tracking
   static const vt = true; // Allow view tracking
   static const lkl = 128; // Key length limit (chars)
@@ -56,7 +55,7 @@ class SBSDefaults {
   static const cet = true; // Allow custom event tracking
   static const ecz = false; // Enter Content Zone after init
   static const czi = 30; // Content Zone request interval (seconds)
-  static const cr = false; // Consent required
+  // static const cr = false; // Consent required - NOT SUPPORTED
   static const scui = 4 * 60 * 60; // Server config update interval (seconds, 4 hours)
   static const rcz = true; // Allow Refresh Content Zone
   static const dort = 0; // Drop old request time (disabled)
@@ -69,9 +68,9 @@ class SBSDefaults {
   static const eb = []; // Event blacklist
   static const upb = []; // User properties blacklist
   static const sb = []; // Segmentation blacklist
-  static const esb = {}; // Event segmentation blacklist
+  static const esb = <String, dynamic>{}; // Event segmentation blacklist
   static const ew = []; // Event whitelist
   static const upw = []; // User property whitelist
   static const sw = []; // Segment whitelist
-  static const esw = {}; // Event segment whitelist
+  static const esw = <String, dynamic>{}; // Event segment whitelist
 }

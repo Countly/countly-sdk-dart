@@ -9,4 +9,3 @@ Map<String, dynamic> getCurrentMetrics() => {
       '_locale': 'en-US',
       '_app_version': SdkInternal.sdkVersion,
     };
-String? getOrientation() => null;

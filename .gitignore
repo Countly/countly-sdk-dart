@@ -9,6 +9,9 @@
 .history
 .svn/
 migrate_working_dir/
+coverage/
+doc/
+tool/
 
 # IntelliJ related
 *.iml
@@ -28,7 +31,15 @@ migrate_working_dir/
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
+android/.gradle/
 build/
 sdk_dart.iml
-example/flutter_example/
-!example/flutter_example/lib/main.dart
+example/flutter_example/.dart_tool/
+example/flutter_example/.idea/
+example/flutter_example/android/
+example/flutter_example/ios/
+example/flutter_example/build/
+example/flutter_example/.gitignore
+example/flutter_example/.metadata
+example/flutter_example/analysis_options.yaml
+example/flutter_example/pubspec.lock

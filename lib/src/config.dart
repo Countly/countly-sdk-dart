@@ -1,15 +1,13 @@
 import 'dart:async';
 import 'package:meta/meta.dart';
-import 'package:countly_sdk_dart/src/constants.dart';
+
+import 'networking.dart';
 
 /// Storage mode for the SDK. Persistent uses platform storage, memory is ephemeral.
 enum StorageMode { persistent, memory }
 
 /// Logging levels ordered by verbosity.
 enum LogLevel { error, warning, info, debug, verbose }
-
-/// Consent types
-enum ConsentType { events, users, remoteConfig, feedback, metrics, views, crashes }
 
 /// User provided custom storage method signatures.
 typedef StorageReadFn = FutureOr<String?> Function(String key);
@@ -44,9 +42,6 @@ class CountlyConfig {
   /// Optional initial user properties.
   final Map<String, dynamic>? userProperties;
 
-  /// Enables remote config fetch loop if true. (default: false)
-  final bool turnOnRemoteConfig;
-
   /// Storage mode selection (persistent by default).
   final StorageMode storageMode;
 
@@ -62,14 +57,14 @@ class CountlyConfig {
   /// SDK internal logging. (disabled by default)
   final bool enableSDKLogs;
 
-  /// If true, SDK features requiring consent will be disabled until consent is given. (default: false)
-  final bool requiresConsent;
+  /// If true, visual warnings (toasts) will be shown for SDK errors and warnings. (default: false)
+  final bool enableVisualWarnings;
 
-  /// Initial list of enabled consent types. (empty by default)
-  final List<ConsentType> initialEnabledConsents;
+  /// If true, consent will be given to SDK to enable features requiring consent. (default: false)
+  final bool giveConsent;
 
-  /// If true, all consent types will be enabled initially, overriding [initialEnabledConsents]. (default: false)
-  final bool giveAllConsents;
+  /// If true, SDK will start with consent granted however it will restrain from sending data until explicit consent is given. (default: false)
+  final bool startWithUnknownConsent;
 
   /// Optional custom request headers to be applied to every network request.
   /// Header names are case-insensitive per HTTP spec. Values must be String.
@@ -78,30 +73,38 @@ class CountlyConfig {
   /// which will only be overridden if explicitly provided).
   final Map<String, String>? customRequestHeaders;
 
-  /// If true, automatically restarts the last
-  /// view with the same name in bg -> fg. (default: true)
-  final bool autoRestartViews;
+  /// Optional override for SDK detected device metrics.
+  /// Used only during initial metrics collection on SDK init.
+  final Map<String, dynamic>? deviceMetricOverrides;
 
   /// SBS data to be used in first init.
   final Map<String, dynamic> sbs;
+
+  /// Disable migration of data from legacy native SDKs (Android/iOS).
+  final bool disableOldDataMigration;
+
+  /// Testing related network client injection used for SDK tests only.
+  @visibleForTesting
+  final NetworkClient? networkClientOverride;
 
   const CountlyConfig._({
     required this.appKey,
     required this.serverUrl,
     required this.deviceId,
     required this.userProperties,
-    required this.turnOnRemoteConfig,
     required this.storageMode,
     required this.storageMethods,
+    required this.startWithUnknownConsent,
     required this.logLevel,
     required this.logger,
-    required this.requiresConsent,
-    required this.initialEnabledConsents,
-    required this.giveAllConsents,
+    required this.giveConsent,
     required this.enableSDKLogs,
+    required this.enableVisualWarnings,
     required this.customRequestHeaders,
-    required this.autoRestartViews,
+    required this.deviceMetricOverrides,
     required this.sbs,
+    required this.disableOldDataMigration,
+    required this.networkClientOverride,
   });
 
   factory CountlyConfig({
@@ -109,20 +112,21 @@ class CountlyConfig {
     required String serverUrl,
     String? deviceId,
     Map<String, dynamic>? userProperties,
-    bool turnOnRemoteConfig = false,
-    StorageMode storageMode = StorageMode.persistent,
-    CustomStorageMethods? storageMethods,
+    @visibleForTesting StorageMode storageMode = StorageMode.persistent,
+    @visibleForTesting CustomStorageMethods? storageMethods,
+    bool startWithUnknownConsent = false,
     LogLevel logLevel = LogLevel.verbose,
+    Map<String, dynamic>? deviceMetricOverrides,
     SdkLogger? logger,
     bool enableSDKLogs = false,
-    bool requiresConsent = SBSDefaults.cr,
-    List<ConsentType> setConsentEnabled = const [],
-    bool giveAllConsents = false,
+    bool enableVisualWarnings = false,
+    bool giveConsent = false,
     Map<String, String>? customRequestHeaders,
-    bool autoRestartViews = true,
     Map<String, dynamic> sbs = const {},
+    bool disableOldDataMigration = false,
+    @visibleForTesting NetworkClient? networkClientOverride,
   }) {
-    if (appKey.isEmpty) {
+    if (appKey.isEmpty || appKey.trim().isEmpty) {
       throw ArgumentError('app_key cannot be empty');
     }
     if (serverUrl.isEmpty) {
@@ -145,24 +149,26 @@ class CountlyConfig {
 
     /// remove trailing slashes
     final normalized = serverUrl.replaceFirst(RegExp(r'/+$'), '');
+    final trimmedAppKey = appKey.trim();
 
     return CountlyConfig._(
-        appKey: appKey,
+        appKey: trimmedAppKey,
         serverUrl: normalized,
         deviceId: deviceId,
         userProperties: userProperties == null ? null : Map.unmodifiable(Map.of(userProperties)),
-        turnOnRemoteConfig: turnOnRemoteConfig,
         storageMode: storageMode,
         storageMethods: storageMethods,
+        startWithUnknownConsent: startWithUnknownConsent,
         logLevel: logLevel,
         logger: logger,
-        requiresConsent: requiresConsent,
-        initialEnabledConsents: List.unmodifiable(setConsentEnabled),
-        giveAllConsents: giveAllConsents,
+        giveConsent: giveConsent,
         enableSDKLogs: enableSDKLogs,
+        enableVisualWarnings: enableVisualWarnings,
         customRequestHeaders: customRequestHeaders == null ? null : Map.unmodifiable(Map.of(customRequestHeaders)),
-        autoRestartViews: autoRestartViews,
-        sbs: Map.of(sbs));
+        deviceMetricOverrides: deviceMetricOverrides == null ? null : Map.unmodifiable(Map.of(deviceMetricOverrides)),
+        sbs: Map.of(sbs),
+        disableOldDataMigration: disableOldDataMigration,
+        networkClientOverride: networkClientOverride);
   }
 }
 

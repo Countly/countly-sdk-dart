@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'config.dart';
-import 'logging_helper.dart';
+import '../config.dart';
+import '../logging/logging_helper.dart';
 
 // TODO: We import shared_preferences only here; in pure dart environments user can provide custom methods or memory mode. A file-based engine can be added for dart.
 import 'storage_persistent_stub.dart' if (dart.library.ui) 'storage_persistent_flutter.dart';
@@ -57,9 +57,10 @@ class _CustomStorageEngine implements StorageEngine {
 class StorageFacade {
   final CountlyConfig config;
   final InstanceLogger? L;
+  final String namespace;
   late final StorageEngine _engine;
 
-  StorageFacade(this.config, {this.L}) {
+  StorageFacade(this.config, this.namespace, {this.L}) {
     if (config.storageMethods != null && config.storageMethods!.hasAny) {
       _engine = _CustomStorageEngine(config.storageMethods!);
       L?.d('storage: using custom storage methods');
@@ -72,16 +73,23 @@ class StorageFacade {
     }
   }
 
+  String _nsKey(String key) {
+    if (namespace.isEmpty) {
+      return key;
+    }
+    return '${namespace}_$key';
+  }
+
   /// Write a JSON-serializable object.
   Future<void> writeJson(String key, Object value) async {
     final encoded = jsonEncode(value);
-    L?.v('storage.writeJson key=$key bytes=${encoded.length}');
-    await _engine.write(key, encoded);
+    // L?.v('storage.writeJson key=$key bytes=${encoded.length}');
+    await _engine.write(_nsKey(key), encoded);
   }
 
   /// Read and parse a JSON object, or null if not found or parse error.
   Future<T?> readJson<T>(String key) async {
-    final raw = await _engine.read(key);
+    final raw = await _engine.read(_nsKey(key));
     if (raw == null) {
       L?.v('storage.readJson key=[$key] -> null');
       return null;
@@ -98,20 +106,19 @@ class StorageFacade {
 
   /// Write a raw string value.
   Future<void> writeString(String key, String value) async {
-    L?.v('storage.writeString key=[$key] length=${value.length}');
-    await _engine.write(key, value);
+    // L?.v('storage.writeString key=$key len=${value.length}');
+    await _engine.write(_nsKey(key), value);
   }
 
-  /// Read a raw string value, or null if not found.
+  /// Read a raw string value.
   Future<String?> readString(String key) async {
-    final v = await _engine.read(key);
-    L?.v('storage.readString key=[$key] hit=${v != null}');
-    return v;
+    // L?.v('storage.readString key=$key');
+    return _engine.read(_nsKey(key));
   }
 
-  /// Remove a stored value.
+  /// Remove a key.
   Future<void> remove(String key) async {
-    L?.v('storage.remove key=[$key]');
-    await _engine.remove(key);
+    // L?.v('storage.remove key=$key');
+    await _engine.remove(_nsKey(key));
   }
 }
