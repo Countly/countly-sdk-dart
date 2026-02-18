@@ -40,8 +40,8 @@ Future<void> main() async {
   await sdk.events.record(key: 'button_click', segmentation: {'id': 'start', 'color': 'blue', 'custom': customSeg});
   await sdk.events.record(key: 'd', segmentation: {'id': 'start', 'color': 'blue', 'custom': customSeg});
   sdk.users.pushToArray("a", ['1', 2, 3.0, true]);
-  sdk.users.setProperties({"a": '1', "b": 2, "c": 3.0, "d": true, "e": null});
-  sdk.users.setProperties({NamedUserProperty.name: 'Alice'});
+  await sdk.users.setProperties({"a": '1', "b": 2, "c": 3.0, "d": true, "e": null});
+  await sdk.users.setProperties({NamedUserProperty.name: 'Alice'});
   await sdk.processEventsAndRequests();
 
   await Future<void>.delayed(const Duration(seconds: 2));

@@ -100,6 +100,7 @@ class CountlyInstance {
     // ignore: invalid_use_of_visible_for_testing_member
     _network = config.networkClientOverride ??
         NetworkClient(config.serverUrl, L: L, customHeaders: config.customRequestHeaders);
+    // Default instance only migration
     _migration = MigrationService(
       _storage,
       enabled:
@@ -154,9 +155,9 @@ class CountlyInstance {
     _startServerConfigTimer();
 
     // Record initial consent status
-    _recordConsentRequest();
+    await _recordConsentRequest();
     // Record location request
-    _addToRequestQueue(_prepareRequest({'location': ''}));
+    await _addToRequestQueue(_prepareRequest({'location': ''}));
 
     L.i('SDK instance initialized successfully');
 
@@ -297,7 +298,7 @@ class CountlyInstance {
   Future<void> processEventsAndRequests() async {
     await _runQueueLocked(() async {
       L.d('Triggered processing event and request queues');
-      _bundleEventQueue();
+      await _bundleEventQueue();
       if ((_userPropertiesNamedCache.isNotEmpty || _customUserPropertiesCache.isNotEmpty) && _consentGranted) {
         L.d('Enqueuing user properties request cache: named=${_userPropertiesNamedCache.keys.length} custom=${_customUserPropertiesCache.keys.length}');
         await _enqueueUserPropertiesCache();
@@ -314,37 +315,37 @@ class CountlyInstance {
   }
 
   /// Persists event queue to storage if enabled.
-  void _persistEventQueue() {
+  Future<void> _persistEventQueue() async {
     if (_isInUnknownConsentState) {
       L.v('In unknown consent state, skipping persisting event queue');
       return;
     }
-    _storage.writeJson(StorageSubKeys.eventQueue, _eventQueue);
+    await _storage.writeJson(StorageSubKeys.eventQueue, _eventQueue);
   }
 
   /// Persists request queue to storage if enabled.
-  void _persistRequestQueue() {
+  Future<void> _persistRequestQueue() async {
     if (_isInUnknownConsentState) {
       L.v('In unknown consent state, skipping persisting request queue');
       return;
     }
-    _storage.writeJson(StorageSubKeys.requestQueue, _requestQueue);
+    await _storage.writeJson(StorageSubKeys.requestQueue, _requestQueue);
   }
 
   /// Converts batched events into a request and sends to request queue.
-  void _bundleEventQueue() {
+  Future<void> _bundleEventQueue() async {
     if (_eventQueue.isEmpty) {
       L.v('Event Bundler: No events to bundle');
       return;
     }
     final batch = List<Map<String, dynamic>>.from(_eventQueue);
     _eventQueue.clear();
-    _persistEventQueue();
+    await _persistEventQueue();
 
     final payload = jsonEncode(batch);
     final request = _prepareRequest({'events': payload});
     L.d('Event Bundler: Flushed events to request queue');
-    _addToRequestQueue(request);
+    await _addToRequestQueue(request);
   }
 
   /// Adds necessary common fields to request data.
@@ -385,7 +386,7 @@ class CountlyInstance {
   /// final inner = <String,dynamic>{'name': 'Alice'};
   /// final req = _prepareRequest({'user_details': inner});
   /// ```
-  void _addToRequestQueue(Map<String, dynamic> request) {
+  Future<void> _addToRequestQueue(Map<String, dynamic> request) async {
     if (!(_sbs?.trackingEnabled ?? true)) {
       L.d('Tracking disabled (SBS), dropping request');
       return;
@@ -402,11 +403,11 @@ class CountlyInstance {
     }
     L.d('To request queue: Enqueuing request');
     _requestQueue.add(request);
-    _persistRequestQueue();
+    await _persistRequestQueue();
   }
 
   /// Adds an event to the event queue with bundling handling.
-  void _addToEventQueue(Map<String, dynamic> event) {
+  Future<void> _addToEventQueue(Map<String, dynamic> event) async {
     if (!(_sbs?.trackingEnabled ?? true)) {
       L.d('Tracking disabled (SBS), dropping event');
       return;
@@ -414,7 +415,7 @@ class CountlyInstance {
     final max = _sbs?.eventQueueSize ?? SBSDefaults.eqs;
     if (_eventQueue.length >= max) {
       L.d('Event queue full, bundling events');
-      _bundleEventQueue();
+      await _bundleEventQueue();
     }
     final key = event['key'];
     if (key is String && _previousEventKey == key) {
@@ -422,7 +423,7 @@ class CountlyInstance {
     }
     L.d('To event queue: Enqueuing event');
     _eventQueue.add(event);
-    _persistEventQueue();
+    await _persistEventQueue();
   }
 
   /// Attempts sending requests in the request queue with backoff handling.
@@ -460,7 +461,7 @@ class CountlyInstance {
       } else {
         L.i('Request sent successfully, removing from queue');
         _requestQueue.removeAt(0);
-        _persistRequestQueue();
+        await _persistRequestQueue();
       }
     }
   }
@@ -544,7 +545,7 @@ class CountlyInstance {
     if (_customUserPropertiesCache.isNotEmpty)
       userDetails['custom'] = Map<String, dynamic>.from(_customUserPropertiesCache);
     final request = _prepareRequest({'user_details': userDetails});
-    _addToRequestQueue(request);
+    await _addToRequestQueue(request);
     L.d('Enqueued user properties request: named=${_userPropertiesNamedCache.keys.length} custom=${_customUserPropertiesCache.keys.length}');
     _userPropertiesNamedCache.clear();
     _customUserPropertiesCache.clear();
@@ -596,7 +597,15 @@ class CountlyInstance {
   /// HC request
   Future<void> _attemptHealthCheck() async {
     L.d('Attempting health check request');
-    if (_didSendHealthCheckThisInit) return;
+    if (_didSendHealthCheckThisInit) {
+      L.v('Did already sent HC request at init, skipping.');
+      return;
+    }
+    ;
+    if (!(_sbs?.networkingEnabled ?? true)) {
+      L.d('Networking disabled (SBS), skipping HC request');
+      return;
+    }
     _didSendHealthCheckThisInit = true;
     try {
       final hc = <String, dynamic>{
@@ -624,7 +633,7 @@ class CountlyInstance {
     }
   }
 
-  void _recordConsentRequest() {
+  Future<void> _recordConsentRequest() async {
     final consentMap = <String, bool>{};
     final consentTypes = ['events', 'users', 'feedback', 'metrics', 'views'];
     if (_consentGranted) {
@@ -637,7 +646,7 @@ class CountlyInstance {
       }
     }
     final req = _prepareRequest({'consent': consentMap});
-    _addToRequestQueue(req);
+    await _addToRequestQueue(req);
     L.d('Recorded consent request:[$consentMap]');
   }
 
@@ -649,8 +658,8 @@ class CountlyInstance {
       _requestQueue.clear();
       _userPropertiesNamedCache.clear();
       _customUserPropertiesCache.clear();
-      _persistEventQueue();
-      _persistRequestQueue();
+      await _persistEventQueue();
+      await _persistRequestQueue();
     });
   }
 
@@ -668,14 +677,14 @@ class CountlyInstance {
     if (granted) {
       L.i('Consent granted upon exiting unknown consent state, resuming normal operations');
       _viewsModule?._persistActiveViewState();
-      processEventsAndRequests();
+      await processEventsAndRequests();
     } else {
       L.i('Consent not granted upon exiting unknown consent state, data will be removed');
       await _clearAllDataQueuesAndCaches();
     }
 
     // At the end we want to report consent status regardless.
-    _recordConsentRequest();
+    await _recordConsentRequest();
   }
 
   bool _disposed = false;
@@ -690,7 +699,7 @@ class CountlyInstance {
 
     // End active view before flushing so duration is captured.
     try {
-      _viewsModule?._endIfActive();
+      await _viewsModule?._endIfActive();
     } catch (_) {}
     if (flush) {
       try {

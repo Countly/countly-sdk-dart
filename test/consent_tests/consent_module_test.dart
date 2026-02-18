@@ -80,7 +80,7 @@ void main() {
       await sdk.events.record(key: 'no_consent_event');
       sdk.views.startAutoStoppedView('NoConsentView');
       sdk.views.startAutoStoppedView('Next');
-      sdk.users.setProperties({'name': 'NoConsent'});
+      await sdk.users.setProperties({'name': 'NoConsent'});
       await sdk.events.recordMetrics();
 
       expect(network.sent, equals([helper.sdkBehaviorRequest, helper.healthCheckRequest]));
@@ -97,9 +97,9 @@ void main() {
       final sdk = await _createInstance(networkClient: network, giveConsent: true);
 
       await sdk.events.record(key: 'consent_event');
-      sdk.views.startAutoStoppedView('ConsentView');
-      sdk.views.startAutoStoppedView('Next'); // wont be sent (single view requests)
-      sdk.users.setProperties({'name': 'Consent'});
+      await sdk.views.startAutoStoppedView('ConsentView');
+      await sdk.views.startAutoStoppedView('Next'); // wont be sent (single view requests)
+      await sdk.users.setProperties({'name': 'Consent'});
       await sdk.events.recordMetrics();
 
       final events =
@@ -145,9 +145,9 @@ void main() {
       await sdk.consents.giveConsent();
 
       await sdk.events.record(key: 'consent_event');
-      sdk.views.startAutoStoppedView('ConsentView');
-      sdk.views.startAutoStoppedView('Next'); // wont be sent (single view requests)
-      sdk.users.setProperties({'name': 'Consent'});
+      await sdk.views.startAutoStoppedView('ConsentView');
+      await sdk.views.startAutoStoppedView('Next'); // wont be sent (single view requests)
+      await sdk.users.setProperties({'name': 'Consent'});
       await sdk.events.recordMetrics();
 
       final events =
@@ -221,7 +221,7 @@ void main() {
       await sdk.events.record(key: 'consent_event');
       sdk.views.startAutoStoppedView('ConsentView');
       sdk.views.startAutoStoppedView('Next'); // wont be sent (single view requests)
-      sdk.users.setProperties({'name': 'Consent'});
+      await sdk.users.setProperties({'name': 'Consent'});
       await sdk.events.recordMetrics();
 
       expect(network.sent, equals([helper.sdkBehaviorRequest, helper.healthCheckRequest]));

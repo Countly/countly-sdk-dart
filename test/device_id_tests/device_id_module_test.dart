@@ -205,9 +205,9 @@ void main() {
 
       // PRE-ID-CHANGE tracking
       await sdk.events.record(key: 'pre_event');
-      sdk.views.startAutoStoppedView('Home');
+      await sdk.views.startAutoStoppedView('Home');
       await Future.delayed(const Duration(milliseconds: 10));
-      sdk.views.startAutoStoppedView('Details');
+      await sdk.views.startAutoStoppedView('Details');
       expect(sdk.debugEventQueueLength, greaterThan(0));
 
       // CHANGE ID WITHOUT MERGE
@@ -285,7 +285,7 @@ void main() {
       expect(postEventKeys, isNot(contains('pre_event')));
 
       // Consent status should be recorded in the request queue.
-      final hasQueuedConsent = postChangeRequests.any((r) => r.containsKey('consent'));
+      final hasQueuedConsent = sdk.debugRequestQueueSnapshot.any((r) => r.containsKey('consent'));
       expect(hasQueuedConsent, isTrue, reason: 'Consent request should be enqueued after exiting unknown state');
 
       // SBS fetch should run after consent; health check may already have run during init, so skip asserting it here.

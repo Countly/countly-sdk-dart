@@ -38,12 +38,13 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   testWidgets('Test metric information reflects platform', (WidgetTester tester) async {
     final network = FakeNetworkClient('https://example.com');
-    final cfg = CountlyConfig(appKey: 'app-key',
-     serverUrl: 'https://example.com', 
-     networkClientOverride: network,
-     deviceId: 'test-device',
-     giveConsent: true,
-    enableSDKLogs: true,
+    final cfg = CountlyConfig(
+      appKey: 'app-key',
+      serverUrl: 'https://example.com',
+      networkClientOverride: network,
+      deviceId: 'test-device',
+      giveConsent: true,
+      enableSDKLogs: true,
     );
     final sdk = await Countly.init(cfg);
 

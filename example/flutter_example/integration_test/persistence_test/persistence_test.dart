@@ -93,4 +93,4 @@ void main() {
 
     Countly.disposeAll();
   });
-};
+}

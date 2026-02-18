@@ -10,11 +10,7 @@ class EventsModule {
   /// The [sum] and [dur] are optional double values.
   /// The [segmentation] is an optional map of key-value pairs (String to primitive types).
   Future<void> record(
-      {required String key,
-      int? count,
-      double? sum,
-      double? dur,
-      Map<String, dynamic>? segmentation}) async {
+      {required String key, int? count, double? sum, double? dur, Map<String, dynamic>? segmentation}) async {
     if (_i._guardDisposed('events.record')) return;
     if (!_i.hasConsentInternal()) {
       _i.L.w('Event ["$key"] dropped: missing consent');
@@ -28,14 +24,14 @@ class EventsModule {
       _i.L.e('events.record called with empty key');
       return;
     }
-    if (_i._sbs!.eventWhitelist.isNotEmpty) {
+    if (_i._sbs!.eventBlacklist.contains(key)) {
+      _i.L.w('Event ["$key"] dropped: blacklisted key');
+      return;
+    } else if (_i._sbs!.eventWhitelist.isNotEmpty) {
       if (!_i._sbs!.eventWhitelist.contains(key)) {
         _i.L.w('Event ["$key"] dropped: not in whitelist');
         return;
       }
-    } else if (_i._sbs!.eventBlacklist.contains(key)) {
-      _i.L.w('Event ["$key"] dropped: blacklisted key');
-      return;
     }
 
     segmentation = _i.removeGraylistedSegmentation(segmentation, key); // both whitelist and blacklist
@@ -59,7 +55,7 @@ class EventsModule {
     _i.L.d(
         'Recording event key=[$key] count=[${count ?? 1}] sum=[${sum ?? 'n/a'}] dur=[${dur ?? 'n/a'}] segmentation=[${segmentation != null ? segmentation.toString() : 'n/a'}]');
     await _i._enqueueUserPropertiesCache();
-    _i._addToEventQueue(evt);
+    await _i._addToEventQueue(evt);
     _i._previousEventKey = key;
   }
 
@@ -77,7 +73,7 @@ class EventsModule {
     }
     final req = _i._prepareRequest({'metrics': metrics});
     await _i._enqueueUserPropertiesCache();
-    _i._addToRequestQueue(req);
+    await _i._addToRequestQueue(req);
     _i.L.d('Recorded metrics request: [${metrics.toString()}');
   }
 }

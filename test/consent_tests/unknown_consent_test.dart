@@ -160,9 +160,9 @@ void main() {
       final sdk = await _createInstanceWithUnknownConsent(networkClient: network);
 
       // Start and switch views
-      sdk.views.startAutoStoppedView('HomePage');
+      await sdk.views.startAutoStoppedView('HomePage');
       await Future.delayed(Duration(milliseconds: 50)); // Small delay for view duration
-      sdk.views.startAutoStoppedView('DetailsPage');
+      await sdk.views.startAutoStoppedView('DetailsPage');
 
       // Check that view events are tracked
       final viewEvents = sdk.debugEventQueueSnapshot.where((e) => e['key'] == '[CLY]_view').toList();
@@ -303,7 +303,7 @@ void main() {
       final sdk = await _createInstance(networkClient: network);
 
       await sdk.events.record(key: 'should_drop');
-      sdk.users.setProperties({'name': 'NoConsent'});
+      await sdk.users.setProperties({'name': 'NoConsent'});
       await sdk.processEventsAndRequests();
 
       expect(sdk.debugEventQueueLength, 0, reason: 'Events must be dropped when consent is missing');
@@ -318,7 +318,7 @@ void main() {
       final sdk = await _createInstance(networkClient: network, giveConsent: true);
 
       await sdk.events.record(key: 'with_consent');
-      sdk.users.setProperties({'name': 'Alice'});
+      await sdk.users.setProperties({'name': 'Alice'});
       await sdk.processEventsAndRequests();
 
       final eventRequests = network.sent.where((r) => r.containsKey('events')).toList();

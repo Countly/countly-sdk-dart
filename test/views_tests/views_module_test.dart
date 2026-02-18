@@ -98,7 +98,7 @@ void main() {
     test('starting a view records view name correctly', () async {
       final sdk = await _createInstance();
 
-      sdk.views.startAutoStoppedView('HomePage');
+      await sdk.views.startAutoStoppedView('HomePage');
 
       // The view is active, so no view event is recorded yet
       // View event is recorded when view ends
@@ -126,9 +126,9 @@ void main() {
     test('starting a new view ends the previous view automatically', () async {
       final sdk = await _createInstance();
 
-      sdk.views.startAutoStoppedView('FirstView');
+      await sdk.views.startAutoStoppedView('FirstView');
       await Future.delayed(const Duration(milliseconds: 50));
-      sdk.views.startAutoStoppedView('SecondView');
+      await sdk.views.startAutoStoppedView('SecondView');
 
       // FirstView should now be ended and in the event queue
       expect(sdk.debugEventQueueLength, 1);
@@ -142,9 +142,9 @@ void main() {
     test('view event has correct structure', () async {
       final sdk = await _createInstance();
 
-      sdk.views.startAutoStoppedView('TestView');
+      await sdk.views.startAutoStoppedView('TestView');
       await Future.delayed(const Duration(milliseconds: 100));
-      sdk.views.startAutoStoppedView('NextView'); // This ends TestView
+      await sdk.views.startAutoStoppedView('NextView'); // This ends TestView
 
       final viewEvent = sdk.debugEventQueueSnapshot.first;
       expect(viewEvent['key'], '[CLY]_view');
@@ -164,9 +164,9 @@ void main() {
       final sdk = await _createInstance();
 
       final beforeStart = DateTime.now();
-      sdk.views.startAutoStoppedView('TimedView');
+      await sdk.views.startAutoStoppedView('TimedView');
       await Future.delayed(const Duration(milliseconds: 50));
-      sdk.views.startAutoStoppedView('NextView');
+      await sdk.views.startAutoStoppedView('NextView');
       final afterEnd = DateTime.now();
 
       final viewEvent = sdk.debugEventQueueSnapshot.first;
@@ -181,9 +181,9 @@ void main() {
     test('duration is in seconds as double', () async {
       final sdk = await _createInstance();
 
-      sdk.views.startAutoStoppedView('DurationTestView');
+      await sdk.views.startAutoStoppedView('DurationTestView');
       await Future.delayed(const Duration(milliseconds: 150));
-      sdk.views.startAutoStoppedView('EndView');
+      await sdk.views.startAutoStoppedView('EndView');
 
       final viewEvent = sdk.debugEventQueueSnapshot.first;
       expect(viewEvent['dur'], isA<double>());
@@ -193,8 +193,8 @@ void main() {
       final sdk = await _createInstance();
 
       // Start and immediately end (nearly zero duration)
-      sdk.views.startAutoStoppedView('QuickView');
-      sdk.views.startAutoStoppedView('NextView');
+      await sdk.views.startAutoStoppedView('QuickView');
+      await sdk.views.startAutoStoppedView('NextView');
 
       final viewEvent = sdk.debugEventQueueSnapshot.first;
       final dur = viewEvent['dur'] as double;
@@ -206,10 +206,10 @@ void main() {
     test('multiple view transitions record events in order', () async {
       final sdk = await _createInstance();
 
-      sdk.views.startAutoStoppedView('View1');
-      sdk.views.startAutoStoppedView('View2');
-      sdk.views.startAutoStoppedView('View3');
-      sdk.views.startAutoStoppedView('View4');
+      await sdk.views.startAutoStoppedView('View1');
+      await sdk.views.startAutoStoppedView('View2');
+      await sdk.views.startAutoStoppedView('View3');
+      await sdk.views.startAutoStoppedView('View4');
 
       expect(sdk.debugEventQueueLength, 3, reason: 'Three views should be ended');
 
@@ -220,11 +220,11 @@ void main() {
     test('each ended view has its own duration', () async {
       final sdk = await _createInstance();
 
-      sdk.views.startAutoStoppedView('ShortView');
+      await sdk.views.startAutoStoppedView('ShortView');
       await Future.delayed(const Duration(milliseconds: 100));
-      sdk.views.startAutoStoppedView('LongerView');
+      await sdk.views.startAutoStoppedView('LongerView');
       await Future.delayed(const Duration(milliseconds: 500));
-      sdk.views.startAutoStoppedView('FinalView');
+      await sdk.views.startAutoStoppedView('FinalView');
 
       final events = sdk.debugEventQueueSnapshot;
       final shortViewDur = events[0]['dur'] as double;
@@ -253,8 +253,8 @@ void main() {
     test('views are tracked with consent given at init', () async {
       final sdk = await _createInstance(giveConsent: true);
 
-      sdk.views.startAutoStoppedView('ConsentedView');
-      sdk.views.startAutoStoppedView('NextView');
+      await sdk.views.startAutoStoppedView('ConsentedView');
+      await sdk.views.startAutoStoppedView('NextView');
 
       expect(sdk.debugEventQueueLength, 1);
       expect(sdk.debugEventQueueSnapshot.first['segmentation']['name'], 'ConsentedView');
@@ -263,8 +263,8 @@ void main() {
     test('views are tracked in unknown consent mode', () async {
       final sdk = await _createInstance(giveConsent: false, startWithUnknownConsent: true);
 
-      sdk.views.startAutoStoppedView('UnknownConsentView');
-      sdk.views.startAutoStoppedView('NextView');
+      await sdk.views.startAutoStoppedView('UnknownConsentView');
+      await sdk.views.startAutoStoppedView('NextView');
 
       expect(sdk.debugEventQueueLength, 1);
       expect(sdk.debugEventQueueSnapshot.first['segmentation']['name'], 'UnknownConsentView');
@@ -294,8 +294,8 @@ void main() {
       final sdk = await _createInstance();
 
       final longName = 'V' * 200; // Longer than 128 limit
-      sdk.views.startAutoStoppedView(longName);
-      sdk.views.startAutoStoppedView('Short');
+      await sdk.views.startAutoStoppedView(longName);
+      await sdk.views.startAutoStoppedView('Short');
 
       final viewEvent = sdk.debugEventQueueSnapshot.first;
       final recordedName = viewEvent['segmentation']['name'] as String;
@@ -323,7 +323,7 @@ void main() {
       final sdk1 = await Countly.init(cfg1, instanceKey: 'v1');
       sdk1.debugOverrideBehaviorSettings(eventQueueSize: 100);
 
-      sdk1.views.startAutoStoppedView('RecoverableView');
+      await sdk1.views.startAutoStoppedView('RecoverableView');
 
       // Allow async storage write to complete
       await Future.delayed(const Duration(milliseconds: 5000));
@@ -351,8 +351,39 @@ void main() {
       backing['v1_COUNTLY_ACTIVE_VIEW'] = jsonEncode({
         'n': 'RecoverableView',
         'ts': DateTime.now().subtract(const Duration(seconds: 15)).millisecondsSinceEpoch,
-        'd': 15000, // 15 seconds of heartbeat time
+        'd': 55000, // 55 seconds of heartbeat time
       });
+
+      expect(backing.containsKey('v1_COUNTLY_DART_ID'), true);
+      expect(backing['v1_COUNTLY_DART_ID'], 'test-device');
+      expect(backing.containsKey('v1_COUNTLY_DART_IDT'), true);
+      expect(backing['v1_COUNTLY_DART_IDT'].toString(), '1');
+
+      expect(backing.containsKey('v1_COUNTLY_DART_RQ'), true);
+      final rqList = jsonDecode(backing['v1_COUNTLY_DART_RQ']!) as List<dynamic>;
+      expect(rqList.length, 3);
+      expect(rqList[0]['consent'], isNotNull);
+      expect(rqList[1]['location'], isNotNull);
+      expect(rqList[2]['metrics'], isNotNull);
+
+      expect(backing.containsKey('v1_COUNTLY_DART_SBS'), true);
+      final sbs = jsonDecode(backing['v1_COUNTLY_DART_SBS']!) as Map<String, dynamic>;
+      expect(sbs.containsKey('c'), true);
+
+      expect(backing.containsKey('v1_COUNTLY_DART_EQ'), true);
+      final eqList = jsonDecode(backing['v1_COUNTLY_DART_EQ']!) as List<dynamic>;
+      expect(eqList.length, 1);
+      final firstEq = eqList.first as Map<String, dynamic>;
+      expect(firstEq['key'], '[CLY]_view');
+      expect(firstEq['segmentation']['name'], 'RecoverableView');
+      expect((firstEq['dur'] as num).toDouble(), closeTo(15.0, 1.0));
+
+      // Active view
+      expect(backing.containsKey('v1_COUNTLY_ACTIVE_VIEW'), true);
+      final active = jsonDecode(backing['v1_COUNTLY_ACTIVE_VIEW']!) as Map<String, dynamic>;
+      expect(active['n'], 'RecoverableView');
+      expect(active['d'], 55000);
+      expect(active['ts'], isA<int>());
 
       // Create new instance - it should recover the view and send it
       final network2 = FakeNetworkClient('https://example.com');
@@ -391,6 +422,7 @@ void main() {
       metricsRequest['tz'] = isA<int>();
       metricsRequest['rr'] = 2;
 
+      // data from first instance
       expect(network2.sent[0], equals(consentRequest));
       expect(network2.sent[1], equals(locationRequest));
       expect(network2.sent[2], equals(metricsRequest));
@@ -403,7 +435,7 @@ void main() {
       expect(events[0]['dur'], closeTo(15.0, 1.0));
       expect(events[1]['segmentation']['name'], equals('RecoverableView'));
       expect(events[1]['segmentation']['recovered'], equals(1));
-      expect(events[1]['dur'], closeTo(15.0, 1.0));
+      expect(events[1]['dur'], closeTo(55.0, 1.0));
 
       expect(network2.sent[4], equals(helper.sdkBehaviorRequest));
       expect(network2.sent[5], equals(helper.healthCheckRequest));
@@ -426,7 +458,7 @@ void main() {
       final network = FakeNetworkClient('https://example.com');
       final sdk = await _createInstance(networkClient: network);
 
-      sdk.views.startAutoStoppedView('DisposeTestView');
+      await sdk.views.startAutoStoppedView('DisposeTestView');
 
       await sdk.dispose(flush: true);
 
@@ -462,7 +494,7 @@ void main() {
       final sdk = await Countly.init(cfg, instanceKey: 'dispose-view-${DateTime.now().microsecondsSinceEpoch}');
 
       await sdk.dispose(flush: false);
-      sdk.views.startAutoStoppedView('AfterDispose');
+      await sdk.views.startAutoStoppedView('AfterDispose');
 
       expect(logger.logs.any((log) => log.contains('disposed')), true);
       expect(sdk.debugActiveViewName, isNull, reason: 'No view should be active after dispose');
@@ -474,9 +506,9 @@ void main() {
       final sdk = await _createInstance();
 
       await sdk.events.record(key: 'before_view');
-      sdk.views.startAutoStoppedView('TestView');
+      await sdk.views.startAutoStoppedView('TestView');
       await sdk.events.record(key: 'during_view');
-      sdk.views.startAutoStoppedView('NextView'); // Ends TestView
+      await sdk.views.startAutoStoppedView('NextView'); // Ends TestView
       await sdk.events.record(key: 'after_view');
 
       final events = sdk.debugEventQueueSnapshot;
@@ -494,8 +526,8 @@ void main() {
       final sdk = await _createInstance(networkClient: network);
 
       await sdk.events.record(key: 'event1');
-      sdk.views.startAutoStoppedView('View1');
-      sdk.views.startAutoStoppedView('View2');
+      await sdk.views.startAutoStoppedView('View1');
+      await sdk.views.startAutoStoppedView('View2');
       await sdk.events.record(key: 'event2');
 
       await sdk.processEventsAndRequests();
@@ -516,12 +548,12 @@ void main() {
       final sdk = await _createInstance();
 
       final beforeStart = DateTime.now();
-      sdk.views.startAutoStoppedView('TimestampView');
+      await sdk.views.startAutoStoppedView('TimestampView');
       final afterStart = DateTime.now();
 
       await Future.delayed(const Duration(milliseconds: 100));
 
-      sdk.views.startAutoStoppedView('NextView');
+      await sdk.views.startAutoStoppedView('NextView');
 
       final viewEvent = sdk.debugEventQueueSnapshot.first;
       final eventTs = viewEvent['timestamp'] as int;
@@ -559,8 +591,8 @@ void main() {
           logger: logger, storageBacking: {'views_COUNTLY_ACTIVE_VIEW': invalid}, networkClient: network);
       await sdk.views.recoverView();
       expect(logger.logs.any((l) => l.contains('Error recovering view')), true);
-      sdk.dispose();
-      sdk.views.endActiveView();
+      await sdk.dispose();
+      await sdk.views.endActiveView();
       sdk.views.testHeartbeatOnce();
       expect(sdk.debugActiveViewName, isNull);
     });
@@ -570,9 +602,9 @@ void main() {
       final sdk = await _createInstance(logger: logger);
       // Set up active view but leave internal lastBeatTime null so first heartbeat assigns it
       sdk.views.testSetupActiveViewForHeartbeat('HBView');
-      sdk.views.testHeartbeatOnce(); // sets _lastBeatTime
-      await Future.delayed(const Duration(milliseconds: 5));
-      sdk.views.testHeartbeatOnce(); // should log a heartbeat
+      await sdk.views.testHeartbeatOnce(); // sets _lastBeatTime
+      await Future.delayed(const Duration(milliseconds: 50));
+      await sdk.views.testHeartbeatOnce(); // should log a heartbeat
       expect(logger.logs.any((l) => l.contains('Heartbeat view')), true);
     });
   });

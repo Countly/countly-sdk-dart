@@ -297,7 +297,7 @@ void main() {
       final sdk = await _createInstance(networkClient: network);
 
       // Set user properties (this queues them in cache)
-      sdk.users.setProperties({'name': 'TestUser', 'email': 'test@example.com'});
+      await sdk.users.setProperties({'name': 'TestUser', 'email': 'test@example.com'});
 
       // Record event - this should flush UP cache first
       await sdk.events.record(key: 'test_event');
@@ -512,7 +512,7 @@ void main() {
       final network = FakeNetworkClient('https://example.com');
       final sdk = await _createInstance(networkClient: network);
 
-      sdk.users.setProperties({'name': 'Test'});
+      await sdk.users.setProperties({'name': 'Test'});
       await sdk.events.recordMetrics();
 
       await sdk.processEventsAndRequests();

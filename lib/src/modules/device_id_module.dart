@@ -25,7 +25,7 @@ class DeviceIdModule {
     // Enqueue merge request containing old_device_id so backend can merge profiles.
     if (oldDeviceId != null && oldDeviceId.isNotEmpty) {
       final req = _inst._prepareRequest({'old_device_id': oldDeviceId});
-      _inst._addToRequestQueue(req);
+      await _inst._addToRequestQueue(req);
       _inst.L.d('Enqueued device ID merge request with old_device_id=[$oldDeviceId]');
     }
   }
@@ -57,6 +57,7 @@ class DeviceIdModule {
     await _inst._setDeviceIdInternal(newDeviceId, type: DeviceIdType.provided);
     _inst._consentGranted = true; // To allow tracking.
     _inst._isInUnknownConsentState = true;
-    _inst.L.i('SDK entered unknown consent state after device ID change without merge. Give consent to resume data delivery.');
+    _inst.L.i(
+        'SDK entered unknown consent state after device ID change without merge. Give consent to resume data delivery.');
   }
 }

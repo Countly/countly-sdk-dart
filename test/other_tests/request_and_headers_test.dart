@@ -328,7 +328,7 @@ void main() {
         final sdk = await _createInstance(enableNetworkOverride: false);
 
         await sdk.events.record(key: 'test');
-        sdk.users.setProperties({'name': 'John'});
+        await sdk.users.setProperties({'name': 'John'});
         sdk.views.startAutoStoppedView('TestView');
 
         await sdk.processEventsAndRequests();

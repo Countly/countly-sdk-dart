@@ -281,7 +281,7 @@ void main() {
       final sdk = await _createInstance(networkClient: network);
 
       // Set some user properties
-      sdk.users.setProperties({'name': 'MetricsTestUser'});
+      await sdk.users.setProperties({'name': 'MetricsTestUser'});
 
       // Clear sent requests to track new ones
       network.sent.clear();

@@ -16,8 +16,8 @@ class ConsentsModule {
     // Only record consent if not in unknown state (unknown state handles its own recording)
     await _inst._getOutOfUnknownConsentState(true);
     if (!wasInUnknownState) {
-      _inst._recordConsentRequest();
-      _inst.events.recordMetrics(metricOverride: _inst.deviceMetrics);
+      await _inst._recordConsentRequest();
+      await _inst.events.recordMetrics(metricOverride: _inst.deviceMetrics);
     }
   }
 
@@ -33,7 +33,7 @@ class ConsentsModule {
     final wasInUnknownState = _inst._isInUnknownConsentState;
     await _inst._getOutOfUnknownConsentState(false);
     if (!wasInUnknownState) {
-      _inst._recordConsentRequest();
+      await _inst._recordConsentRequest();
     }
   }
 }

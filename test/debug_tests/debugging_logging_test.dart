@@ -319,7 +319,7 @@ void main() {
       final logger = TestLogger();
       final sdk = await _createInstance(logger: logger);
 
-      sdk.views.startAutoStoppedView('HomePage');
+      await sdk.views.startAutoStoppedView('HomePage');
 
       expect(logger.logs.any((log) => log.contains('HomePage')), true);
     });
