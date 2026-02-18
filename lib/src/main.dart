@@ -88,6 +88,7 @@ class CountlyInstance {
     L = InstanceLogger(
       _logger,
       enabled: config.enableSDKLogs,
+      enableVisualWarnings: config.enableVisualWarnings,
       instanceKey: instanceKey,
       onLog: (lvl) {
         if (lvl == LogLevel.error)

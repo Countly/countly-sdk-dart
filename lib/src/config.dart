@@ -57,6 +57,9 @@ class CountlyConfig {
   /// SDK internal logging. (disabled by default)
   final bool enableSDKLogs;
 
+  /// If true, visual warnings (toasts) will be shown for SDK errors and warnings. (default: false)
+  final bool enableVisualWarnings;
+
   /// If true, consent will be given to SDK to enable features requiring consent. (default: false)
   final bool giveConsent;
 
@@ -96,6 +99,7 @@ class CountlyConfig {
     required this.logger,
     required this.giveConsent,
     required this.enableSDKLogs,
+    required this.enableVisualWarnings,
     required this.customRequestHeaders,
     required this.deviceMetricOverrides,
     required this.sbs,
@@ -115,13 +119,14 @@ class CountlyConfig {
     Map<String, dynamic>? deviceMetricOverrides,
     SdkLogger? logger,
     bool enableSDKLogs = false,
+    bool enableVisualWarnings = false,
     bool giveConsent = false,
     Map<String, String>? customRequestHeaders,
     Map<String, dynamic> sbs = const {},
     bool disableOldDataMigration = false,
     @visibleForTesting NetworkClient? networkClientOverride,
   }) {
-    if (appKey.isEmpty) {
+    if (appKey.isEmpty || appKey.trim().isEmpty) {
       throw ArgumentError('app_key cannot be empty');
     }
     if (serverUrl.isEmpty) {
@@ -144,9 +149,10 @@ class CountlyConfig {
 
     /// remove trailing slashes
     final normalized = serverUrl.replaceFirst(RegExp(r'/+$'), '');
+    final trimmedAppKey = appKey.trim();
 
     return CountlyConfig._(
-        appKey: appKey,
+        appKey: trimmedAppKey,
         serverUrl: normalized,
         deviceId: deviceId,
         userProperties: userProperties == null ? null : Map.unmodifiable(Map.of(userProperties)),
@@ -157,6 +163,7 @@ class CountlyConfig {
         logger: logger,
         giveConsent: giveConsent,
         enableSDKLogs: enableSDKLogs,
+        enableVisualWarnings: enableVisualWarnings,
         customRequestHeaders: customRequestHeaders == null ? null : Map.unmodifiable(Map.of(customRequestHeaders)),
         deviceMetricOverrides: deviceMetricOverrides == null ? null : Map.unmodifiable(Map.of(deviceMetricOverrides)),
         sbs: Map.of(sbs),
