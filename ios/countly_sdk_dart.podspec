@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'countly_sdk_dart'
-  s.version          = '0.0.1'
+  s.version          = '26.1.0'
   s.summary          = 'Countly Dart SDK native bridge for migration'
   s.description      = <<-DESC
 A Flutter plugin shim to access legacy Countly native SDK storage for migration.

@@ -27,11 +27,11 @@ Future<void> main() async {
 
   await sdk.consents.giveConsent();
   await sdk.events.recordMetrics();
-  sdk.views.startAutoStoppedView("home");
+  await sdk.views.startAutoStoppedView("home");
 
   final sdk_2 = await Countly.init(config2, instanceKey: 'secondary');
-  sdk_2.events.record(key: 'instance_2_event');
-  sdk_2.views.startAutoStoppedView("home");
+  await sdk_2.events.record(key: 'instance_2_event');
+  await sdk_2.views.startAutoStoppedView("home");
 
   await sdk.events.record(key: 'session_start');
   await Future<void>.delayed(const Duration(seconds: 5));
@@ -39,7 +39,7 @@ Future<void> main() async {
   List<String> customSeg = ['a', 'b', 'c'];
   await sdk.events.record(key: 'button_click', segmentation: {'id': 'start', 'color': 'blue', 'custom': customSeg});
   await sdk.events.record(key: 'd', segmentation: {'id': 'start', 'color': 'blue', 'custom': customSeg});
-  sdk.users.pushToArray("a", ['1', 2, 3.0, true]);
+  await sdk.users.pushToArray("a", ['1', 2, 3.0, true]);
   await sdk.users.setProperties({"a": '1', "b": 2, "c": 3.0, "d": true, "e": null});
   await sdk.users.setProperties({NamedUserProperty.name: 'Alice'});
   await sdk.processEventsAndRequests();

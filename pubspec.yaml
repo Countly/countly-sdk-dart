@@ -1,7 +1,13 @@
 name: countly_sdk_dart
-description: "A new Flutter package project."
-version: 0.0.1
-homepage: count.ly
+description: "Countly Dart SDK for tracking user actions on all platforms supported by Dart."
+version: 26.1.0
+homepage: https://support.count.ly/hc/en-us/articles/
+repository: https://github.com/Countly/countly-
+issue_tracker: https://github.com/Countly/countly-
+documentation: https://support.count.ly/hc/en-us/articles/
+platforms:
+  android:
+  ios:
 
 environment:
   sdk: ^3.0.0

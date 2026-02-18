@@ -1,3 +1,3 @@
-## 0.0.1
+## 26.1.0
 
-* TODO: Describe initial release.
+* Initial SDK release with the following functionalities:
