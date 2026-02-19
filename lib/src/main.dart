@@ -169,6 +169,9 @@ class CountlyInstance {
       _disposeLifecycleListener = listenToLifecycle(
         onBackground: () {
           _isInBackground = true;
+          L.d('App going to background, processing queues');
+          // ignore: discarded_futures
+          processEventsAndRequests();
         },
         onForeground: () {
           _isInBackground = false;
