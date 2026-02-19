@@ -34,6 +34,7 @@ class ConsentsModule {
     await _inst._getOutOfUnknownConsentState(false);
     if (!wasInUnknownState) {
       await _inst._recordConsentRequest();
+            await _inst.processEventsAndRequests();
     }
   }
 }

@@ -72,8 +72,9 @@ class EventsModule {
       metrics.addAll(_i._sanitizeSegmentation(metricOverride));
     }
     final req = _i._prepareRequest({'metrics': metrics});
+    if (req == null) return;
     await _i._enqueueUserPropertiesCache();
     await _i._addToRequestQueue(req);
-    _i.L.d('Recorded metrics request: [${metrics.toString()}');
+    _i.L.d('Recorded metrics request: [${metrics.toString()}]');
   }
 }

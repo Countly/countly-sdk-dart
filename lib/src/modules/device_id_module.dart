@@ -25,6 +25,7 @@ class DeviceIdModule {
     // Enqueue merge request containing old_device_id so backend can merge profiles.
     if (oldDeviceId != null && oldDeviceId.isNotEmpty) {
       final req = _inst._prepareRequest({'old_device_id': oldDeviceId});
+      if (req == null) return;
       await _inst._addToRequestQueue(req);
       _inst.L.d('Enqueued device ID merge request with old_device_id=[$oldDeviceId]');
     }
@@ -49,7 +50,7 @@ class DeviceIdModule {
     _inst.L.i('Changing device ID without merge from [$oldDeviceId] to [$newDeviceId]');
 
     // Stop any open view so its data is finalized under the old device id.
-    _inst._viewsModule?._endIfActive();
+    await _inst._viewsModule?._endIfActive();
 
     await _inst.processEventsAndRequests();
     await _inst._clearAllDataQueuesAndCaches();

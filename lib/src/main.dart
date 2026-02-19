@@ -72,6 +72,7 @@ class CountlyInstance {
   String? _previousEventKey;
   late final DateTime _sdkStartTime;
   bool _isInBackground = false;
+  void Function()? _disposeLifecycleListener;
   bool _isInUnknownConsentState = false;
 
   CountlyInstance._(this.config, this.instanceKey);
@@ -158,13 +159,14 @@ class CountlyInstance {
     // Record initial consent status
     await _recordConsentRequest();
     // Record location request
-    await _addToRequestQueue(_prepareRequest({'location': ''}));
+    final locationReq = _prepareRequest({'location': ''});
+    if (locationReq != null) await _addToRequestQueue(locationReq);
 
     L.i('SDK instance initialized successfully');
 
     // Lifecycle listeners
     try {
-      listenToLifecycle(
+      _disposeLifecycleListener = listenToLifecycle(
         onBackground: () {
           _isInBackground = true;
         },
@@ -204,7 +206,11 @@ class CountlyInstance {
           try {
             final d = jsonDecode(item);
             if (d is Map<String, dynamic>) _requestQueue.add(d);
-          } catch (_) {}
+          } catch (e) {
+            L.w('Dropped unparseable request queue item: $e');
+          }
+        } else {
+          L.w('Dropped request queue item with unexpected type: ${item.runtimeType}');
         }
       }
     } else {
@@ -220,7 +226,11 @@ class CountlyInstance {
           try {
             final d = jsonDecode(item);
             if (d is Map<String, dynamic>) _eventQueue.add(d);
-          } catch (_) {}
+          } catch (e) {
+            L.w('Dropped unparseable event queue item: $e');
+          }
+        } else {
+          L.w('Dropped event queue item with unexpected type: ${item.runtimeType}');
         }
       }
     } else {
@@ -300,7 +310,7 @@ class CountlyInstance {
     await _runQueueLocked(() async {
       L.d('Triggered processing event and request queues');
       await _bundleEventQueue();
-      if ((_userPropertiesNamedCache.isNotEmpty || _customUserPropertiesCache.isNotEmpty) && _consentGranted) {
+      if (_userPropertiesNamedCache.isNotEmpty || _customUserPropertiesCache.isNotEmpty) {
         L.d('Enqueuing user properties request cache: named=${_userPropertiesNamedCache.keys.length} custom=${_customUserPropertiesCache.keys.length}');
         await _enqueueUserPropertiesCache();
       }
@@ -345,17 +355,21 @@ class CountlyInstance {
 
     final payload = jsonEncode(batch);
     final request = _prepareRequest({'events': payload});
+    if (request == null) return;
     L.d('Event Bundler: Flushed events to request queue');
     await _addToRequestQueue(request);
   }
 
   /// Adds necessary common fields to request data.
-  Map<String, dynamic> _prepareRequest(Map<String, dynamic> data) {
+  /// Returns null if device ID is not set, preventing invalid requests from being queued.
+  Map<String, dynamic>? _prepareRequest(Map<String, dynamic> data) {
     if (_deviceId == null) {
-      L.e('prepareRequest called with null deviceId, this should not happen');
+      L.e('prepareRequest called with null deviceId, dropping request');
+      return null;
     }
     if (config.appKey.isEmpty) {
-      L.e('prepareRequest called with empty appKey, this should not happen');
+      L.e('prepareRequest called with empty appKey, dropping request');
+      return null;
     }
     return {
       'app_key': config.appKey,
@@ -455,9 +469,10 @@ class CountlyInstance {
     for (final req in rqSnapshot) {
       final ok = await _sendRequest(req);
       if (!ok) {
-        L.w('Request failed, backing off for 60 seconds'); // TODO: hardcoded
+        final backoffDuration = _sbs?.internalTimerInterval ?? SBSDefaults.sui;
+        L.w('Request failed, backing off for $backoffDuration seconds');
         _suspended = true;
-        _suspendUntil = DateTime.now().add(const Duration(seconds: 60));
+        _suspendUntil = DateTime.now().add(Duration(seconds: backoffDuration));
         break;
       } else {
         L.i('Request sent successfully, removing from queue');
@@ -546,6 +561,7 @@ class CountlyInstance {
     if (_customUserPropertiesCache.isNotEmpty)
       userDetails['custom'] = Map<String, dynamic>.from(_customUserPropertiesCache);
     final request = _prepareRequest({'user_details': userDetails});
+    if (request == null) return;
     await _addToRequestQueue(request);
     L.d('Enqueued user properties request: named=${_userPropertiesNamedCache.keys.length} custom=${_customUserPropertiesCache.keys.length}');
     _userPropertiesNamedCache.clear();
@@ -617,6 +633,7 @@ class CountlyInstance {
       };
       final metrics = {'_app_version': SdkInternal.appVersion};
       final req = _prepareRequest({'hc': hc, 'metrics': metrics});
+      if (req == null) return;
       _attachDynamicRequestMeta(req);
       final resp = await _network.makeRequest(req, Endpoints.i);
       final ok = _network.isResponseValid(resp, acceptJSON: false);
@@ -647,6 +664,7 @@ class CountlyInstance {
       }
     }
     final req = _prepareRequest({'consent': consentMap});
+    if (req == null) return;
     await _addToRequestQueue(req);
     L.d('Recorded consent request:[$consentMap]');
   }
@@ -702,6 +720,8 @@ class CountlyInstance {
     try {
       await _viewsModule?._endIfActive();
     } catch (_) {}
+    // Ensure heartbeat is cancelled even if _endIfActive returned early.
+    _viewsModule?._cancelHeartbeat();
     if (flush) {
       try {
         // Ensure any remaining events & user properties become requests.
@@ -711,6 +731,10 @@ class CountlyInstance {
       }
     }
     _disposed = true;
+    try {
+      _disposeLifecycleListener?.call();
+      _disposeLifecycleListener = null;
+    } catch (_) {}
     try {
       _network.close();
     } catch (e, st) {
@@ -827,8 +851,13 @@ class Countly {
   /// Returns default instance if already initialized, else null.
   static CountlyInstance? get defaultInstance => _instances['default'];
 
-  /// TODO: If instance exists it is replaced safely. Should not?
   static Future<CountlyInstance> init(CountlyConfig config, {String instanceKey = 'default'}) async {
+    final existing = _instances[instanceKey];
+    if (existing != null) {
+      existing.L.w('Replacing existing SDK instance key=[$instanceKey], disposing old instance');
+      await existing.dispose(flush: true);
+      _instances.remove(instanceKey);
+    }
     final inst = await CountlyInstance.create(config, instanceKey: instanceKey);
     _instances[instanceKey] = inst;
     return inst;

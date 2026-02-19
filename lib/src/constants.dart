@@ -13,10 +13,10 @@ class StorageSubKeys {
 @internal
 class DeviceIdType {
   /// Provided by user.
-  static const provided = 1;
+  static const provided = 0;
 
   /// Generated UUID.
-  static const generated = 2;
+  static const generated = 1;
 }
 
 /// SDK metadata
