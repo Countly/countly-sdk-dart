@@ -224,21 +224,22 @@ void main() {
       await sdk.users.setProperties({'name': 'Consent'});
       await sdk.events.recordMetrics();
 
-      // revokeConsent sends queued data first (consent, location, metrics),
-      // then adds false consent request. Init requests are now sent via network.
-      // network.sent includes SBS + healthcheck (direct) + 3 queued init requests
-      expect(network.sent.length, 5);
+      // revokeConsent records false consent, then flushes the entire queue.
+      // network.sent includes SBS + healthcheck (direct) + 4 queued requests
+      // (trueConsent + location + metrics + falseConsent)
+      expect(network.sent.length, 6);
       expect(network.sent[0], equals(helper.sdkBehaviorRequest));
       expect(network.sent[1], equals(helper.healthCheckRequest));
-      // Remaining 3 are the init requests with dynamic metadata added
+      // Remaining 4 are the queued requests with dynamic metadata added
       expect(network.sent[2]['consent'], helper.trueConsentRequest['consent']);
       expect(network.sent[3]['location'], helper.locationRequest['location']);
       expect(network.sent[4].containsKey('metrics'), true);
+      expect(network.sent[5]['consent'], helper.falseConsentRequest['consent']);
 
       expect(sdk.debugEventQueueSnapshot, equals([]));
 
-      // Only the false consent request remains in queue (added after flush)
-      expect(sdk.debugRequestQueueSnapshot, equals([helper.falseConsentRequest]));
+      // Queue is empty after flush
+      expect(sdk.debugRequestQueueSnapshot, equals([]));
     });
   });
 
@@ -275,16 +276,21 @@ void main() {
       await sdk.consents.revokeConsent();
       await sdk.consents.revokeConsent();
 
-      // First revokeConsent sends queued init data, subsequent calls are no-ops
-      // network.sent: SBS + healthcheck (direct) + 3 queued init requests
-      expect(network.sent.length, 5);
+      // First revokeConsent flushes all queued data, subsequent calls are no-ops
+      // network.sent: SBS + healthcheck (direct) + 4 queued requests
+      expect(network.sent.length, 6);
+      expect(network.sent[0], equals(helper.sdkBehaviorRequest));
+      expect(network.sent[1], equals(helper.healthCheckRequest));
+      expect(network.sent[2]['consent'], helper.trueConsentRequest['consent']);
+      expect(network.sent[3]['location'], helper.locationRequest['location']);
+      expect(network.sent[4].containsKey('metrics'), true);
+      expect(network.sent[5]['consent'], helper.falseConsentRequest['consent']);
 
       // eq cleared
       expect(sdk.debugEventQueueSnapshot, equals([]));
 
-      // Only the false consent request remains
-      expect(sdk.debugRequestQueueSnapshot.length, equals(1));
-      expect(sdk.debugRequestQueueSnapshot[0], equals(helper.falseConsentRequest));
+      // Queue is empty after flush
+      expect(sdk.debugRequestQueueSnapshot.length, equals(0));
     });
 
     test('consent toggle does not lose data incorrectly', () async {
