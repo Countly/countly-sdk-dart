@@ -35,7 +35,7 @@ In the `dependencies:` section of your `pubspec.yaml`, add the following line:
 
 ```yaml
 dependencies:
-  countly_sdk_dart: <latest_version>
+  countly_sdk_dart_core: <latest_version>
 ```
 
 ## Usage
@@ -43,7 +43,7 @@ dependencies:
 ### Initialization
 
 ```dart
-import 'package:countly_sdk_dart/countly.dart';
+import 'package:countly_sdk_dart_core/countly.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -238,7 +238,7 @@ final config = CountlyConfig(
 ### Pure Dart Usage (Non-Flutter)
 
 ```dart
-import 'package:countly_sdk_dart/countly.dart';
+import 'package:countly_sdk_dart_core/countly.dart';
 
 void main() async {
   final config = CountlyConfig(

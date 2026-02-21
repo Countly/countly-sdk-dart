@@ -1,12 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:countly_sdk_dart/countly.dart' as C;
+import 'package:countly_sdk_dart_core/countly.dart' as C;
 import 'package:countly_flutter_np/countly_config.dart';
 import 'package:countly_flutter_np/countly_flutter.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:countly_sdk_dart/src/networking.dart' as N;
+import 'package:countly_sdk_dart_core/src/networking.dart' as N;
 import '../../../../test/helper/helper.dart' as helper;
 import 'package:http/http.dart' as http;
 
@@ -36,11 +36,11 @@ class FakeNetworkClient extends N.NetworkClient {
   }
 }
 
-
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   testWidgets('Test SDK migrates data from flutter SDK', (WidgetTester tester) async {
-    CountlyConfig config = CountlyConfig('https://old.com', 'old-app-key').setLoggingEnabled(true).setDeviceId('old-device-id');
+    CountlyConfig config =
+        CountlyConfig('https://old.com', 'old-app-key').setLoggingEnabled(true).setDeviceId('old-device-id');
     await Countly.initWithConfig(config);
     var event = {'key': 'Old event', 'count': 1};
     Countly.recordEvent(event);
@@ -59,7 +59,7 @@ void main() {
     await sdk.processEventsAndRequests();
     for (var req in network.sent) {
       print(req);
-      expect(req['app_key'], 'app-key'); 
+      expect(req['app_key'], 'app-key');
       expect(req['device_id'], 'old-device-id'); // migrated device ID should be used
       expect(req['sdk_name'], 'countly-sdk-dart');
       expect(req['sdk_version'], '1.0.0');

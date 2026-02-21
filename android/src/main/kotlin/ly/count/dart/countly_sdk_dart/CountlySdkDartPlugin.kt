@@ -1,4 +1,4 @@
-package ly.count.dart.countly_sdk_dart
+package ly.count.dart.countly_sdk_dart_core
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -73,7 +73,7 @@ class CountlySdkDartPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
     }
 
     companion object {
-        private const val CHANNEL_NAME = "countly_sdk_dart/migration"
+        private const val CHANNEL_NAME = "countly_sdk_dart_core/migration"
         private const val METHOD_GET = "getLegacyData"
         private const val METHOD_CLEAR_ANDROID = "clearAndroidLegacyData"
         private const val ANDROID_PREFERENCES = "COUNTLY_STORE"

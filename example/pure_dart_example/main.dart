@@ -4,7 +4,7 @@
 // (non-Flutter applications like CLI tools, servers, etc.)
 
 import 'dart:async';
-import 'package:countly_sdk_dart/countly.dart';
+import 'package:countly_sdk_dart_core/countly.dart';
 
 Future<void> main() async {
   print('=== Countly Dart SDK - Pure Dart Example ===\n');

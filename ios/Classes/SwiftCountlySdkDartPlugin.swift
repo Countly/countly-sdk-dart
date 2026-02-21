@@ -2,7 +2,7 @@ import Flutter
 import UIKit
 
 public class SwiftCountlySdkDartPlugin: NSObject, FlutterPlugin {
-  private static let channelName = "countly_sdk_dart/migration"
+  private static let channelName = "countly_sdk_dart_core/migration"
   private static let methodGet = "getLegacyData"
   private static let methodClear = "clearIOSLegacyData"
 

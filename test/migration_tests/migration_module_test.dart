@@ -1,10 +1,10 @@
 import 'dart:convert';
 
-import 'package:countly_sdk_dart/countly.dart';
-import 'package:countly_sdk_dart/src/constants.dart';
-import 'package:countly_sdk_dart/src/logging/logging_helper.dart';
-import 'package:countly_sdk_dart/src/migration/migration.dart';
-import 'package:countly_sdk_dart/src/storage/storage.dart';
+import 'package:countly_sdk_dart_core/countly.dart';
+import 'package:countly_sdk_dart_core/src/constants.dart';
+import 'package:countly_sdk_dart_core/src/logging/logging_helper.dart';
+import 'package:countly_sdk_dart_core/src/migration/migration.dart';
+import 'package:countly_sdk_dart_core/src/storage/storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// A simple SdkLogger that captures all logs for testing purposes.
@@ -26,7 +26,8 @@ class CapturingSdkLogger implements SdkLogger {
 class TestLogger extends InstanceLogger {
   final CapturingSdkLogger capturer;
 
-  TestLogger._internal(this.capturer) : super(capturer, enabled: true, enableVisualWarnings: false, instanceKey: 'test');
+  TestLogger._internal(this.capturer)
+      : super(capturer, enabled: true, enableVisualWarnings: false, instanceKey: 'test');
 
   factory TestLogger() {
     final capturer = CapturingSdkLogger();

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:countly_sdk_dart/countly.dart';
+import 'package:countly_sdk_dart_core/countly.dart';
 
 import 'pages/events_page.dart';
 import 'pages/views_page.dart';
