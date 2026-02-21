@@ -6,11 +6,19 @@ typedef _LifecycleCallback = void Function();
 final List<_LifecycleCallback> _backgroundListeners = [];
 final List<_LifecycleCallback> _foregroundListeners = [];
 
-void listenToLifecycle({void Function()? onBackground, void Function()? onForeground}) {
+/// Returns a dispose function that removes the observer and callbacks.
+void Function() listenToLifecycle({void Function()? onBackground, void Function()? onForeground}) {
   final binding = WidgetsBinding.instance;
-  binding.addObserver(_CountlyLifecycleObserver(onBackground, onForeground));
+  final observer = _CountlyLifecycleObserver(onBackground, onForeground);
+  binding.addObserver(observer);
   if (onBackground != null) _backgroundListeners.add(onBackground);
   if (onForeground != null) _foregroundListeners.add(onForeground);
+
+  return () {
+    binding.removeObserver(observer);
+    if (onBackground != null) _backgroundListeners.remove(onBackground);
+    if (onForeground != null) _foregroundListeners.remove(onForeground);
+  };
 }
 
 /// Test-only: simulate app moving to background.

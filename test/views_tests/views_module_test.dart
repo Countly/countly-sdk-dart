@@ -357,7 +357,7 @@ void main() {
       expect(backing.containsKey('v1_COUNTLY_DART_ID'), true);
       expect(backing['v1_COUNTLY_DART_ID'], 'test-device');
       expect(backing.containsKey('v1_COUNTLY_DART_IDT'), true);
-      expect(backing['v1_COUNTLY_DART_IDT'].toString(), '1');
+      expect(backing['v1_COUNTLY_DART_IDT'].toString(), '0'); // DeviceIdType.provided
 
       expect(backing.containsKey('v1_COUNTLY_DART_RQ'), true);
       final rqList = jsonDecode(backing['v1_COUNTLY_DART_RQ']!) as List<dynamic>;

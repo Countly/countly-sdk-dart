@@ -47,7 +47,7 @@ _BrowserInfo _parseBrowser(String ua) {
     RegExp(r'Edg\/([0-9.]+)'): 'Edge',
     RegExp(r'Chrome\/([0-9.]+)'): 'Chrome',
     RegExp(r'Firefox\/([0-9.]+)'): 'Firefox',
-    RegExp(r'Verv\/([0-9.]+)'): 'Vivaldi',
+    RegExp(r'Vivaldi\/([0-9.]+)'): 'Vivaldi',
     RegExp(r'Safari\/([0-9.]+)'): 'Safari'
   };
   for (final e in patterns.entries) {

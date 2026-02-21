@@ -26,7 +26,7 @@ class CapturingSdkLogger implements SdkLogger {
 class TestLogger extends InstanceLogger {
   final CapturingSdkLogger capturer;
 
-  TestLogger._internal(this.capturer) : super(capturer, enabled: true, instanceKey: 'test');
+  TestLogger._internal(this.capturer) : super(capturer, enabled: true, enableVisualWarnings: false, instanceKey: 'test');
 
   factory TestLogger() {
     final capturer = CapturingSdkLogger();

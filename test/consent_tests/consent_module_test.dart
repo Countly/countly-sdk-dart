@@ -224,14 +224,22 @@ void main() {
       await sdk.users.setProperties({'name': 'Consent'});
       await sdk.events.recordMetrics();
 
-      expect(network.sent, equals([helper.sdkBehaviorRequest, helper.healthCheckRequest]));
+      // revokeConsent records false consent, then flushes the entire queue.
+      // network.sent includes SBS + healthcheck (direct) + 4 queued requests
+      // (trueConsent + location + metrics + falseConsent)
+      expect(network.sent.length, 6);
+      expect(network.sent[0], equals(helper.sdkBehaviorRequest));
+      expect(network.sent[1], equals(helper.healthCheckRequest));
+      // Remaining 4 are the queued requests with dynamic metadata added
+      expect(network.sent[2]['consent'], helper.trueConsentRequest['consent']);
+      expect(network.sent[3]['location'], helper.locationRequest['location']);
+      expect(network.sent[4].containsKey('metrics'), true);
+      expect(network.sent[5]['consent'], helper.falseConsentRequest['consent']);
 
       expect(sdk.debugEventQueueSnapshot, equals([]));
 
-      expect(
-          sdk.debugRequestQueueSnapshot,
-          equals(
-              [helper.trueConsentRequest, helper.locationRequest, helper.metricsRequest, helper.falseConsentRequest]));
+      // Queue is empty after flush
+      expect(sdk.debugRequestQueueSnapshot, equals([]));
     });
   });
 
@@ -268,20 +276,21 @@ void main() {
       await sdk.consents.revokeConsent();
       await sdk.consents.revokeConsent();
 
-      // init requests
-      expect(network.sent, equals([helper.sdkBehaviorRequest, helper.healthCheckRequest])); // direct requests
+      // First revokeConsent flushes all queued data, subsequent calls are no-ops
+      // network.sent: SBS + healthcheck (direct) + 4 queued requests
+      expect(network.sent.length, 6);
+      expect(network.sent[0], equals(helper.sdkBehaviorRequest));
+      expect(network.sent[1], equals(helper.healthCheckRequest));
+      expect(network.sent[2]['consent'], helper.trueConsentRequest['consent']);
+      expect(network.sent[3]['location'], helper.locationRequest['location']);
+      expect(network.sent[4].containsKey('metrics'), true);
+      expect(network.sent[5]['consent'], helper.falseConsentRequest['consent']);
 
       // eq cleared
       expect(sdk.debugEventQueueSnapshot, equals([]));
 
-      // all eq requests sent
-      expect(sdk.debugRequestQueueSnapshot.length, equals(4));
-
-      // order
-      expect(sdk.debugRequestQueueSnapshot[0], equals(helper.trueConsentRequest));
-      expect(sdk.debugRequestQueueSnapshot[1], equals(helper.locationRequest));
-      expect(sdk.debugRequestQueueSnapshot[2], equals(helper.metricsRequest));
-      expect(sdk.debugRequestQueueSnapshot[3], equals(helper.falseConsentRequest));
+      // Queue is empty after flush
+      expect(sdk.debugRequestQueueSnapshot.length, equals(0));
     });
 
     test('consent toggle does not lose data incorrectly', () async {
@@ -290,12 +299,19 @@ void main() {
 
       await sdk.events.record(key: 'first_event');
       await sdk.consents.revokeConsent();
+      // revokeConsent sends queued data first, so first_event is bundled and sent
+      // Verify first_event was sent via network
+      final sentWithEvents = network.sent.where((r) => r.containsKey('events')).toList();
+      expect(sentWithEvents.length, 1);
+      final events = helper.deconstructEventsRequest(sentWithEvents.first);
+      expect(events.any((e) => e['key'] == 'first_event'), true);
+
       await sdk.consents.giveConsent();
       await sdk.events.record(key: 'second_event');
 
-      expect(sdk.debugEventQueueLength, 2);
-      expect(sdk.debugEventQueueSnapshot[0]['key'], 'first_event');
-      expect(sdk.debugEventQueueSnapshot[1]['key'], 'second_event');
+      // Only second_event remains in event queue
+      expect(sdk.debugEventQueueLength, 1);
+      expect(sdk.debugEventQueueSnapshot[0]['key'], 'second_event');
     });
 
     test('disposed instance ignores consent calls', () async {
