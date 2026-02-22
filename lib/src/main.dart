@@ -206,11 +206,11 @@ class CountlyInstance {
         if (item is Map<String, dynamic>) {
           _requestQueue.add(item);
         } else if (item is String) {
-          try {
-            final d = jsonDecode(item);
-            if (d is Map<String, dynamic>) _requestQueue.add(d);
-          } catch (e) {
-            L.w('Dropped unparseable request queue item: $e');
+          final parsed = _parsePersistedRequestQueueItem(item);
+          if (parsed != null) {
+            _requestQueue.add(parsed);
+          } else {
+            L.w('Dropped unparseable request queue item: $item');
           }
         } else {
           L.w('Dropped request queue item with unexpected type: ${item.runtimeType}');
@@ -239,6 +239,60 @@ class CountlyInstance {
     } else {
       L.v('No persisted event queue found');
     }
+  }
+
+  /// Parses a persisted request queue item which can be either a JSON string or a legacy query string.
+  Map<String, dynamic>? _parsePersistedRequestQueueItem(String item) {
+    try {
+      final decoded = jsonDecode(item);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    } catch (_) {}
+
+    if (!item.contains('=')) {
+      return null;
+    }
+
+    try {
+      final query = Uri.splitQueryString(item, encoding: utf8);
+      if (query.isEmpty) {
+        return null;
+      }
+
+      final parsed = <String, dynamic>{};
+      query.forEach((key, value) {
+        parsed[key] = _coerceLegacyQueryValue(value);
+      });
+      return parsed;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  dynamic _coerceLegacyQueryValue(String value) {
+    if (value.isEmpty) return value;
+
+    final lower = value.toLowerCase();
+    if (lower == 'true') return true;
+    if (lower == 'false') return false;
+
+    final intValue = int.tryParse(value);
+    if (intValue != null) return intValue;
+
+    final doubleValue = double.tryParse(value);
+    if (doubleValue != null) return doubleValue;
+
+    final firstChar = value[0];
+    if (firstChar == '{' || firstChar == '[') {
+      try {
+        return jsonDecode(value);
+      } catch (_) {
+        return value;
+      }
+    }
+
+    return value;
   }
 
   /// Initializes device id: loads from storage if any, else uses provided or generates new.

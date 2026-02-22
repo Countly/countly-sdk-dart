@@ -1,5 +1,5 @@
-import 'package:countly_sdk_dart/countly.dart';
-import 'package:countly_sdk_dart/src/networking.dart';
+import 'package:countly_sdk_dart_core/countly.dart';
+import 'package:countly_sdk_dart_core/src/networking.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';

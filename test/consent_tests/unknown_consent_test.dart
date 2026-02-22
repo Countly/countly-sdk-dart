@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:countly_sdk_dart/countly.dart';
-import 'package:countly_sdk_dart/src/constants.dart';
+import 'package:countly_sdk_dart_core/countly.dart';
+import 'package:countly_sdk_dart_core/src/constants.dart';
 import 'package:http/http.dart' as http;
-import 'package:countly_sdk_dart/src/networking.dart';
+import 'package:countly_sdk_dart_core/src/networking.dart';
 
 class TestLogger implements SdkLogger {
   final List<String> logs = [];
@@ -378,8 +378,8 @@ void main() {
         {
           'app_key': 'app-key',
           'device_id': 'stored-device',
-          'sdk_version': '1.0.0',
-          'sdk_name': 'countly-sdk-dart',
+          'sdk_version': '26.1.0',
+          'sdk_name': 'countly-sdk-dart-core',
           'offline': true,
         }
       ]);

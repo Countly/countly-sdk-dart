@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:countly_sdk_dart/countly.dart';
+import 'package:countly_sdk_dart_core/countly.dart';
 
 class ConsentPage extends StatefulWidget {
   const ConsentPage({super.key});

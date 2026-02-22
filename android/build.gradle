@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace 'ly.count.dart.countly_sdk_dart'
+    namespace 'ly.count.dart.countly_sdk_dart_core'
     compileSdkVersion 34
 
     defaultConfig {

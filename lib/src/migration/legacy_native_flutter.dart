@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 
 import 'legacy_native_types.dart';
 
-const MethodChannel _channel = MethodChannel('countly_sdk_dart/migration');
+const MethodChannel _channel = MethodChannel('countly_sdk_dart_core/migration');
 
 LegacyNativeBridge legacyNativeBridgeFactory() => _FlutterLegacyNativeBridge();
 

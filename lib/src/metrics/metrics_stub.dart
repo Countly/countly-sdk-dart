@@ -7,5 +7,5 @@ Map<String, dynamic> getCurrentMetrics() => {
       '_device': 'unknown',
       '_device_type': 'desktop',
       '_locale': 'en-US',
-      '_app_version': SdkInternal.sdkVersion,
+      '_app_version': SdkInternal.appVersion,
     };

@@ -1,5 +1,5 @@
 Pod::Spec.new do |s|
-  s.name             = 'countly_sdk_dart'
+  s.name             = 'countly_sdk_dart_core'
   s.version          = '26.1.0'
   s.summary          = 'Countly Dart SDK native bridge for migration'
   s.description      = <<-DESC
