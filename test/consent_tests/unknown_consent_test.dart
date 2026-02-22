@@ -378,8 +378,8 @@ void main() {
         {
           'app_key': 'app-key',
           'device_id': 'stored-device',
-          'sdk_version': '1.0.0',
-          'sdk_name': 'countly-sdk-dart',
+          'sdk_version': '26.1.0',
+          'sdk_name': 'countly-sdk-dart-core',
           'offline': true,
         }
       ]);

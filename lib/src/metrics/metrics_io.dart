@@ -8,7 +8,7 @@ Map<String, dynamic> getCurrentMetrics() {
     '_device': _deviceName(), // TODO: this might be generic 'hostname' on desktops plus some other info. Check.
     '_device_type': _inferDeviceType(),
     '_locale': _locale(),
-    '_app_version': SdkInternal.sdkVersion,
+    '_app_version': SdkInternal.appVersion,
   };
 }
 

@@ -13,6 +13,7 @@ dependencies:
   countly_sdk_dart_core:
     path: ../..
   countly_flutter_np: ^25.4.3
+  shared_preferences: ^2.3.2
 
 dev_dependencies:
   flutter_test:

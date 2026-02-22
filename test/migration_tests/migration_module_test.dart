@@ -216,6 +216,42 @@ void main() {
       expect(decoded[1]['segmentation'], {'a': 'b'});
     });
 
+    test('migrates event queue as legacy request when legacy request envelope exists', () async {
+      final legacyBeginSession =
+          'app_key=old-app-key&device_id=old-device-id&sdk_version=25.4.3&sdk_name=dart-flutterbnp-android&av=0.0.1&begin_session=1';
+      final event1 = jsonEncode({'key': 'event1', 'count': 1});
+      final event2 = jsonEncode({'key': 'event2', 'count': 2});
+      final backing = <String, String>{
+        AndroidLegacyKeys.deviceId: 'old-device-id',
+        AndroidLegacyKeys.requestQueue: legacyBeginSession,
+        AndroidLegacyKeys.eventQueue: '$event1${AndroidLegacyKeys.delimiter}$event2',
+      };
+      final storage = createTestStorage(backing);
+      final migration = MigrationService(storage, enabled: true);
+
+      await migration.migrateIfNeeded();
+
+      final migratedRq = backing[StorageSubKeys.requestQueue];
+      expect(migratedRq, isNotNull);
+      final decodedRq = jsonDecode(migratedRq!) as List;
+      expect(decodedRq.length, 2);
+      expect(decodedRq.first, legacyBeginSession);
+
+      final wrappedEventsReq = decodedRq.last as Map<String, dynamic>;
+      expect(wrappedEventsReq['app_key'], 'old-app-key');
+      expect(wrappedEventsReq['device_id'], 'old-device-id');
+      expect(wrappedEventsReq['sdk_version'], '25.4.3');
+      expect(wrappedEventsReq['sdk_name'], 'dart-flutterbnp-android');
+      expect(wrappedEventsReq['av'], '0.0.1');
+      final wrappedEvents = (wrappedEventsReq['events'] as List).cast<Map<String, dynamic>>();
+      expect(wrappedEvents.length, 2);
+      expect(wrappedEvents[0]['key'], 'event1');
+      expect(wrappedEvents[1]['key'], 'event2');
+
+      // Event queue should not be used when wrapping to legacy request queue is possible.
+      expect(backing[StorageSubKeys.eventQueue], isNull);
+    });
+
     test('skips invalid JSON in event queue but continues with valid ones', () async {
       final validEvent = jsonEncode({'key': 'valid_event', 'count': 1});
       final invalidEvent = 'not valid json {{{';

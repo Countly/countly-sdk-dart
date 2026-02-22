@@ -15,7 +15,7 @@ Map<String, dynamic> getCurrentMetrics() {
     if (pixelRatio != null) '_density': pixelRatio,
     '_locale': _locale(),
     if (size != null && (size.width != 0 || size.height != 0)) '_orientation': size.height >= size.width ? 'portrait' : 'landscape',
-    '_app_version': SdkInternal.sdkVersion,
+    '_app_version': SdkInternal.appVersion,
   };
 }
 

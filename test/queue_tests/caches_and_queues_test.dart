@@ -399,6 +399,34 @@ void main() {
       expect(jsonDecode(network.sent.first['events'])[0]['key'], 'stored_event');
     });
 
+    test('legacy URL-encoded request queue items are loaded and sent', () async {
+      final backing = <String, String>{};
+      final network = FakeNetworkClient('https://example.com');
+
+      backing['default_' + StorageSubKeys.requestQueue] = jsonEncode([
+        'app_key=old-app-key&device_id=legacy-device&begin_session=1&timestamp=1771689915235&user_details=%7B%22name%22%3A%22Legacy%20User%22%7D'
+      ]);
+      backing['default_' + StorageSubKeys.deviceId] = 'stored-device';
+      backing['default_' + StorageSubKeys.deviceIdType] = DeviceIdType.generated.toString();
+
+      await _createInstance(
+        storageBacking: backing,
+        storageMode: StorageMode.persistent,
+        startWithUnknownConsent: true,
+        networkClient: network,
+      );
+
+      final legacyReq = network.sent.firstWhere(
+        (r) => r['begin_session'] == 1,
+        orElse: () => <String, dynamic>{},
+      );
+
+      expect(legacyReq, isNotEmpty);
+      expect(legacyReq['app_key'], 'old-app-key');
+      expect(legacyReq['device_id'], 'legacy-device');
+      expect(legacyReq['user_details'], {'name': 'Legacy User'});
+    });
+
     test('queues are NOT persisted in unknown consent mode', () async {
       final backing = <String, String>{};
       final sdk = await _createInstance(
