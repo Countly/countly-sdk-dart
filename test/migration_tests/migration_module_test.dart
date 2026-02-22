@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:countly_sdk_dart_core/countly.dart';
 import 'package:countly_sdk_dart_core/src/constants.dart';
+import 'package:countly_sdk_dart_core/src/migration/legacy_native.dart';
+import 'package:countly_sdk_dart_core/src/migration/legacy_native_types.dart';
 import 'package:countly_sdk_dart_core/src/logging/logging_helper.dart';
 import 'package:countly_sdk_dart_core/src/migration/migration.dart';
 import 'package:countly_sdk_dart_core/src/storage/storage.dart';
@@ -72,6 +74,21 @@ class MemoryBackedStorage {
       keys: () async => backing.keys.toList(),
     );
   }
+}
+
+class FakeLegacyNativeBridge implements LegacyNativeBridge {
+  final LegacyNativeData? data;
+
+  FakeLegacyNativeBridge(this.data);
+
+  @override
+  Future<LegacyNativeData?> fetchLegacyData() async => data;
+
+  @override
+  Future<void> clearAndroidLegacyData() async {}
+
+  @override
+  Future<void> clearIOSLegacyData() async {}
 }
 
 StorageFacade createTestStorage(Map<String, String> backing) {
@@ -389,6 +406,70 @@ void main() {
 
       expect(backing[StorageSubKeys.deviceId], isNull);
       expect(logger.hasLogContaining('no legacy iOS data found'), isTrue);
+    });
+
+    test('recorded events are migrated to event queue when no legacy requests exist', () async {
+      final backing = <String, String>{};
+      final storage = createTestStorage(backing);
+      final nativeBridge = FakeLegacyNativeBridge(
+        LegacyNativeData(
+          ios: LegacyIOSData(
+            deviceId: 'ios-device',
+            recordedEvents: [
+              {'key': 'old_event_only', 'count': 1}
+            ],
+            legacyAppKey: 'old-app-only-events',
+          ),
+        ),
+      );
+
+      final migration = MigrationService(storage, enabled: true, nativeBridge: nativeBridge);
+      await migration.migrateIfNeeded();
+
+      final migratedRq = backing[StorageSubKeys.requestQueue];
+      final migratedEq = backing[StorageSubKeys.eventQueue];
+
+      expect(migratedRq, isNull);
+      expect(migratedEq, isNotNull);
+      final decodedEq = jsonDecode(migratedEq!) as List<dynamic>;
+      expect(decodedEq.length, 1);
+      expect((decodedEq.first as Map<String, dynamic>)['key'], 'old_event_only');
+    });
+
+    test('recorded events are wrapped with legacy app key when legacy requests exist', () async {
+      final backing = <String, String>{};
+      final storage = createTestStorage(backing);
+      final nativeBridge = FakeLegacyNativeBridge(
+        LegacyNativeData(
+          ios: LegacyIOSData(
+            deviceId: 'ios-device',
+            queuedRequests: ['app_key=old-app-only-events&device_id=old-only-events-device&begin_session=1'],
+            recordedEvents: [
+              {'key': 'old_event_only', 'count': 1}
+            ],
+            legacyAppKey: 'old-app-only-events',
+          ),
+        ),
+      );
+
+      final migration = MigrationService(storage, enabled: true, nativeBridge: nativeBridge);
+      await migration.migrateIfNeeded();
+
+      final migratedRq = backing[StorageSubKeys.requestQueue];
+      final migratedEq = backing[StorageSubKeys.eventQueue];
+
+      expect(migratedEq, isNull);
+      expect(migratedRq, isNotNull);
+
+      final decodedRq = jsonDecode(migratedRq!) as List<dynamic>;
+      expect(decodedRq.length, 2);
+
+      final wrappedEventsReq = decodedRq.last as Map<String, dynamic>;
+      expect(wrappedEventsReq['app_key'], 'old-app-only-events');
+      expect(wrappedEventsReq['device_id'], 'old-only-events-device');
+      final wrappedEvents = (wrappedEventsReq['events'] as List<dynamic>).cast<Map<String, dynamic>>();
+      expect(wrappedEvents.length, 1);
+      expect(wrappedEvents.first['key'], 'old_event_only');
     });
   });
 

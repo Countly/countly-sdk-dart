@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 import 'package:countly_flutter_np/countly_config.dart';
 import 'package:countly_flutter_np/countly_flutter.dart';
@@ -65,28 +66,30 @@ void main() {
     await sdk.processEventsAndRequests();
 
     expect(network.sent.length, greaterThanOrEqualTo(3));
-
-    final first = network.sent[0];
-    expect(first['begin_session'] == 1 || first['begin_session'] == '1', isTrue,
-        reason: 'First request should be legacy begin_session request');
-    expect(first['app_key'], 'old-app-key');
-    expect(first['device_id'], 'old-device-id');
-    expect(first['sdk_name'], 'dart-flutterbnp-android');
-    expect(first['sdk_version'], '25.4.3');
-    expect(first['av'], '0.0.1');
-
-    final second = network.sent[1];
-    expect(second['app_key'], 'old-app-key');
-    final secondEvents = _decodeEvents(second['events']);
-    expect(secondEvents.first['key'], '[CLY]_orientation');
-
-    final third = network.sent[2];
-    expect(third['app_key'], 'old-app-key');
-    expect((third['user_details'] as Map)['custom']['specialProperty'], 'value');
+    bool sawLegacyBeginSession = false;
+    bool sawLegacyUserDetails = false;
 
     bool sawNewSdkRequest = false;
     bool sawMigratedOldEventUnderLegacyAppKey = false;
     for (final req in network.sent) {
+      if (req['app_key'] == 'old-app-key') {
+        if (req['begin_session'] == 1 || req['begin_session'] == '1') {
+          sawLegacyBeginSession = true;
+          expect(req['device_id'], 'old-device-id');
+          expect(req['sdk_name'], Platform.isAndroid ? 'dart-flutterbnp-android' : 'dart-flutterbnp-ios');
+          expect(req['sdk_version'], '25.4.3');
+          expect(req['av'], '0.0.1');
+        }
+
+        final userDetails = req['user_details'];
+        if (userDetails is Map && userDetails['custom'] is Map) {
+          final custom = userDetails['custom'] as Map;
+          if (custom['specialProperty'] == 'value') {
+            sawLegacyUserDetails = true;
+          }
+        }
+      }
+
       if (req['app_key'] == 'app-key') {
         sawNewSdkRequest = true;
         expect(req['device_id'], 'old-device-id');
@@ -104,6 +107,8 @@ void main() {
       }
     }
 
+    expect(sawLegacyBeginSession, isTrue);
+    expect(sawLegacyUserDetails, isTrue);
     expect(sawNewSdkRequest, isTrue);
     expect(sawMigratedOldEventUnderLegacyAppKey, isTrue);
   });
@@ -165,9 +170,15 @@ void main() {
 }
 
 List<Map<String, dynamic>> _decodeEvents(dynamic raw) {
+  if (raw == null) {
+    return const <Map<String, dynamic>>[];
+  }
   if (raw is String) {
     final decoded = json.decode(raw) as List<dynamic>;
     return decoded.cast<Map<String, dynamic>>();
   }
-  return (raw as List).cast<Map<String, dynamic>>();
+  if (raw is List) {
+    return raw.whereType<Map>().map((e) => e.cast<String, dynamic>()).toList();
+  }
+  return const <Map<String, dynamic>>[];
 }

@@ -42,6 +42,7 @@ void main() {
   testWidgets('Migration with only old event data (no old requests)', (WidgetTester tester) async {
     final oldConfig = CountlyConfig('https://old.com', 'old-app-only-events')
         .setLoggingEnabled(true)
+        .enableManualSessionHandling()
         .setDeviceId('old-only-events-device');
     await Countly.initWithConfig(oldConfig);
 
@@ -58,7 +59,6 @@ void main() {
     );
     final sdk = await C.Countly.init(cfg);
     await sdk.processEventsAndRequests();
-
     Map<String, dynamic>? migratedOldEventReq;
     for (final req in network.sent) {
       final rawEvents = req['events'];
@@ -71,7 +71,7 @@ void main() {
     }
 
     expect(migratedOldEventReq, isNotNull, reason: 'Expected migrated event to be sent');
-    expect(migratedOldEventReq!['app_key'],equals('new-app-only-events'));
+    expect(migratedOldEventReq!['app_key'], equals('new-app-only-events'));
     expect(migratedOldEventReq['sdk_name'], 'countly-sdk-dart-core');
     expect(migratedOldEventReq['sdk_version'], '26.1.0');
   });

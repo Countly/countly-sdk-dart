@@ -347,12 +347,38 @@ class MigrationService {
         migrated = true;
       }
 
+      List<dynamic> migratedRequestQueueItems = const [];
+
       final queuedRequests = native?.queuedRequests;
       if (queuedRequests != null && queuedRequests.isNotEmpty) {
-        await storage.writeJson(StorageSubKeys.requestQueue, queuedRequests);
+        migratedRequestQueueItems = List<dynamic>.from(queuedRequests);
+        await storage.writeJson(StorageSubKeys.requestQueue, migratedRequestQueueItems);
         L?.d('migration(iOS): migrated request queue (${queuedRequests.length} items)');
         migrated = true;
       }
+
+      final recordedEvents = native?.recordedEvents;
+      if (recordedEvents != null && recordedEvents.isNotEmpty) {
+        final fallbackDeviceId = deviceId ?? iosDeviceId ?? iosNsuuid ?? '';
+        final legacyEnvelope = _extractLegacyEnvelopeFromRequestQueue(migratedRequestQueueItems, fallbackDeviceId);
+
+        if (legacyEnvelope != null) {
+          final legacyEventsRequest = {
+            ...legacyEnvelope,
+            'events': recordedEvents,
+          };
+          final updatedRq = List<dynamic>.from(migratedRequestQueueItems)..add(legacyEventsRequest);
+          await storage.writeJson(StorageSubKeys.requestQueue, updatedRq);
+          migratedRequestQueueItems = updatedRq;
+          L?.d('migration(iOS): migrated recorded events as legacy request (${recordedEvents.length} events)');
+        } else {
+          await storage.writeJson(StorageSubKeys.eventQueue, recordedEvents);
+          L?.d('migration(iOS): migrated recorded events (${recordedEvents.length} events)');
+        }
+
+        migrated = true;
+      }
+
       // Clean up legacy iOS keys
       await _cleanupIOSLegacyData();
 

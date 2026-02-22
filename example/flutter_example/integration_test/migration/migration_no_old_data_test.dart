@@ -2,6 +2,7 @@ import 'package:countly_sdk_dart_core/countly.dart' as C;
 import 'package:countly_sdk_dart_core/src/networking.dart' as N;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'dart:io' show Platform;
 import 'package:integration_test/integration_test.dart';
 
 class FakeResponseSuccess extends http.Response {
@@ -50,7 +51,10 @@ void main() {
     await sdk.processEventsAndRequests();
 
     expect(network.sent, isNotEmpty);
-    expect(network.sent.any((r) => r['sdk_name'] == 'dart-flutterbnp-android'), isFalse,
+    expect(
+        network.sent
+            .any((r) => r['sdk_name'] == (Platform.isAndroid ? 'dart-flutterbnp-android' : 'dart-flutterbnp-ios')),
+        isFalse,
         reason: 'No legacy sdk payload should be present');
     expect(network.sent.every((r) => r['app_key'] == 'fresh-app-no-legacy'), isTrue,
         reason: 'All requests should belong to new SDK app key');
