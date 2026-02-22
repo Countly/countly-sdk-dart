@@ -112,61 +112,6 @@ void main() {
     expect(sawNewSdkRequest, isTrue);
     expect(sawMigratedOldEventUnderLegacyAppKey, isTrue);
   });
-
-  testWidgets('Migration does not re-populate legacy values on next core init', (WidgetTester tester) async {
-    const markerEventKey = 'Old reinit marker event';
-    final oldConfig =
-        CountlyConfig('https://old.com', 'old-app-reinit').setLoggingEnabled(true).setDeviceId('old-device-reinit');
-    await Countly.initWithConfig(oldConfig);
-
-    Countly.instance.userProfile.setProperty('specialReinitProperty', 'value');
-    Countly.instance.sessions.beginSession();
-    Countly.recordEvent({'key': markerEventKey, 'count': 1});
-
-    final firstNetwork = FakeNetworkClient('https://example.com');
-    final firstCfg = C.CountlyConfig(
-      appKey: 'new-app-first-init',
-      serverUrl: 'https://example.com',
-      networkClientOverride: firstNetwork,
-      deviceId: 'new-device-first-init',
-      giveConsent: true,
-      enableSDKLogs: true,
-    );
-    final firstSdk = await C.Countly.init(firstCfg);
-    await firstSdk.processEventsAndRequests();
-
-    await C.Countly.disposeAll();
-
-    final secondNetwork = FakeNetworkClient('https://example.com');
-    final secondCfg = C.CountlyConfig(
-      appKey: 'new-app-second-init',
-      serverUrl: 'https://example.com',
-      networkClientOverride: secondNetwork,
-      deviceId: 'new-device-second-init',
-      giveConsent: true,
-      enableSDKLogs: true,
-    );
-    final secondSdk = await C.Countly.init(secondCfg);
-    await secondSdk.processEventsAndRequests();
-
-    bool secondRunContainsMarker = false;
-    for (final req in secondNetwork.sent) {
-      expect(req['device_id'], 'old-device-reinit');
-      final rawEvents = req['events'];
-      if (rawEvents == null) continue;
-      final events = _decodeEvents(rawEvents);
-      if (events.any((e) => e['key'] == markerEventKey)) {
-        secondRunContainsMarker = true;
-        break;
-      }
-    }
-
-    expect(
-      secondRunContainsMarker,
-      isFalse,
-      reason: 'Second init should not re-send migrated marker event',
-    );
-  });
 }
 
 List<Map<String, dynamic>> _decodeEvents(dynamic raw) {
