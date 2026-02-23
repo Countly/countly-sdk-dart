@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:countly_sdk_dart/countly.dart';
-import 'package:countly_sdk_dart/src/networking.dart';
+import 'package:countly_sdk_dart_core/countly.dart';
+import 'package:countly_sdk_dart_core/src/networking.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:integration_test/integration_test.dart';
@@ -450,7 +450,7 @@ void main() {
       // HC request should also include standard metadata
       expect(hcReq['app_key'], 'app-key');
       expect(hcReq['device_id'], 'test-device');
-      expect(hcReq['sdk_name'], 'countly-sdk-dart');
+      expect(hcReq['sdk_name'], 'countly-sdk-dart-core');
     });
 
     testWidgets('health check is only sent once per init', (WidgetTester tester) async {
@@ -595,7 +595,7 @@ void main() {
       final req = reqs.last;
       expect(req['app_key'], 'test-app-key');
       expect(req['device_id'], 'meta-test-device');
-      expect(req['sdk_name'], 'countly-sdk-dart');
+      expect(req['sdk_name'], 'countly-sdk-dart-core');
       expect(req['sdk_version'], '1.0.0');
       expect(req['av'], '1.0.0');
       // Timestamp should be recent (within last 60 seconds)
