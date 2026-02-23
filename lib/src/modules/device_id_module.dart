@@ -8,11 +8,11 @@ class DeviceIdModule {
   Future<void> changeWithMerge(String newDeviceId) async {
     if (_inst._guardDisposed('id.changeWithMerge')) return;
     if (newDeviceId.isEmpty) {
-      _inst.L.e('id.changeWithMerge called with empty newDeviceId');
+      _inst.L.e('changeWithMerge called with empty newDeviceId');
       return;
     }
     if (newDeviceId == _inst._deviceId) {
-      _inst.L.d('id.changeWithMerge called with the same deviceId, no change needed');
+      _inst.L.d('changeWithMerge called with the same deviceId, no change needed');
       return;
     }
 
@@ -38,11 +38,11 @@ class DeviceIdModule {
   Future<void> changeWithoutMerge(String newDeviceId) async {
     if (_inst._guardDisposed('id.changeWithoutMerge')) return;
     if (newDeviceId.isEmpty) {
-      _inst.L.e('id.changeWithoutMerge called with empty newDeviceId');
+      _inst.L.e('changeWithoutMerge called with empty newDeviceId');
       return;
     }
     if (newDeviceId == _inst._deviceId) {
-      _inst.L.d('id.changeWithoutMerge called with the same deviceId, no change needed');
+      _inst.L.d('changeWithoutMerge called with the same deviceId, no change needed');
       return;
     }
 

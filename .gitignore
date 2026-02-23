@@ -22,7 +22,7 @@ tool/
 # The .vscode folder contains launch configuration and tasks you configure in
 # VS Code which you may wish to be included in version control, so this line
 # is commented out by default.
-#.vscode/
+.vscode/
 
 # Flutter/Dart/Pub related
 # Libraries should not include pubspec.lock, per https://dart.dev/guides/libraries/private-files#pubspeclock.
@@ -31,15 +31,7 @@ tool/
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
-android/.gradle/
+android/
+ios/
 build/
 sdk_dart.iml
-example/flutter_example/.dart_tool/
-example/flutter_example/.idea/
-example/flutter_example/android/
-example/flutter_example/ios/
-example/flutter_example/build/
-example/flutter_example/.gitignore
-example/flutter_example/.metadata
-example/flutter_example/analysis_options.yaml
-example/flutter_example/pubspec.lock

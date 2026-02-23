@@ -2,18 +2,17 @@ library sdk_instance_lib;
 
 import 'dart:async';
 import 'dart:convert';
-import 'metrics/metrics_collector.dart' as metrics_collector;
 import 'package:meta/meta.dart';
 
 import 'package:uuid/uuid.dart';
 
 import 'config.dart';
 import 'networking.dart';
+import 'platform_environment.dart';
 import 'storage/storage.dart';
 import 'migration/migration.dart';
 import 'logging/logging_helper.dart';
 import 'constants.dart';
-import 'lifecycle/lifecycle_stub.dart' if (dart.library.ui) 'lifecycle/lifecycle_flutter.dart';
 
 part 'modules/events_module.dart';
 part 'modules/users_module.dart';
@@ -51,8 +50,8 @@ class CountlyInstance {
 
   Future<void> _queueLock = Future.value();
 
-  static const _sdkVersion = SdkInternal.sdkVersion;
-  static const _sdkName = SdkInternal.sdkName;
+  String get _sdkVersion => config.sdkVersionOverride ?? SdkInternal.sdkVersion;
+  String get _sdkName => config.sdkNameOverride ?? SdkInternal.sdkName;
 
   late final StorageFacade _storage;
   late NetworkClient _network;
@@ -74,6 +73,7 @@ class CountlyInstance {
   bool _isInBackground = false;
   void Function()? _disposeLifecycleListener;
   bool _isInUnknownConsentState = false;
+  late final CountlyPlatformEnvironment _platformEnvironment;
 
   CountlyInstance._(this.config, this.instanceKey);
 
@@ -84,17 +84,21 @@ class CountlyInstance {
   }
 
   Future<void> _init() async {
+    _platformEnvironment = config.platformEnvironment;
     _sdkStartTime = DateTime.now();
     _logger = config.logger ?? DefaultSdkLogger(config.logLevel);
     L = InstanceLogger(
       _logger,
       enabled: config.enableSDKLogs,
       enableVisualWarnings: config.enableVisualWarnings,
+      warningPresenter: _platformEnvironment.warningPresenter,
       instanceKey: instanceKey,
       onLog: (lvl) {
-        if (lvl == LogLevel.error)
+        if (lvl == LogLevel.error) {
           _logErrorCount++;
-        else if (lvl == LogLevel.warning) _logWarningCount++;
+        } else if (lvl == LogLevel.warning) {
+          _logWarningCount++;
+        }
       },
     );
 
@@ -108,6 +112,7 @@ class CountlyInstance {
       enabled:
           instanceKey == 'default' && config.storageMode == StorageMode.persistent && !config.disableOldDataMigration,
       L: L,
+      nativeBridge: _platformEnvironment.legacyMigrationAdapter,
     );
 
     _sbs = BehaviorModule(this);
@@ -166,7 +171,7 @@ class CountlyInstance {
 
     // Lifecycle listeners
     try {
-      _disposeLifecycleListener = listenToLifecycle(
+      _disposeLifecycleListener = _platformEnvironment.lifecycleAdapter.listen(
         onBackground: () {
           _isInBackground = true;
           L.d('App going to background, processing queues');
@@ -614,9 +619,10 @@ class CountlyInstance {
       return;
     }
     final userDetails = <String, dynamic>{};
-    if (_userPropertiesNamedCache.isNotEmpty) userDetails.addAll(_userPropertiesNamedCache);
-    if (_customUserPropertiesCache.isNotEmpty)
+    if (_userPropertiesNamedCache.isNotEmpty) {userDetails.addAll(_userPropertiesNamedCache);}
+    if (_customUserPropertiesCache.isNotEmpty) {
       userDetails['custom'] = Map<String, dynamic>.from(_customUserPropertiesCache);
+    }
     final request = _prepareRequest({'user_details': userDetails});
     if (request == null) return;
     await _addToRequestQueue(request);
@@ -641,11 +647,11 @@ class CountlyInstance {
     props.forEach((key, value) {
       if (_sbs!.userPropertiesWhitelist.isNotEmpty) {
         if (!_sbs!.userPropertiesWhitelist.contains(key)) {
-          L.w('User property ["${key}"] dropped: not in whitelist');
+          L.w('User property [$key] dropped: not in whitelist');
           return;
         }
       } else if (_sbs!.userPropertiesBlacklist.contains(key)) {
-        L.w('User property ["${key}"] dropped: blacklisted key');
+        L.w('User property [$key] dropped: blacklisted key');
         return;
       }
       var k = key;
@@ -675,7 +681,6 @@ class CountlyInstance {
       L.v('Did already sent HC request at init, skipping.');
       return;
     }
-    ;
     if (!(_sbs?.networkingEnabled ?? true)) {
       L.d('Networking disabled (SBS), skipping HC request');
       return;

@@ -4,8 +4,7 @@ import 'package:countly_sdk_dart_core/countly.dart';
 import 'package:countly_sdk_dart_core/src/constants.dart';
 import 'package:countly_sdk_dart_core/src/networking.dart';
 import '../helper/helper.dart' as helper;
-import 'package:countly_sdk_dart_core/src/lifecycle/lifecycle_stub.dart'
-    if (dart.library.ui) 'package:countly_sdk_dart_core/src/lifecycle/lifecycle_flutter.dart';
+import 'package:countly_sdk_dart_core/src/lifecycle/lifecycle_stub.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;

@@ -70,7 +70,6 @@ final metricsRequest = {
   'av': '1.0.0',
   'metrics': {
     '_os': isA<String>(),
-    '_os_version': isA<String>(),
     '_device': isA<String>(),
     '_device_type': isA<String>(),
     '_resolution': isA<String>(),

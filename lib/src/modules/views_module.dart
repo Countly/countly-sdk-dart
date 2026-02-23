@@ -158,7 +158,7 @@ class ViewsModule {
       _viewTime += beatDur;
       _lastBeatTime = now;
       await _persistActiveViewState();
-      _inst.L.v('Heartbeat view=[${_inst._activeViewName}] cumulative time=[${_viewTime}]');
+      _inst.L.v('Heartbeat view=[${_inst._activeViewName}] cumulative time=[$_viewTime]');
     }
   }
 

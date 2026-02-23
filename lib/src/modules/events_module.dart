@@ -67,7 +67,7 @@ class EventsModule {
       _i.L.v('Metrics collection skipped: missing consent');
       return;
     }
-    final metrics = metrics_collector.getCurrentMetrics();
+    final metrics = _i._platformEnvironment.metricsAdapter.collectMetrics();
     if (metricOverride != null && metricOverride.isNotEmpty) {
       metrics.addAll(_i._sanitizeSegmentation(metricOverride));
     }
