@@ -1,4 +1,4 @@
-part of sdk_instance_lib;
+part of '../main.dart';
 
 class ViewsModule {
   final CountlyInstance _inst;

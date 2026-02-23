@@ -1,7 +1,7 @@
 import 'package:countly_sdk_dart_core/src/lifecycle/lifecycle_stub.dart' as lifecycle_stub;
 import 'package:countly_sdk_dart_core/src/migration/legacy_native_types.dart';
 import 'package:countly_sdk_dart_core/src/platform_environment.dart';
-import 'package:countly_sdk_dart_core/countly.dart';
+import 'package:countly_sdk_dart_core/countly_sdk_dart_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _FakeLifecycleAdapter implements CountlyLifecycleAdapter {

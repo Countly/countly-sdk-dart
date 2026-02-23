@@ -1,4 +1,4 @@
-import 'package:countly_sdk_dart_core/countly.dart';
+import 'package:countly_sdk_dart_core/countly_sdk_dart_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

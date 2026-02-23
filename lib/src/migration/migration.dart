@@ -1,3 +1,10 @@
+import 'dart:convert';
+import '../storage/storage.dart';
+import '../constants.dart';
+import '../logging/logging_helper.dart';
+import '../platform_environment.dart';
+import 'legacy_native_types.dart';
+
 /// ## Android Migration
 /// The Android SDK stores data in SharedPreferences with preference name "COUNTLY_STORE".
 /// Keys are stored directly (not nested JSON):
@@ -16,13 +23,6 @@
 /// - `kCountlyRemoteConfigKey` - Remote config (NSDictionary)
 /// - `kCountlyServerConfigPersistencyKey` - Server config (NSDictionary)
 /// However, request and event queues are stored in a file using NSKeyedArchiver
-
-import 'dart:convert';
-import '../storage/storage.dart';
-import '../constants.dart';
-import '../logging/logging_helper.dart';
-import '../platform_environment.dart';
-import 'legacy_native_types.dart';
 
 /// Keys used by the Android SDK (CountlyStore.java)
 class _AndroidLegacyKeys {
