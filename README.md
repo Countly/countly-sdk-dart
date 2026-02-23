@@ -42,7 +42,7 @@ dependencies:
 ### Initialization
 
 ```dart
-import 'package:countly_sdk_dart_core/countly.dart';
+import 'package:countly_sdk_dart_core/countly_sdk_dart_core.dart';
 
 void main() async {
   final config = CountlyConfig(
