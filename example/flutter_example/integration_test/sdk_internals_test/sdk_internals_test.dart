@@ -596,7 +596,7 @@ void main() {
       expect(req['app_key'], 'test-app-key');
       expect(req['device_id'], 'meta-test-device');
       expect(req['sdk_name'], 'countly-sdk-dart-core');
-      expect(req['sdk_version'], '1.0.0');
+      expect(req['sdk_version'], '26.1.0');
       expect(req['av'], '1.0.0');
       // Timestamp should be recent (within last 60 seconds)
       final ts = req['timestamp'] as int;
