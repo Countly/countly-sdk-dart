@@ -1,4 +1,4 @@
-part of sdk_instance_lib;
+part of '../main.dart';
 
 class DeviceIdModule {
   final CountlyInstance _inst;

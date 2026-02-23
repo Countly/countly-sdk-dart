@@ -1,4 +1,4 @@
-part of sdk_instance_lib;
+part of '../main.dart';
 
 /// Named user properties for [UsersModule.setProperties].
 class NamedUserProperty {

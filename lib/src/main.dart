@@ -50,7 +50,9 @@ class CountlyInstance {
 
   Future<void> _queueLock = Future.value();
 
+  // ignore: invalid_use_of_visible_for_testing_member
   String get _sdkVersion => config.sdkVersionOverride ?? SdkInternal.sdkVersion;
+  // ignore: invalid_use_of_visible_for_testing_member
   String get _sdkName => config.sdkNameOverride ?? SdkInternal.sdkName;
 
   late final StorageFacade _storage;
@@ -456,7 +458,7 @@ class CountlyInstance {
   }
 
   /// Adds a request to the request queue with overflow handling.
-  /// If sending nested data, ensure to use Map<String, dynamic> copies to avoid mutation issues.
+  /// If sending nested data, ensure to use Map&lt;String, dynamic&gt; copies to avoid mutation issues.
   /// example:
   ///
   /// ```dart
