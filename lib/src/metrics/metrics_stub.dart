@@ -3,7 +3,6 @@ import '../constants.dart';
 
 Map<String, dynamic> getCurrentMetrics() => {
       '_os': 'unknown',
-      '_os_version': 'unknown',
       '_device': 'unknown',
       '_device_type': 'desktop',
       '_locale': 'en-US',

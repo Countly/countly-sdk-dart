@@ -8,13 +8,13 @@ Map<String, dynamic> getCurrentMetrics() {
   final size = window?.physicalSize;
   return {
     '_os': _platformName(),
-    '_os_version': Platform.version.split(' ').first, // we want version until first space
     '_device': _deviceModel(),
     '_device_type': _inferDeviceType(),
     if (size != null) '_resolution': '${size.width.toInt()}x${size.height.toInt()}',
     if (pixelRatio != null) '_density': pixelRatio,
     '_locale': _locale(),
-    if (size != null && (size.width != 0 || size.height != 0)) '_orientation': size.height >= size.width ? 'portrait' : 'landscape',
+    if (size != null && (size.width != 0 || size.height != 0))
+      '_orientation': size.height >= size.width ? 'portrait' : 'landscape',
     '_app_version': SdkInternal.appVersion,
   };
 }

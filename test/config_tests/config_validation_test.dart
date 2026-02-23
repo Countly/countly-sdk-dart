@@ -343,4 +343,23 @@ void main() {
       expect(config.enableVisualWarnings, false);
     });
   });
+
+  group('CountlyConfig - storageMode', () {
+    test('defaults to memory', () {
+      final config = CountlyConfig(
+        appKey: 'test-key',
+        serverUrl: 'https://example.com',
+      );
+      expect(config.storageMode, StorageMode.memory);
+    });
+
+    test('can be explicitly set to persistent', () {
+      final config = CountlyConfig(
+        appKey: 'test-key',
+        serverUrl: 'https://example.com',
+        storageMode: StorageMode.persistent,
+      );
+      expect(config.storageMode, StorageMode.persistent);
+    });
+  });
 }

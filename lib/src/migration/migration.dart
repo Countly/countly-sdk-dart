@@ -21,7 +21,8 @@ import 'dart:convert';
 import '../storage/storage.dart';
 import '../constants.dart';
 import '../logging/logging_helper.dart';
-import 'legacy_native.dart';
+import '../platform_environment.dart';
+import 'legacy_native_types.dart';
 
 /// Keys used by the Android SDK (CountlyStore.java)
 class _AndroidLegacyKeys {
@@ -48,10 +49,11 @@ class MigrationService {
   final StorageFacade storage;
   final bool enabled;
   final InstanceLogger? L;
-  final LegacyNativeBridge _nativeBridge;
+  final CountlyLegacyMigrationAdapter _nativeBridge;
 
-  MigrationService(this.storage, {required this.enabled, this.L, LegacyNativeBridge? nativeBridge})
-      : _nativeBridge = nativeBridge ?? legacyNativeBridge;
+  MigrationService(this.storage,
+      {required this.enabled, this.L, CountlyLegacyMigrationAdapter nativeBridge = const NoOpLegacyMigrationAdapter()})
+      : _nativeBridge = nativeBridge;
 
   /// Runs migration if needed. Checks for Android data first, then iOS.
   /// Migration is skipped if new Dart SDK data already exists.

@@ -10,11 +10,10 @@ Map<String, dynamic> getCurrentMetrics() {
   final height = screen.height;
   final pixelRatio = web.window.devicePixelRatio;
   final browser = _parseBrowser(ua);
-  final osInfo = _parseOs(ua);
+  final osName = _parseOs(ua);
   final deviceType = _inferDeviceTypeFromUa(ua);
   return {
-    '_os': osInfo.$1,
-    '_os_version': osInfo.$2,
+    '_os': osName,
     '_device': 'browser',
     '_device_type': deviceType,
     '_resolution': '${width}x$height',
@@ -27,7 +26,6 @@ Map<String, dynamic> getCurrentMetrics() {
     '_app_version': SdkInternal.sdkVersion,
   };
 }
-
 
 String _locale() {
   final l = web.window.navigator.language;
@@ -57,8 +55,7 @@ _BrowserInfo _parseBrowser(String ua) {
   return _BrowserInfo('Unknown', '0');
 }
 
-/// Returns (osName, osVersion)
-(String, String) _parseOs(String ua) {
+String _parseOs(String ua) {
   final android = RegExp(r'Android ([0-9.]+)');
   final ios = RegExp(r'iPhone OS ([0-9_]+)');
   final ipad = RegExp(r'iPad; CPU OS ([0-9_]+)');
@@ -66,29 +63,24 @@ _BrowserInfo _parseBrowser(String ua) {
   final win = RegExp(r'Windows NT ([0-9.]+)');
   final linux = RegExp(r'X11; Linux');
   if (android.hasMatch(ua)) {
-    final v = android.firstMatch(ua)!.group(1)!;
-    return ('Android', v);
+    return 'Android';
   }
   if (ios.hasMatch(ua)) {
-    final v = ios.firstMatch(ua)!.group(1)!.replaceAll('_', '.');
-    return ('iOS', v);
+    return 'iOS';
   }
   if (ipad.hasMatch(ua)) {
-    final v = ipad.firstMatch(ua)!.group(1)!.replaceAll('_', '.');
-    return ('iPadOS', v);
+    return 'iPadOS';
   }
   if (mac.hasMatch(ua)) {
-    final v = mac.firstMatch(ua)!.group(1)!.replaceAll('_', '.');
-    return ('macOS', v);
+    return 'macOS';
   }
   if (win.hasMatch(ua)) {
-    final v = win.firstMatch(ua)!.group(1)!;
-    return ('Windows', v);
+    return 'Windows';
   }
   if (linux.hasMatch(ua)) {
-    return ('Linux', 'n/a');
+    return 'Linux';
   }
-  return ('Web', 'n/a');
+  return 'Web';
 }
 
 String _inferDeviceTypeFromUa(String ua) {

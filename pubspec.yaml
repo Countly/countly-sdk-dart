@@ -1,19 +1,16 @@
 name: countly_sdk_dart_core
-description: "Countly Dart SDK for tracking user actions, events, views, and user profiles on all platforms supported by Dart and Flutter."
+description: "Countly Dart SDK for tracking user actions, events, views, and user profiles on all platforms supported by Dart."
 version: 26.1.0
 homepage: https://countly.com
 repository: https://github.com/Countly/countly-sdk-dart
 issue_tracker: https://github.com/Countly/countly-sdk-dart/issues
-documentation: https://support.count.ly/hc/en-us/articles/
+documentation: https://support.countly.com/hc/en-us/articles/25623697635356-Dart
 topics:
   - analytics
   - countly
   - events
   - tracking
   - user-profiles
-platforms:
-  android:
-  ios:
 
 environment:
   sdk: ^3.0.0
@@ -24,17 +21,9 @@ dependencies:
   meta: ^1.12.0
   web: ^0.5.1
 
-flutter:
-  plugin:
-    platforms:
-      android:
-        package: ly.count.dart.countly_sdk_dart_core
-        pluginClass: CountlySdkDartPlugin
-      ios:
-        pluginClass: CountlySdkDartPlugin
-
 dev_dependencies:
+  flutter:
+    sdk: flutter
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
-  shared_preferences: ^2.3.2

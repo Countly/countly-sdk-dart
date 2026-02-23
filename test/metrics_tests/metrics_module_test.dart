@@ -90,7 +90,6 @@ void main() {
       final sdk = await _createInstance(
         deviceMetricOverrides: {
           '_os': 'CustomOS',
-          '_os_version': '15.0',
           '_device': 'CustomDevice',
           '_device_type': 'Tablet',
           '_resolution': '2000x1200',
@@ -105,7 +104,6 @@ void main() {
 
       final metrics = metricsReq['metrics'] as Map<String, dynamic>;
       expect(metrics['_os'], 'CustomOS');
-      expect(metrics['_os_version'], '15.0');
       expect(metrics['_device'], 'CustomDevice');
       expect(metrics['_device_type'], 'Tablet');
       expect(metrics['_resolution'], '2000x1200');
@@ -126,7 +124,6 @@ void main() {
 
       final metrics = metricsReq['metrics'] as Map<String, dynamic>;
       expect(metrics['_os'], isA<String>());
-      expect(metrics['_os_version'], isA<String>());
       expect(metrics['_device'], isA<String>());
       expect(metrics['_device_type'], isA<String>());
       expect(metrics['_resolution'], isA<String>());
@@ -154,7 +151,6 @@ void main() {
 
       await sdk.events.recordMetrics(metricOverride: {
         '_os': 'CustomOS',
-        '_os_version': '15.0',
         '_device': 'CustomDevice',
         'battery_level': 85,
         'screen_brightness': 0.7,
@@ -165,7 +161,6 @@ void main() {
       final metrics = metricsReq['metrics'] as Map<String, dynamic>;
 
       expect(metrics['_os'], 'CustomOS');
-      expect(metrics['_os_version'], '15.0');
       expect(metrics['_device'], 'CustomDevice');
       expect(metrics['_device_type'], isA<String>());
       expect(metrics['_resolution'], isA<String>());
@@ -181,7 +176,6 @@ void main() {
       final sdk = await _createInstance(
         deviceMetricOverrides: {
           '_os': 'InitOS',
-          '_os_version': '14.0',
           '_device': 'InitDevice',
         },
       );
@@ -189,7 +183,6 @@ void main() {
       // takes precedence over init overrides
       await sdk.events.recordMetrics(metricOverride: {
         '_os': 'CustomOS',
-        '_os_version': '15.0',
         '_device': 'CustomDevice',
         'battery_level': 85,
         'screen_brightness': 0.7,
@@ -200,7 +193,6 @@ void main() {
       final metrics = metricsReq['metrics'] as Map<String, dynamic>;
 
       expect(metrics['_os'], 'CustomOS');
-      expect(metrics['_os_version'], '15.0');
       expect(metrics['_device'], 'CustomDevice');
       expect(metrics['_device_type'], isA<String>());
       expect(metrics['_resolution'], isA<String>());
@@ -216,7 +208,6 @@ void main() {
       final sdk = await _createInstance(
         deviceMetricOverrides: {
           '_os': 'InitOS',
-          '_os_version': '14.0',
           '_device': 'InitDevice',
           'battery_level': 80,
         },
@@ -233,7 +224,6 @@ void main() {
       final metrics = metricsReq['metrics'] as Map<String, dynamic>;
 
       expect(metrics['_os'], isNot('InitOS'));
-      expect(metrics['_os_version'], isNot('14.0'));
       expect(metrics['_device'], isNot('InitDevice'));
       expect(metrics['_device_type'], isA<String>());
       expect(metrics['_resolution'], isA<String>());
@@ -248,7 +238,6 @@ void main() {
     test('recordMetrics with override merges custom data + init overrides', () async {
       final sdk = await _createInstance(deviceMetricOverrides: {
         '_os': 'InitOS',
-        '_os_version': '14.0',
         '_device': 'InitDevice',
         'battery_level': 80,
       }, startWithUnknownConsent: true);
@@ -264,7 +253,6 @@ void main() {
       final metrics = metricsReq['metrics'] as Map<String, dynamic>;
 
       expect(metrics['_os'], isNot('InitOS'));
-      expect(metrics['_os_version'], isNot('14.0'));
       expect(metrics['_device'], isNot('InitDevice'));
       expect(metrics['_device_type'], isA<String>());
       expect(metrics['_resolution'], isA<String>());

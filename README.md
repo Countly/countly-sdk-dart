@@ -1,6 +1,6 @@
 # Countly Dart SDK - Core
 
-This repository contains the Countly Dart SDK, which can be integrated into mobile Flutter applications and any platform Dart can run. The Countly Dart SDK is intended to be used with [Countly Lite](https://countly.com/lite), [Countly Flex](https://countly.com/flex), [Countly Enterprise](https://countly.com/enterprise).
+This repository contains the Dart core package for Countly SDK integrations on any platform Dart can run. The Countly Dart SDK is intended to be used with [Countly Lite](https://countly.com/lite), [Countly Flex](https://countly.com/flex), [Countly Enterprise](https://countly.com/enterprise).
 
 ## What is Countly?
 
@@ -15,19 +15,18 @@ Track, measure, and take action - all without leaving Countly.
 
 ## Integrating Countly SDK in your projects
 
-For a detailed description on how to use this SDK [check out our documentation](https://support.count.ly/hc/en-us/articles/).
+For a detailed description on how to use this SDK [check out our documentation](https://support.count.ly/hc/en-us/articles/25623697635356-Dart).
 
-For information about how to add the SDK to your project, please check [this section of the documentation](https://support.count.ly/hc/en-us/articles/).
+For information about how to add the SDK to your project, please check [this section of the documentation](https://support.count.ly/hc/en-us/articles/25623697635356-Dart#h_01H930GAQ59MD94NK0NP68GNGT).
 
-You can find minimal SDK integration information for your project in [this section of the documentation](https://support.count.ly/hc/en-us/articles/).
+You can find minimal SDK integration information for your project in [this section of the documentation](https://support.count.ly/hc/en-us/articles/25623697635356-Dart#h_01H930GAQ5RGKSA3CTNVTBTDZF).
 
-For an example integration of this SDK, you can have a look [here](https://github.com/Countly/countly-sdk-dart/tree/main/example).
+For an example integration of this SDK, you can have a look [here](https://github.com/Countly/countly-sdk-dart/blob/master/example/pure_dart_example/main.dart).
 
 This SDK supports the following features:
 
 * [Analytics](https://support.count.ly/hc/en-us/articles/4431589003545-Analytics)
 * [User Profiles](https://support.count.ly/hc/en-us/articles/4403281285913-User-Profiles)
-* [Views](https://support.count.ly/hc/en-us/articles/)
 
 ## Installation
 
@@ -46,17 +45,22 @@ dependencies:
 import 'package:countly_sdk_dart_core/countly.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  
   final config = CountlyConfig(
     appKey: 'YOUR_APP_KEY',
     serverUrl: 'https://your.server.com',
-    giveConsent: true,
-    enableSDKLogs: true, // Disable in production
+    storageMode: StorageMode.memory,
+    deviceMetricOverrides: {
+      '_os': 'Custom OS',
+    },
   );
   
   final sdk = await Countly.init(config);
-  runApp(const MyApp());
+  await sdk.consents.giveConsent();
+  
+  await sdk.events.record(key: 'app_start');
+  await sdk.views.startAutoStoppedView('main');
+  
+  await Countly.disposeAll();
 }
 ```
 
@@ -76,13 +80,13 @@ final config = CountlyConfig(
     'X-Custom-Header': 'value',
   },
   deviceMetricOverrides: {           // Optional: Override device metrics
-    '_os_version': '14.0',
+    '_os': 'Custom OS',
   },
   userProperties: {                  // Optional: Initial user properties
     'name': 'John Doe',
     'tier': 'premium',
   },
-  storageMode: StorageMode.persistent, // Optional: Storage mode
+  storageMode: StorageMode.memory, // Optional: Storage mode (default)
   disableOldDataMigration: false,    // Optional: Disable legacy migration
 );
 ```
@@ -233,35 +237,6 @@ final config = CountlyConfig(
   logger: MyLogger(),
   enableSDKLogs: true,
 );
-```
-
-### Pure Dart Usage (Non-Flutter)
-
-```dart
-import 'package:countly_sdk_dart_core/countly.dart';
-
-void main() async {
-  final config = CountlyConfig(
-    appKey: 'YOUR_APP_KEY',
-    serverUrl: 'https://your.server.com',
-    storageMode: StorageMode.memory, // Use memory storage for pure Dart
-    deviceMetricOverrides: {
-      '_os': 'Custom OS',
-      '_os_version': '1.0.0',
-    },
-  );
-  
-  final sdk = await Countly.init(config);
-  await sdk.consents.giveConsent();
-  
-  await sdk.events.record(key: 'app_start');
-  await sdk.views.startAutoStoppedView('main');
-  
-  // Process and send data
-  await sdk.processEventsAndRequests();
-  
-  await Countly.disposeAll();
-}
 ```
 
 ## Security

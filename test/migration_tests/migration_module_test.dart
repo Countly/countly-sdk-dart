@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:countly_sdk_dart_core/countly.dart';
 import 'package:countly_sdk_dart_core/src/constants.dart';
-import 'package:countly_sdk_dart_core/src/migration/legacy_native.dart';
 import 'package:countly_sdk_dart_core/src/migration/legacy_native_types.dart';
 import 'package:countly_sdk_dart_core/src/logging/logging_helper.dart';
 import 'package:countly_sdk_dart_core/src/migration/migration.dart';
@@ -29,7 +28,11 @@ class TestLogger extends InstanceLogger {
   final CapturingSdkLogger capturer;
 
   TestLogger._internal(this.capturer)
-      : super(capturer, enabled: true, enableVisualWarnings: false, instanceKey: 'test');
+      : super(capturer,
+            enabled: true,
+            enableVisualWarnings: false,
+            warningPresenter: const NoOpWarningPresenter(),
+            instanceKey: 'test');
 
   factory TestLogger() {
     final capturer = CapturingSdkLogger();
@@ -76,7 +79,7 @@ class MemoryBackedStorage {
   }
 }
 
-class FakeLegacyNativeBridge implements LegacyNativeBridge {
+class FakeLegacyNativeBridge implements CountlyLegacyMigrationAdapter {
   final LegacyNativeData? data;
 
   FakeLegacyNativeBridge(this.data);

@@ -17,7 +17,6 @@ Future<void> main() async {
   final config = CountlyConfig(
     appKey: 'YOUR_APP_KEY',
     serverUrl: 'https://your.server.com',
-    storageMode: StorageMode.memory, // Use memory storage for pure Dart
     enableSDKLogs: true,
     logLevel: LogLevel.info,
     giveConsent: true,
@@ -230,7 +229,6 @@ Future<void> main() async {
   final secondaryConfig = CountlyConfig(
     appKey: 'SECONDARY_APP_KEY',
     serverUrl: 'https://secondary.server.com',
-    storageMode: StorageMode.memory,
     giveConsent: true,
   );
 
