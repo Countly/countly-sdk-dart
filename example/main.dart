@@ -1,4 +1,4 @@
-// Run with: dart run example/pure_dart_example/main.dart
+// Run with: dart run example/main.dart
 //
 // This example demonstrates all SDK features for pure Dart environments
 // (non-Flutter applications like CLI tools, servers, etc.)

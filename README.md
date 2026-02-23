@@ -21,7 +21,7 @@ For information about how to add the SDK to your project, please check [this sec
 
 You can find minimal SDK integration information for your project in [this section of the documentation](https://support.count.ly/hc/en-us/articles/25623697635356-Dart#h_01H930GAQ5RGKSA3CTNVTBTDZF).
 
-For an example integration of this SDK, you can have a look [here](https://github.com/Countly/countly-sdk-dart/blob/master/example/pure_dart_example/main.dart).
+For an example integration of this SDK, you can have a look [here](https://github.com/Countly/countly-sdk-dart/blob/master/example/main.dart).
 
 This SDK supports the following features:
 
