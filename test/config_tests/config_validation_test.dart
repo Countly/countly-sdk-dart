@@ -1,4 +1,4 @@
-import 'package:countly_sdk_dart/countly.dart';
+import 'package:countly_sdk_dart_core/countly_sdk_dart_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -341,6 +341,25 @@ void main() {
         enableVisualWarnings: false,
       );
       expect(config.enableVisualWarnings, false);
+    });
+  });
+
+  group('CountlyConfig - storageMode', () {
+    test('defaults to memory', () {
+      final config = CountlyConfig(
+        appKey: 'test-key',
+        serverUrl: 'https://example.com',
+      );
+      expect(config.storageMode, StorageMode.memory);
+    });
+
+    test('can be explicitly set to persistent', () {
+      final config = CountlyConfig(
+        appKey: 'test-key',
+        serverUrl: 'https://example.com',
+        storageMode: StorageMode.persistent,
+      );
+      expect(config.storageMode, StorageMode.persistent);
     });
   });
 }

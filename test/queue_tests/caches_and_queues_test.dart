@@ -1,8 +1,8 @@
 import 'dart:convert';
 
-import 'package:countly_sdk_dart/countly.dart';
-import 'package:countly_sdk_dart/src/constants.dart';
-import 'package:countly_sdk_dart/src/networking.dart';
+import 'package:countly_sdk_dart_core/countly_sdk_dart_core.dart';
+import 'package:countly_sdk_dart_core/src/constants.dart';
+import 'package:countly_sdk_dart_core/src/networking.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 
@@ -397,6 +397,34 @@ void main() {
       );
 
       expect(jsonDecode(network.sent.first['events'])[0]['key'], 'stored_event');
+    });
+
+    test('legacy URL-encoded request queue items are loaded and sent', () async {
+      final backing = <String, String>{};
+      final network = FakeNetworkClient('https://example.com');
+
+      backing['default_' + StorageSubKeys.requestQueue] = jsonEncode([
+        'app_key=old-app-key&device_id=legacy-device&begin_session=1&timestamp=1771689915235&user_details=%7B%22name%22%3A%22Legacy%20User%22%7D'
+      ]);
+      backing['default_' + StorageSubKeys.deviceId] = 'stored-device';
+      backing['default_' + StorageSubKeys.deviceIdType] = DeviceIdType.generated.toString();
+
+      await _createInstance(
+        storageBacking: backing,
+        storageMode: StorageMode.persistent,
+        startWithUnknownConsent: true,
+        networkClient: network,
+      );
+
+      final legacyReq = network.sent.firstWhere(
+        (r) => r['begin_session'] == 1,
+        orElse: () => <String, dynamic>{},
+      );
+
+      expect(legacyReq, isNotEmpty);
+      expect(legacyReq['app_key'], 'old-app-key');
+      expect(legacyReq['device_id'], 'legacy-device');
+      expect(legacyReq['user_details'], {'name': 'Legacy User'});
     });
 
     test('queues are NOT persisted in unknown consent mode', () async {

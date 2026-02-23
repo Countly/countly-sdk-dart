@@ -1,10 +1,11 @@
 import 'dart:convert';
 
-import 'package:countly_sdk_dart/countly.dart';
-import 'package:countly_sdk_dart/src/constants.dart';
-import 'package:countly_sdk_dart/src/logging/logging_helper.dart';
-import 'package:countly_sdk_dart/src/migration/migration.dart';
-import 'package:countly_sdk_dart/src/storage/storage.dart';
+import 'package:countly_sdk_dart_core/countly_sdk_dart_core.dart';
+import 'package:countly_sdk_dart_core/src/constants.dart';
+import 'package:countly_sdk_dart_core/src/migration/legacy_native_types.dart';
+import 'package:countly_sdk_dart_core/src/logging/logging_helper.dart';
+import 'package:countly_sdk_dart_core/src/migration/migration.dart';
+import 'package:countly_sdk_dart_core/src/storage/storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// A simple SdkLogger that captures all logs for testing purposes.
@@ -26,7 +27,12 @@ class CapturingSdkLogger implements SdkLogger {
 class TestLogger extends InstanceLogger {
   final CapturingSdkLogger capturer;
 
-  TestLogger._internal(this.capturer) : super(capturer, enabled: true, instanceKey: 'test');
+  TestLogger._internal(this.capturer)
+      : super(capturer,
+            enabled: true,
+            enableVisualWarnings: false,
+            warningPresenter: const NoOpWarningPresenter(),
+            instanceKey: 'test');
 
   factory TestLogger() {
     final capturer = CapturingSdkLogger();
@@ -71,6 +77,21 @@ class MemoryBackedStorage {
       keys: () async => backing.keys.toList(),
     );
   }
+}
+
+class FakeLegacyNativeBridge implements CountlyLegacyMigrationAdapter {
+  final LegacyNativeData? data;
+
+  FakeLegacyNativeBridge(this.data);
+
+  @override
+  Future<LegacyNativeData?> fetchLegacyData() async => data;
+
+  @override
+  Future<void> clearAndroidLegacyData() async {}
+
+  @override
+  Future<void> clearIOSLegacyData() async {}
 }
 
 StorageFacade createTestStorage(Map<String, String> backing) {
@@ -215,6 +236,42 @@ void main() {
       expect(decoded[1]['segmentation'], {'a': 'b'});
     });
 
+    test('migrates event queue as legacy request when legacy request envelope exists', () async {
+      final legacyBeginSession =
+          'app_key=old-app-key&device_id=old-device-id&sdk_version=25.4.3&sdk_name=dart-flutterbnp-android&av=0.0.1&begin_session=1';
+      final event1 = jsonEncode({'key': 'event1', 'count': 1});
+      final event2 = jsonEncode({'key': 'event2', 'count': 2});
+      final backing = <String, String>{
+        AndroidLegacyKeys.deviceId: 'old-device-id',
+        AndroidLegacyKeys.requestQueue: legacyBeginSession,
+        AndroidLegacyKeys.eventQueue: '$event1${AndroidLegacyKeys.delimiter}$event2',
+      };
+      final storage = createTestStorage(backing);
+      final migration = MigrationService(storage, enabled: true);
+
+      await migration.migrateIfNeeded();
+
+      final migratedRq = backing[StorageSubKeys.requestQueue];
+      expect(migratedRq, isNotNull);
+      final decodedRq = jsonDecode(migratedRq!) as List;
+      expect(decodedRq.length, 2);
+      expect(decodedRq.first, legacyBeginSession);
+
+      final wrappedEventsReq = decodedRq.last as Map<String, dynamic>;
+      expect(wrappedEventsReq['app_key'], 'old-app-key');
+      expect(wrappedEventsReq['device_id'], 'old-device-id');
+      expect(wrappedEventsReq['sdk_version'], '25.4.3');
+      expect(wrappedEventsReq['sdk_name'], 'dart-flutterbnp-android');
+      expect(wrappedEventsReq['av'], '0.0.1');
+      final wrappedEvents = (wrappedEventsReq['events'] as List).cast<Map<String, dynamic>>();
+      expect(wrappedEvents.length, 2);
+      expect(wrappedEvents[0]['key'], 'event1');
+      expect(wrappedEvents[1]['key'], 'event2');
+
+      // Event queue should not be used when wrapping to legacy request queue is possible.
+      expect(backing[StorageSubKeys.eventQueue], isNull);
+    });
+
     test('skips invalid JSON in event queue but continues with valid ones', () async {
       final validEvent = jsonEncode({'key': 'valid_event', 'count': 1});
       final invalidEvent = 'not valid json {{{';
@@ -352,6 +409,70 @@ void main() {
 
       expect(backing[StorageSubKeys.deviceId], isNull);
       expect(logger.hasLogContaining('no legacy iOS data found'), isTrue);
+    });
+
+    test('recorded events are migrated to event queue when no legacy requests exist', () async {
+      final backing = <String, String>{};
+      final storage = createTestStorage(backing);
+      final nativeBridge = FakeLegacyNativeBridge(
+        LegacyNativeData(
+          ios: LegacyIOSData(
+            deviceId: 'ios-device',
+            recordedEvents: [
+              {'key': 'old_event_only', 'count': 1}
+            ],
+            legacyAppKey: 'old-app-only-events',
+          ),
+        ),
+      );
+
+      final migration = MigrationService(storage, enabled: true, nativeBridge: nativeBridge);
+      await migration.migrateIfNeeded();
+
+      final migratedRq = backing[StorageSubKeys.requestQueue];
+      final migratedEq = backing[StorageSubKeys.eventQueue];
+
+      expect(migratedRq, isNull);
+      expect(migratedEq, isNotNull);
+      final decodedEq = jsonDecode(migratedEq!) as List<dynamic>;
+      expect(decodedEq.length, 1);
+      expect((decodedEq.first as Map<String, dynamic>)['key'], 'old_event_only');
+    });
+
+    test('recorded events are wrapped with legacy app key when legacy requests exist', () async {
+      final backing = <String, String>{};
+      final storage = createTestStorage(backing);
+      final nativeBridge = FakeLegacyNativeBridge(
+        LegacyNativeData(
+          ios: LegacyIOSData(
+            deviceId: 'ios-device',
+            queuedRequests: ['app_key=old-app-only-events&device_id=old-only-events-device&begin_session=1'],
+            recordedEvents: [
+              {'key': 'old_event_only', 'count': 1}
+            ],
+            legacyAppKey: 'old-app-only-events',
+          ),
+        ),
+      );
+
+      final migration = MigrationService(storage, enabled: true, nativeBridge: nativeBridge);
+      await migration.migrateIfNeeded();
+
+      final migratedRq = backing[StorageSubKeys.requestQueue];
+      final migratedEq = backing[StorageSubKeys.eventQueue];
+
+      expect(migratedEq, isNull);
+      expect(migratedRq, isNotNull);
+
+      final decodedRq = jsonDecode(migratedRq!) as List<dynamic>;
+      expect(decodedRq.length, 2);
+
+      final wrappedEventsReq = decodedRq.last as Map<String, dynamic>;
+      expect(wrappedEventsReq['app_key'], 'old-app-only-events');
+      expect(wrappedEventsReq['device_id'], 'old-only-events-device');
+      final wrappedEvents = (wrappedEventsReq['events'] as List<dynamic>).cast<Map<String, dynamic>>();
+      expect(wrappedEvents.length, 1);
+      expect(wrappedEvents.first['key'], 'old_event_only');
     });
   });
 

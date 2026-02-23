@@ -1,4 +1,4 @@
-part of sdk_instance_lib;
+part of '../main.dart';
 
 class EventsModule {
   final CountlyInstance _i;
@@ -67,13 +67,14 @@ class EventsModule {
       _i.L.v('Metrics collection skipped: missing consent');
       return;
     }
-    final metrics = metrics_collector.getCurrentMetrics();
+    final metrics = _i._platformEnvironment.metricsAdapter.collectMetrics();
     if (metricOverride != null && metricOverride.isNotEmpty) {
       metrics.addAll(_i._sanitizeSegmentation(metricOverride));
     }
     final req = _i._prepareRequest({'metrics': metrics});
+    if (req == null) return;
     await _i._enqueueUserPropertiesCache();
     await _i._addToRequestQueue(req);
-    _i.L.d('Recorded metrics request: [${metrics.toString()}');
+    _i.L.d('Recorded metrics request: [${metrics.toString()}]');
   }
 }

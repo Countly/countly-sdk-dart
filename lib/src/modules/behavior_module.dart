@@ -1,4 +1,4 @@
-part of sdk_instance_lib;
+part of '../main.dart';
 
 class BehaviorModule {
   final CountlyInstance _inst;
@@ -7,26 +7,26 @@ class BehaviorModule {
   final Map<String, dynamic> _sbs = {};
 
   /// getters for SBS values to be used in SdkInstance
-  bool get trackingEnabled => _sbs['tracking'] as bool; // default true
-  bool get networkingEnabled => _sbs['networking'] as bool; // default true
-  int get eventQueueSize => _sbs['eqs'] as int; // default 100
-  int get requestQueueSize => _sbs['rqs'] as int; // default 50
-  int get internalTimerInterval => _sbs['sui'] as int; // default 60
+  bool get trackingEnabled => _sbs['tracking'] as bool? ?? SBSDefaults.tracking;
+  bool get networkingEnabled => _sbs['networking'] as bool? ?? SBSDefaults.networking;
+  int get eventQueueSize => _sbs['eqs'] as int? ?? SBSDefaults.eqs;
+  int get requestQueueSize => _sbs['rqs'] as int? ?? SBSDefaults.rqs;
+  int get internalTimerInterval => _sbs['sui'] as int? ?? SBSDefaults.sui;
   // bool get isSessionTrackingAllowed => (_sbs['st'] as bool? ?? true); // default 1 - NOT SUPPORTED
   // bool get isCrashTrackingAllowed => (_sbs['crt'] as bool? ?? true); // default 1 - NOT SUPPORTED
   // bool get isLocationTrackingAllowed => (_sbs['lt'] as bool? ?? true); // default 1 - NOT SUPPORTED
-  bool get isViewTrackingAllowed => (_sbs['vt'] as bool? ?? true); // default 1
-  int get keyLengthLimit => _sbs['lkl'] as int; // default 128
-  int get valueSizeLimit => _sbs['lvs'] as int; // default 256
-  int get segmentationValuesLimit => _sbs['lsv'] as int; // default 100
+  bool get isViewTrackingAllowed => _sbs['vt'] as bool? ?? SBSDefaults.vt;
+  int get keyLengthLimit => _sbs['lkl'] as int? ?? SBSDefaults.lkl;
+  int get valueSizeLimit => _sbs['lvs'] as int? ?? SBSDefaults.lvs;
+  int get segmentationValuesLimit => _sbs['lsv'] as int? ?? SBSDefaults.lsv;
   // int get breadcrumbCountLimit => _sbs['lbc'] as int; // default 100 - NOT SUPPORTED
   // int get stackTraceLineCountLimit => _sbs['ltlpt'] as int; // default 30 - NOT SUPPORTED
   // int get stackTraceLineLengthLimit => _sbs['ltl'] as int; // default 200 - NOT SUPPORTED
-  bool get isCustomEventTrackingAllowed => (_sbs['cet'] as bool? ?? true); // default 1
+  bool get isCustomEventTrackingAllowed => _sbs['cet'] as bool? ?? SBSDefaults.cet;
   // bool get enterContentZoneAfterInit => (_sbs['ecz'] as bool? ?? false); // default 0 - NOT SUPPORTED
   // int get contentZoneRequestInterval => _sbs['czi'] as int; // default 30 - NOT SUPPORTED
   // bool get isConsentRequired => (_sbs['cr'] as bool? ?? false); // default 0 - NOT SUPPORTED
-  int get serverConfigUpdateInterval => _sbs['scui'] as int; // default 4 hours
+  int get serverConfigUpdateInterval => _sbs['scui'] as int? ?? SBSDefaults.scui;
   // bool get isRefreshContentZoneAllowed => (_sbs['rcz'] as bool? ?? true); // default 1 - NOT SUPPORTED
   // int get dropOldRequestTime => _sbs['dort'] as int; // default 0 (disabled) - NOT SUPPORTED
   // bool get isBackoffMechanismEnabled => (_sbs['bom'] as bool? ?? true); // default 1 - NOT SUPPORTED
@@ -34,15 +34,15 @@ class BehaviorModule {
   // double get backoffMechanismRequestQueuePercent => _sbs['bom_rqp'] as double; // default 0.5 - NOT SUPPORTED
   // int get backoffMechanismRequestAge => _sbs['bom_ra'] as int; // default 24 hours - NOT SUPPORTED
   // int get backoffMechanismDuration => _sbs['bom_d'] as int; // default 60 minutes - NOT SUPPORTED
-  int get userPropertiesCacheLimit => _sbs['upcl'] as int; // default 100
+  int get userPropertiesCacheLimit => _sbs['upcl'] as int? ?? SBSDefaults.upcl;
   List<String> get eventBlacklist => _stringList('eb'); // default []
   List<String> get userPropertiesBlacklist => _stringList('upb'); // default []
   List<String> get segmentationBlacklist => _stringList('sb'); // default []
-  Map<String, dynamic> get eventSegmentationBlacklist => _sbs['esb'] as Map<String, dynamic>; // default {}
+  Map<String, dynamic> get eventSegmentationBlacklist => _sbs['esb'] as Map<String, dynamic>? ?? const {};
   List<String> get eventWhitelist => _stringList('ew'); // default []
   List<String> get userPropertiesWhitelist => _stringList('upw'); // default []
   List<String> get segmentationWhitelist => _stringList('sw'); // default []
-  Map<String, dynamic> get eventSegmentationWhitelist => _sbs['esw'] as Map<String, dynamic>; // default {}
+  Map<String, dynamic> get eventSegmentationWhitelist => _sbs['esw'] as Map<String, dynamic>? ?? const {};
   @visibleForTesting
   Map<String, dynamic> get sbsSnapshot => Map.unmodifiable(_sbs);
 
@@ -118,7 +118,6 @@ class BehaviorModule {
       }
       return;
     }
-    ;
     _inst.L.i('BehaviorModule: loaded stored SBS object=[${stored.toString()}]');
     final overrides = stored['c'];
     if (overrides is Map<String, dynamic>) {
@@ -153,7 +152,9 @@ class BehaviorModule {
       return;
     }
     try {
-      final data = _inst._prepareRequest({})..['method'] = 'sc';
+      final data = _inst._prepareRequest({});
+      if (data == null) return;
+      data['method'] = 'sc';
       final resp = await _inst._network.makeRequest(data, Endpoints.sdk);
       if (_inst._network.isResponseValid(resp, acceptJSON: true)) {
         final decoded = jsonDecode(resp.body);

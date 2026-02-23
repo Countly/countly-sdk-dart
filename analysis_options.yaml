@@ -4,6 +4,8 @@ include: package:flutter_lints/flutter.yaml
 # https://dart.dev/guides/language/analysis-options
 
 analyzer:
+  errors:
+    unnecessary_library_name: ignore
   exclude: [build/**, test/**, example/**]
   language:
     strict-casts: true

@@ -1,11 +1,10 @@
 import 'dart:convert';
 
-import 'package:countly_sdk_dart/countly.dart';
-import 'package:countly_sdk_dart/src/constants.dart';
-import 'package:countly_sdk_dart/src/networking.dart';
+import 'package:countly_sdk_dart_core/countly_sdk_dart_core.dart';
+import 'package:countly_sdk_dart_core/src/constants.dart';
+import 'package:countly_sdk_dart_core/src/networking.dart';
 import '../helper/helper.dart' as helper;
-import 'package:countly_sdk_dart/src/lifecycle/lifecycle_stub.dart'
-    if (dart.library.ui) 'package:countly_sdk_dart/src/lifecycle/lifecycle_flutter.dart';
+import 'package:countly_sdk_dart_core/src/lifecycle/lifecycle_stub.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -357,7 +356,7 @@ void main() {
       expect(backing.containsKey('v1_COUNTLY_DART_ID'), true);
       expect(backing['v1_COUNTLY_DART_ID'], 'test-device');
       expect(backing.containsKey('v1_COUNTLY_DART_IDT'), true);
-      expect(backing['v1_COUNTLY_DART_IDT'].toString(), '1');
+      expect(backing['v1_COUNTLY_DART_IDT'].toString(), '0'); // DeviceIdType.provided
 
       expect(backing.containsKey('v1_COUNTLY_DART_RQ'), true);
       final rqList = jsonDecode(backing['v1_COUNTLY_DART_RQ']!) as List<dynamic>;

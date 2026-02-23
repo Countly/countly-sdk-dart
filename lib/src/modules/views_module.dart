@@ -1,4 +1,4 @@
-part of sdk_instance_lib;
+part of '../main.dart';
 
 class ViewsModule {
   final CountlyInstance _inst;
@@ -158,7 +158,7 @@ class ViewsModule {
       _viewTime += beatDur;
       _lastBeatTime = now;
       await _persistActiveViewState();
-      _inst.L.v('Heartbeat view=[${_inst._activeViewName}] cumulative time=[${_viewTime}]');
+      _inst.L.v('Heartbeat view=[${_inst._activeViewName}] cumulative time=[$_viewTime]');
     }
   }
 

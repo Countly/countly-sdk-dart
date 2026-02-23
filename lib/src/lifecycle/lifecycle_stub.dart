@@ -6,9 +6,15 @@ typedef _LifecycleCallback = void Function();
 final List<_LifecycleCallback> _backgroundListeners = [];
 final List<_LifecycleCallback> _foregroundListeners = [];
 
-void listenToLifecycle({void Function()? onBackground, void Function()? onForeground}) {
+/// Returns a dispose function that removes the callbacks.
+void Function() listenToLifecycle({void Function()? onBackground, void Function()? onForeground}) {
   if (onBackground != null) _backgroundListeners.add(onBackground);
   if (onForeground != null) _foregroundListeners.add(onForeground);
+
+  return () {
+    if (onBackground != null) _backgroundListeners.remove(onBackground);
+    if (onForeground != null) _foregroundListeners.remove(onForeground);
+  };
 }
 
 /// Test-only: simulate app moving to background.

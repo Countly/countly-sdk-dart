@@ -1,3 +1,10 @@
+import 'dart:convert';
+import '../storage/storage.dart';
+import '../constants.dart';
+import '../logging/logging_helper.dart';
+import '../platform_environment.dart';
+import 'legacy_native_types.dart';
+
 /// ## Android Migration
 /// The Android SDK stores data in SharedPreferences with preference name "COUNTLY_STORE".
 /// Keys are stored directly (not nested JSON):
@@ -16,12 +23,6 @@
 /// - `kCountlyRemoteConfigKey` - Remote config (NSDictionary)
 /// - `kCountlyServerConfigPersistencyKey` - Server config (NSDictionary)
 /// However, request and event queues are stored in a file using NSKeyedArchiver
-
-import 'dart:convert';
-import '../storage/storage.dart';
-import '../constants.dart';
-import '../logging/logging_helper.dart';
-import 'legacy_native.dart';
 
 /// Keys used by the Android SDK (CountlyStore.java)
 class _AndroidLegacyKeys {
@@ -48,10 +49,11 @@ class MigrationService {
   final StorageFacade storage;
   final bool enabled;
   final InstanceLogger? L;
-  final LegacyNativeBridge _nativeBridge;
+  final CountlyLegacyMigrationAdapter _nativeBridge;
 
-  MigrationService(this.storage, {required this.enabled, this.L, LegacyNativeBridge? nativeBridge})
-      : _nativeBridge = nativeBridge ?? legacyNativeBridge;
+  MigrationService(this.storage,
+      {required this.enabled, this.L, CountlyLegacyMigrationAdapter nativeBridge = const NoOpLegacyMigrationAdapter()})
+      : _nativeBridge = nativeBridge;
 
   /// Runs migration if needed. Checks for Android data first, then iOS.
   /// Migration is skipped if new Dart SDK data already exists.
@@ -116,12 +118,15 @@ class MigrationService {
         L?.d('migration(Android): migrated device id type ($androidDeviceIdType -> $mappedType)');
       }
 
+      List<dynamic> migratedRequestQueueItems = const [];
+
       // Migrate Request Queue (delimiter separated string)
       final androidRq = native?.requestQueue ?? await storage.readString(_AndroidLegacyKeys.requestQueue);
       if (androidRq != null && androidRq.isNotEmpty) {
         final items = androidRq.split(_AndroidLegacyKeys.delimiter).where((e) => e.isNotEmpty).toList();
         if (items.isNotEmpty) {
-          await storage.writeJson(StorageSubKeys.requestQueue, items);
+          migratedRequestQueueItems = List<dynamic>.from(items);
+          await storage.writeJson(StorageSubKeys.requestQueue, migratedRequestQueueItems);
           L?.d('migration(Android): migrated request queue (${items.length} items)');
         }
       }
@@ -144,8 +149,20 @@ class MigrationService {
             }
           }
           if (events.isNotEmpty) {
-            await storage.writeJson(StorageSubKeys.eventQueue, events);
-            L?.d('migration(Android): migrated event queue (${events.length} events)');
+            final legacyEnvelope = _extractLegacyEnvelopeFromRequestQueue(migratedRequestQueueItems, androidDeviceId);
+            if (legacyEnvelope != null) {
+              final legacyEventsRequest = {
+                ...legacyEnvelope,
+                'events': events,
+              };
+              final updatedRq = List<dynamic>.from(migratedRequestQueueItems)..add(legacyEventsRequest);
+              await storage.writeJson(StorageSubKeys.requestQueue, updatedRq);
+              migratedRequestQueueItems = updatedRq;
+              L?.d('migration(Android): migrated event queue as legacy request (${events.length} events)');
+            } else {
+              await storage.writeJson(StorageSubKeys.eventQueue, events);
+              L?.d('migration(Android): migrated event queue (${events.length} events)');
+            }
           }
         }
       }
@@ -160,6 +177,97 @@ class MigrationService {
     }
 
     return migrated;
+  }
+
+  Map<String, dynamic>? _extractLegacyEnvelopeFromRequestQueue(List<dynamic> requestItems, String fallbackDeviceId) {
+    if (requestItems.isEmpty) {
+      return null;
+    }
+
+    for (final item in requestItems) {
+      final parsed = _parseLegacyRequestItem(item);
+      if (parsed == null) {
+        continue;
+      }
+
+      final appKey = parsed['app_key'];
+      if (appKey is! String || appKey.isEmpty) {
+        continue;
+      }
+
+      final envelope = <String, dynamic>{
+        'app_key': appKey,
+        'device_id': (parsed['device_id'] is String && (parsed['device_id'] as String).isNotEmpty)
+            ? parsed['device_id']
+            : fallbackDeviceId,
+      };
+
+      if (parsed['sdk_version'] != null) envelope['sdk_version'] = parsed['sdk_version'];
+      if (parsed['sdk_name'] != null) envelope['sdk_name'] = parsed['sdk_name'];
+      if (parsed['av'] != null) envelope['av'] = parsed['av'];
+      return envelope;
+    }
+
+    return null;
+  }
+
+  Map<String, dynamic>? _parseLegacyRequestItem(dynamic item) {
+    if (item is Map<String, dynamic>) {
+      return item;
+    }
+    if (item is! String || item.isEmpty) {
+      return null;
+    }
+
+    try {
+      final decoded = jsonDecode(item);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    } catch (_) {}
+
+    if (!item.contains('=')) {
+      return null;
+    }
+
+    try {
+      final query = Uri.splitQueryString(item, encoding: utf8);
+      if (query.isEmpty) {
+        return null;
+      }
+      final parsed = <String, dynamic>{};
+      query.forEach((key, value) {
+        parsed[key] = _coerceLegacyQueryValue(value);
+      });
+      return parsed;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  dynamic _coerceLegacyQueryValue(String value) {
+    if (value.isEmpty) return value;
+
+    final lower = value.toLowerCase();
+    if (lower == 'true') return true;
+    if (lower == 'false') return false;
+
+    final intValue = int.tryParse(value);
+    if (intValue != null) return intValue;
+
+    final doubleValue = double.tryParse(value);
+    if (doubleValue != null) return doubleValue;
+
+    final firstChar = value[0];
+    if (firstChar == '{' || firstChar == '[') {
+      try {
+        return jsonDecode(value);
+      } catch (_) {
+        return value;
+      }
+    }
+
+    return value;
   }
 
   /// Maps Android SDK device ID type strings to our internal type values.
@@ -241,12 +349,38 @@ class MigrationService {
         migrated = true;
       }
 
+      List<dynamic> migratedRequestQueueItems = const [];
+
       final queuedRequests = native?.queuedRequests;
       if (queuedRequests != null && queuedRequests.isNotEmpty) {
-        await storage.writeJson(StorageSubKeys.requestQueue, queuedRequests);
+        migratedRequestQueueItems = List<dynamic>.from(queuedRequests);
+        await storage.writeJson(StorageSubKeys.requestQueue, migratedRequestQueueItems);
         L?.d('migration(iOS): migrated request queue (${queuedRequests.length} items)');
         migrated = true;
       }
+
+      final recordedEvents = native?.recordedEvents;
+      if (recordedEvents != null && recordedEvents.isNotEmpty) {
+        final fallbackDeviceId = deviceId ?? iosDeviceId ?? iosNsuuid ?? '';
+        final legacyEnvelope = _extractLegacyEnvelopeFromRequestQueue(migratedRequestQueueItems, fallbackDeviceId);
+
+        if (legacyEnvelope != null) {
+          final legacyEventsRequest = {
+            ...legacyEnvelope,
+            'events': recordedEvents,
+          };
+          final updatedRq = List<dynamic>.from(migratedRequestQueueItems)..add(legacyEventsRequest);
+          await storage.writeJson(StorageSubKeys.requestQueue, updatedRq);
+          migratedRequestQueueItems = updatedRq;
+          L?.d('migration(iOS): migrated recorded events as legacy request (${recordedEvents.length} events)');
+        } else {
+          await storage.writeJson(StorageSubKeys.eventQueue, recordedEvents);
+          L?.d('migration(iOS): migrated recorded events (${recordedEvents.length} events)');
+        }
+
+        migrated = true;
+      }
+
       // Clean up legacy iOS keys
       await _cleanupIOSLegacyData();
 

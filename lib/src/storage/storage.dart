@@ -3,9 +3,7 @@ import 'dart:convert';
 
 import '../config.dart';
 import '../logging/logging_helper.dart';
-
-// TODO: We import shared_preferences only here; in pure dart environments user can provide custom methods or memory mode. A file-based engine can be added for dart.
-import 'storage_persistent_stub.dart' if (dart.library.ui) 'storage_persistent_flutter.dart';
+import '../platform_environment.dart';
 
 abstract class StorageEngine {
   Future<void> write(String key, String value);
@@ -15,7 +13,8 @@ abstract class StorageEngine {
 
 // Adapter that wraps the platform-specific persistent storage engine.
 class _PersistentAdapter implements StorageEngine {
-  final PersistentStorageEngine inner = PersistentStorageEngine();
+  final CountlyStorageAdapter inner;
+  _PersistentAdapter(this.inner);
   @override
   Future<String?> read(String key) => inner.read(key);
   @override
@@ -65,8 +64,13 @@ class StorageFacade {
       _engine = _CustomStorageEngine(config.storageMethods!);
       L?.d('storage: using custom storage methods');
     } else if (config.storageMode == StorageMode.persistent) {
-      _engine = _PersistentAdapter();
-      L?.d('storage: using persistent engine');
+      if (config.platformEnvironment.storageAdapter is NoOpStorageAdapter) {
+        _engine = MemoryStorageEngine();
+        L?.w('storage: persistent mode requested but no storage adapter injected, falling back to in-memory engine');
+      } else {
+        _engine = _PersistentAdapter(config.platformEnvironment.storageAdapter);
+        L?.d('storage: using persistent adapter from platform environment');
+      }
     } else {
       _engine = MemoryStorageEngine();
       L?.d('storage: using in-memory engine');

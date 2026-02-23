@@ -5,8 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 final sdkBehaviorRequest = {
   'app_key': 'app-key',
   'device_id': 'test-device',
-  'sdk_version': '1.0.0',
-  'sdk_name': 'countly-sdk-dart',
+  'sdk_version': '26.1.0',
+  'sdk_name': 'countly-sdk-dart-core',
   'av': '1.0.0',
   'method': 'sc',
 };
@@ -14,8 +14,8 @@ final sdkBehaviorRequest = {
 final healthCheckRequest = {
   'app_key': 'app-key',
   'device_id': 'test-device',
-  'sdk_version': '1.0.0',
-  'sdk_name': 'countly-sdk-dart',
+  'sdk_version': '26.1.0',
+  'sdk_name': 'countly-sdk-dart-core',
   'av': '1.0.0',
   'hc': {'el': 0, 'wl': 0, 'sc': '', 'em': ''},
   'metrics': {'_app_version': '1.0.0'},
@@ -28,8 +28,8 @@ final healthCheckRequest = {
 final falseConsentRequest = {
   'app_key': 'app-key',
   'device_id': 'test-device',
-  'sdk_version': '1.0.0',
-  'sdk_name': 'countly-sdk-dart',
+  'sdk_version': '26.1.0',
+  'sdk_name': 'countly-sdk-dart-core',
   'av': '1.0.0',
   'consent': {
     'events': false,
@@ -42,8 +42,8 @@ final falseConsentRequest = {
 final trueConsentRequest = {
   'app_key': 'app-key',
   'device_id': 'test-device',
-  'sdk_version': '1.0.0',
-  'sdk_name': 'countly-sdk-dart',
+  'sdk_version': '26.1.0',
+  'sdk_name': 'countly-sdk-dart-core',
   'av': '1.0.0',
   'consent': {
     'events': true,
@@ -56,8 +56,8 @@ final trueConsentRequest = {
 final locationRequest = {
   'app_key': 'app-key',
   'device_id': 'test-device',
-  'sdk_version': '1.0.0',
-  'sdk_name': 'countly-sdk-dart',
+  'sdk_version': '26.1.0',
+  'sdk_name': 'countly-sdk-dart-core',
   'av': '1.0.0',
   'location': '',
 };
@@ -65,12 +65,11 @@ final locationRequest = {
 final metricsRequest = {
   'app_key': 'app-key',
   'device_id': 'test-device',
-  'sdk_version': '1.0.0',
-  'sdk_name': 'countly-sdk-dart',
+  'sdk_version': '26.1.0',
+  'sdk_name': 'countly-sdk-dart-core',
   'av': '1.0.0',
   'metrics': {
     '_os': isA<String>(),
-    '_os_version': isA<String>(),
     '_device': isA<String>(),
     '_device_type': isA<String>(),
     '_resolution': isA<String>(),
@@ -87,8 +86,8 @@ final metricsRequest = {
 /// {
 ///  'app_key': 'app-key',
 ///  'device_id': 'test-device',
-///  'sdk_version': '1.0.0',
-///  'sdk_name': 'countly-sdk-dart',
+///  'sdk_version': '26.1.0',
+///  'sdk_name': 'countly-sdk-dart-core',
 ///  'av': '1.0.0',
 ///  'events': [ { ... }, { ... } ]
 /// }

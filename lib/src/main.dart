@@ -2,18 +2,17 @@ library sdk_instance_lib;
 
 import 'dart:async';
 import 'dart:convert';
-import 'metrics/metrics_collector.dart' as metrics_collector;
 import 'package:meta/meta.dart';
 
 import 'package:uuid/uuid.dart';
 
 import 'config.dart';
 import 'networking.dart';
+import 'platform_environment.dart';
 import 'storage/storage.dart';
 import 'migration/migration.dart';
 import 'logging/logging_helper.dart';
 import 'constants.dart';
-import 'lifecycle/lifecycle_stub.dart' if (dart.library.ui) 'lifecycle/lifecycle_flutter.dart';
 
 part 'modules/events_module.dart';
 part 'modules/users_module.dart';
@@ -51,8 +50,10 @@ class CountlyInstance {
 
   Future<void> _queueLock = Future.value();
 
-  static const _sdkVersion = SdkInternal.sdkVersion;
-  static const _sdkName = SdkInternal.sdkName;
+  // ignore: invalid_use_of_visible_for_testing_member
+  String get _sdkVersion => config.sdkVersionOverride ?? SdkInternal.sdkVersion;
+  // ignore: invalid_use_of_visible_for_testing_member
+  String get _sdkName => config.sdkNameOverride ?? SdkInternal.sdkName;
 
   late final StorageFacade _storage;
   late NetworkClient _network;
@@ -72,7 +73,9 @@ class CountlyInstance {
   String? _previousEventKey;
   late final DateTime _sdkStartTime;
   bool _isInBackground = false;
+  void Function()? _disposeLifecycleListener;
   bool _isInUnknownConsentState = false;
+  late final CountlyPlatformEnvironment _platformEnvironment;
 
   CountlyInstance._(this.config, this.instanceKey);
 
@@ -83,17 +86,21 @@ class CountlyInstance {
   }
 
   Future<void> _init() async {
+    _platformEnvironment = config.platformEnvironment;
     _sdkStartTime = DateTime.now();
     _logger = config.logger ?? DefaultSdkLogger(config.logLevel);
     L = InstanceLogger(
       _logger,
       enabled: config.enableSDKLogs,
       enableVisualWarnings: config.enableVisualWarnings,
+      warningPresenter: _platformEnvironment.warningPresenter,
       instanceKey: instanceKey,
       onLog: (lvl) {
-        if (lvl == LogLevel.error)
+        if (lvl == LogLevel.error) {
           _logErrorCount++;
-        else if (lvl == LogLevel.warning) _logWarningCount++;
+        } else if (lvl == LogLevel.warning) {
+          _logWarningCount++;
+        }
       },
     );
 
@@ -107,6 +114,7 @@ class CountlyInstance {
       enabled:
           instanceKey == 'default' && config.storageMode == StorageMode.persistent && !config.disableOldDataMigration,
       L: L,
+      nativeBridge: _platformEnvironment.legacyMigrationAdapter,
     );
 
     _sbs = BehaviorModule(this);
@@ -158,15 +166,19 @@ class CountlyInstance {
     // Record initial consent status
     await _recordConsentRequest();
     // Record location request
-    await _addToRequestQueue(_prepareRequest({'location': ''}));
+    final locationReq = _prepareRequest({'location': ''});
+    if (locationReq != null) await _addToRequestQueue(locationReq);
 
     L.i('SDK instance initialized successfully');
 
     // Lifecycle listeners
     try {
-      listenToLifecycle(
+      _disposeLifecycleListener = _platformEnvironment.lifecycleAdapter.listen(
         onBackground: () {
           _isInBackground = true;
+          L.d('App going to background, processing queues');
+          // ignore: discarded_futures
+          processEventsAndRequests();
         },
         onForeground: () {
           _isInBackground = false;
@@ -201,10 +213,14 @@ class CountlyInstance {
         if (item is Map<String, dynamic>) {
           _requestQueue.add(item);
         } else if (item is String) {
-          try {
-            final d = jsonDecode(item);
-            if (d is Map<String, dynamic>) _requestQueue.add(d);
-          } catch (_) {}
+          final parsed = _parsePersistedRequestQueueItem(item);
+          if (parsed != null) {
+            _requestQueue.add(parsed);
+          } else {
+            L.w('Dropped unparseable request queue item: $item');
+          }
+        } else {
+          L.w('Dropped request queue item with unexpected type: ${item.runtimeType}');
         }
       }
     } else {
@@ -220,12 +236,70 @@ class CountlyInstance {
           try {
             final d = jsonDecode(item);
             if (d is Map<String, dynamic>) _eventQueue.add(d);
-          } catch (_) {}
+          } catch (e) {
+            L.w('Dropped unparseable event queue item: $e');
+          }
+        } else {
+          L.w('Dropped event queue item with unexpected type: ${item.runtimeType}');
         }
       }
     } else {
       L.v('No persisted event queue found');
     }
+  }
+
+  /// Parses a persisted request queue item which can be either a JSON string or a legacy query string.
+  Map<String, dynamic>? _parsePersistedRequestQueueItem(String item) {
+    try {
+      final decoded = jsonDecode(item);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    } catch (_) {}
+
+    if (!item.contains('=')) {
+      return null;
+    }
+
+    try {
+      final query = Uri.splitQueryString(item, encoding: utf8);
+      if (query.isEmpty) {
+        return null;
+      }
+
+      final parsed = <String, dynamic>{};
+      query.forEach((key, value) {
+        parsed[key] = _coerceLegacyQueryValue(value);
+      });
+      return parsed;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  dynamic _coerceLegacyQueryValue(String value) {
+    if (value.isEmpty) return value;
+
+    final lower = value.toLowerCase();
+    if (lower == 'true') return true;
+    if (lower == 'false') return false;
+
+    final intValue = int.tryParse(value);
+    if (intValue != null) return intValue;
+
+    final doubleValue = double.tryParse(value);
+    if (doubleValue != null) return doubleValue;
+
+    final firstChar = value[0];
+    if (firstChar == '{' || firstChar == '[') {
+      try {
+        return jsonDecode(value);
+      } catch (_) {
+        return value;
+      }
+    }
+
+    return value;
   }
 
   /// Initializes device id: loads from storage if any, else uses provided or generates new.
@@ -300,7 +374,7 @@ class CountlyInstance {
     await _runQueueLocked(() async {
       L.d('Triggered processing event and request queues');
       await _bundleEventQueue();
-      if ((_userPropertiesNamedCache.isNotEmpty || _customUserPropertiesCache.isNotEmpty) && _consentGranted) {
+      if (_userPropertiesNamedCache.isNotEmpty || _customUserPropertiesCache.isNotEmpty) {
         L.d('Enqueuing user properties request cache: named=${_userPropertiesNamedCache.keys.length} custom=${_customUserPropertiesCache.keys.length}');
         await _enqueueUserPropertiesCache();
       }
@@ -345,17 +419,21 @@ class CountlyInstance {
 
     final payload = jsonEncode(batch);
     final request = _prepareRequest({'events': payload});
+    if (request == null) return;
     L.d('Event Bundler: Flushed events to request queue');
     await _addToRequestQueue(request);
   }
 
   /// Adds necessary common fields to request data.
-  Map<String, dynamic> _prepareRequest(Map<String, dynamic> data) {
+  /// Returns null if device ID is not set, preventing invalid requests from being queued.
+  Map<String, dynamic>? _prepareRequest(Map<String, dynamic> data) {
     if (_deviceId == null) {
-      L.e('prepareRequest called with null deviceId, this should not happen');
+      L.e('prepareRequest called with null deviceId, dropping request');
+      return null;
     }
     if (config.appKey.isEmpty) {
-      L.e('prepareRequest called with empty appKey, this should not happen');
+      L.e('prepareRequest called with empty appKey, dropping request');
+      return null;
     }
     return {
       'app_key': config.appKey,
@@ -380,7 +458,7 @@ class CountlyInstance {
   }
 
   /// Adds a request to the request queue with overflow handling.
-  /// If sending nested data, ensure to use Map<String, dynamic> copies to avoid mutation issues.
+  /// If sending nested data, ensure to use Map&lt;String, dynamic&gt; copies to avoid mutation issues.
   /// example:
   ///
   /// ```dart
@@ -455,9 +533,10 @@ class CountlyInstance {
     for (final req in rqSnapshot) {
       final ok = await _sendRequest(req);
       if (!ok) {
-        L.w('Request failed, backing off for 60 seconds'); // TODO: hardcoded
+        final backoffDuration = _sbs?.internalTimerInterval ?? SBSDefaults.sui;
+        L.w('Request failed, backing off for $backoffDuration seconds');
         _suspended = true;
-        _suspendUntil = DateTime.now().add(const Duration(seconds: 60));
+        _suspendUntil = DateTime.now().add(Duration(seconds: backoffDuration));
         break;
       } else {
         L.i('Request sent successfully, removing from queue');
@@ -542,10 +621,12 @@ class CountlyInstance {
       return;
     }
     final userDetails = <String, dynamic>{};
-    if (_userPropertiesNamedCache.isNotEmpty) userDetails.addAll(_userPropertiesNamedCache);
-    if (_customUserPropertiesCache.isNotEmpty)
+    if (_userPropertiesNamedCache.isNotEmpty) {userDetails.addAll(_userPropertiesNamedCache);}
+    if (_customUserPropertiesCache.isNotEmpty) {
       userDetails['custom'] = Map<String, dynamic>.from(_customUserPropertiesCache);
+    }
     final request = _prepareRequest({'user_details': userDetails});
+    if (request == null) return;
     await _addToRequestQueue(request);
     L.d('Enqueued user properties request: named=${_userPropertiesNamedCache.keys.length} custom=${_customUserPropertiesCache.keys.length}');
     _userPropertiesNamedCache.clear();
@@ -568,11 +649,11 @@ class CountlyInstance {
     props.forEach((key, value) {
       if (_sbs!.userPropertiesWhitelist.isNotEmpty) {
         if (!_sbs!.userPropertiesWhitelist.contains(key)) {
-          L.w('User property ["${key}"] dropped: not in whitelist');
+          L.w('User property [$key] dropped: not in whitelist');
           return;
         }
       } else if (_sbs!.userPropertiesBlacklist.contains(key)) {
-        L.w('User property ["${key}"] dropped: blacklisted key');
+        L.w('User property [$key] dropped: blacklisted key');
         return;
       }
       var k = key;
@@ -602,7 +683,6 @@ class CountlyInstance {
       L.v('Did already sent HC request at init, skipping.');
       return;
     }
-    ;
     if (!(_sbs?.networkingEnabled ?? true)) {
       L.d('Networking disabled (SBS), skipping HC request');
       return;
@@ -617,6 +697,7 @@ class CountlyInstance {
       };
       final metrics = {'_app_version': SdkInternal.appVersion};
       final req = _prepareRequest({'hc': hc, 'metrics': metrics});
+      if (req == null) return;
       _attachDynamicRequestMeta(req);
       final resp = await _network.makeRequest(req, Endpoints.i);
       final ok = _network.isResponseValid(resp, acceptJSON: false);
@@ -647,6 +728,7 @@ class CountlyInstance {
       }
     }
     final req = _prepareRequest({'consent': consentMap});
+    if (req == null) return;
     await _addToRequestQueue(req);
     L.d('Recorded consent request:[$consentMap]');
   }
@@ -702,6 +784,8 @@ class CountlyInstance {
     try {
       await _viewsModule?._endIfActive();
     } catch (_) {}
+    // Ensure heartbeat is cancelled even if _endIfActive returned early.
+    _viewsModule?._cancelHeartbeat();
     if (flush) {
       try {
         // Ensure any remaining events & user properties become requests.
@@ -711,6 +795,10 @@ class CountlyInstance {
       }
     }
     _disposed = true;
+    try {
+      _disposeLifecycleListener?.call();
+      _disposeLifecycleListener = null;
+    } catch (_) {}
     try {
       _network.close();
     } catch (e, st) {
@@ -827,8 +915,13 @@ class Countly {
   /// Returns default instance if already initialized, else null.
   static CountlyInstance? get defaultInstance => _instances['default'];
 
-  /// TODO: If instance exists it is replaced safely. Should not?
   static Future<CountlyInstance> init(CountlyConfig config, {String instanceKey = 'default'}) async {
+    final existing = _instances[instanceKey];
+    if (existing != null) {
+      existing.L.w('Replacing existing SDK instance key=[$instanceKey], disposing old instance');
+      await existing.dispose(flush: true);
+      _instances.remove(instanceKey);
+    }
     final inst = await CountlyInstance.create(config, instanceKey: instanceKey);
     _instances[instanceKey] = inst;
     return inst;

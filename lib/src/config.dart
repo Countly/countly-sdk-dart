@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:meta/meta.dart';
 
 import 'networking.dart';
+import 'platform_environment.dart';
 
 /// Storage mode for the SDK. Persistent uses platform storage, memory is ephemeral.
 enum StorageMode { persistent, memory }
@@ -42,7 +43,7 @@ class CountlyConfig {
   /// Optional initial user properties.
   final Map<String, dynamic>? userProperties;
 
-  /// Storage mode selection (persistent by default).
+  /// Storage mode selection (memory by default).
   final StorageMode storageMode;
 
   /// Custom storage overrides (optional).
@@ -57,7 +58,7 @@ class CountlyConfig {
   /// SDK internal logging. (disabled by default)
   final bool enableSDKLogs;
 
-  /// If true, visual warnings (toasts) will be shown for SDK errors and warnings. (default: false)
+  /// Internal: If true, visual warnings (toasts) will be shown for SDK errors and warnings. (default: false)
   final bool enableVisualWarnings;
 
   /// If true, consent will be given to SDK to enable features requiring consent. (default: false)
@@ -80,10 +81,21 @@ class CountlyConfig {
   /// SBS data to be used in first init.
   final Map<String, dynamic> sbs;
 
-  /// Disable migration of data from legacy native SDKs (Android/iOS).
+  /// Internal: Disable migration of data from native SDKs (Android/iOS).
   final bool disableOldDataMigration;
 
-  /// Testing related network client injection used for SDK tests only.
+  /// Internal: Platform environment adapters.
+  final CountlyPlatformEnvironment platformEnvironment;
+
+  /// Internal: SDK version override for request payloads.
+  @visibleForTesting
+  final String? sdkVersionOverride;
+
+  /// Internal: SDK name override for request payloads.
+  @visibleForTesting
+  final String? sdkNameOverride;
+
+  /// Internal: Testing related network client injection used for SDK tests only.
   @visibleForTesting
   final NetworkClient? networkClientOverride;
 
@@ -104,6 +116,9 @@ class CountlyConfig {
     required this.deviceMetricOverrides,
     required this.sbs,
     required this.disableOldDataMigration,
+    required this.platformEnvironment,
+    required this.sdkVersionOverride,
+    required this.sdkNameOverride,
     required this.networkClientOverride,
   });
 
@@ -112,7 +127,7 @@ class CountlyConfig {
     required String serverUrl,
     String? deviceId,
     Map<String, dynamic>? userProperties,
-    @visibleForTesting StorageMode storageMode = StorageMode.persistent,
+    @visibleForTesting StorageMode storageMode = StorageMode.memory,
     @visibleForTesting CustomStorageMethods? storageMethods,
     bool startWithUnknownConsent = false,
     LogLevel logLevel = LogLevel.verbose,
@@ -124,6 +139,9 @@ class CountlyConfig {
     Map<String, String>? customRequestHeaders,
     Map<String, dynamic> sbs = const {},
     bool disableOldDataMigration = false,
+    CountlyPlatformEnvironment platformEnvironment = const CountlyPlatformEnvironment(),
+    String? sdkVersionOverride,
+    String? sdkNameOverride,
     @visibleForTesting NetworkClient? networkClientOverride,
   }) {
     if (appKey.isEmpty || appKey.trim().isEmpty) {
@@ -145,6 +163,12 @@ class CountlyConfig {
           throw ArgumentError('customRequestHeaders header [${e.key}] has empty value');
         }
       }
+    }
+    if (sdkVersionOverride != null && sdkVersionOverride.trim().isEmpty) {
+      throw ArgumentError('sdkVersionOverride cannot be empty');
+    }
+    if (sdkNameOverride != null && sdkNameOverride.trim().isEmpty) {
+      throw ArgumentError('sdkNameOverride cannot be empty');
     }
 
     /// remove trailing slashes
@@ -168,7 +192,56 @@ class CountlyConfig {
         deviceMetricOverrides: deviceMetricOverrides == null ? null : Map.unmodifiable(Map.of(deviceMetricOverrides)),
         sbs: Map.of(sbs),
         disableOldDataMigration: disableOldDataMigration,
+        platformEnvironment: platformEnvironment,
+        sdkVersionOverride: sdkVersionOverride?.trim(),
+        sdkNameOverride: sdkNameOverride?.trim(),
         networkClientOverride: networkClientOverride);
+  }
+
+  CountlyConfig copyWith({
+    String? appKey,
+    String? serverUrl,
+    String? deviceId,
+    Map<String, dynamic>? userProperties,
+    StorageMode? storageMode,
+    CustomStorageMethods? storageMethods,
+    bool? startWithUnknownConsent,
+    LogLevel? logLevel,
+    Map<String, dynamic>? deviceMetricOverrides,
+    SdkLogger? logger,
+    bool? enableSDKLogs,
+    bool? enableVisualWarnings,
+    bool? giveConsent,
+    Map<String, String>? customRequestHeaders,
+    Map<String, dynamic>? sbs,
+    bool? disableOldDataMigration,
+    CountlyPlatformEnvironment? platformEnvironment,
+    String? sdkVersionOverride,
+    String? sdkNameOverride,
+    @visibleForTesting NetworkClient? networkClientOverride,
+  }) {
+    return CountlyConfig(
+      appKey: appKey ?? this.appKey,
+      serverUrl: serverUrl ?? this.serverUrl,
+      deviceId: deviceId ?? this.deviceId,
+      userProperties: userProperties ?? this.userProperties,
+      storageMode: storageMode ?? this.storageMode,
+      storageMethods: storageMethods ?? this.storageMethods,
+      startWithUnknownConsent: startWithUnknownConsent ?? this.startWithUnknownConsent,
+      logLevel: logLevel ?? this.logLevel,
+      deviceMetricOverrides: deviceMetricOverrides ?? this.deviceMetricOverrides,
+      logger: logger ?? this.logger,
+      enableSDKLogs: enableSDKLogs ?? this.enableSDKLogs,
+      enableVisualWarnings: enableVisualWarnings ?? this.enableVisualWarnings,
+      giveConsent: giveConsent ?? this.giveConsent,
+      customRequestHeaders: customRequestHeaders ?? this.customRequestHeaders,
+      sbs: sbs ?? this.sbs,
+      disableOldDataMigration: disableOldDataMigration ?? this.disableOldDataMigration,
+      platformEnvironment: platformEnvironment ?? this.platformEnvironment,
+      sdkVersionOverride: sdkVersionOverride ?? this.sdkVersionOverride,
+      sdkNameOverride: sdkNameOverride ?? this.sdkNameOverride,
+      networkClientOverride: networkClientOverride ?? this.networkClientOverride,
+    );
   }
 }
 

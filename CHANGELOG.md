@@ -1,4 +1,4 @@
-## 26.1.0
+## 26.1.0-rc.1
 
 * Initial SDK release with the following functionalities:
 
@@ -22,11 +22,9 @@
   * `logLevel` - Logging verbosity level (error, warning, info, debug, verbose)
   * `logger` - Custom logger implementation (SdkLogger interface)
   * `enableSDKLogs` - Enable SDK internal logging
-  * `enableVisualWarnings` - Show visual warnings (toasts) for SDK errors/warnings
   * `customRequestHeaders` - Custom HTTP headers for requests
   * `deviceMetricOverrides` - Override collected device metrics
   * `sbs` - Initial SDK Behavior Settings
-  * `disableOldDataMigration` - Disable migration from legacy native SDKs
 
 * Events Module (sdk.events)
   * `record(key, count, sum, dur, segmentation)` - Record custom events with optional parameters
@@ -69,10 +67,9 @@
   * Event-specific segmentation filtering
 
 * Storage
-  * Persistent storage support (SharedPreferences)
+  * Persistent storage support
   * Memory-only storage mode for pure Dart
   * Custom storage methods override
-  * Legacy native SDK data migration (Android/iOS)
 
 * Networking
   * Automatic request queuing and retry
@@ -83,5 +80,4 @@
 * Logging
   * Configurable log levels
   * Custom logger implementation support
-  * Visual warnings (toasts) on Flutter
   

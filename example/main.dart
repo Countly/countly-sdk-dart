@@ -1,10 +1,10 @@
-// Run with: dart run example/pure_dart_example/main.dart
+// Run with: dart run example/main.dart
 //
 // This example demonstrates all SDK features for pure Dart environments
 // (non-Flutter applications like CLI tools, servers, etc.)
 
 import 'dart:async';
-import 'package:countly_sdk_dart/countly.dart';
+import 'package:countly_sdk_dart_core/countly_sdk_dart_core.dart';
 
 Future<void> main() async {
   print('=== Countly Dart SDK - Pure Dart Example ===\n');
@@ -17,7 +17,6 @@ Future<void> main() async {
   final config = CountlyConfig(
     appKey: 'YOUR_APP_KEY',
     serverUrl: 'https://your.server.com',
-    storageMode: StorageMode.memory, // Use memory storage for pure Dart
     enableSDKLogs: true,
     logLevel: LogLevel.info,
     giveConsent: true,
@@ -230,7 +229,6 @@ Future<void> main() async {
   final secondaryConfig = CountlyConfig(
     appKey: 'SECONDARY_APP_KEY',
     serverUrl: 'https://secondary.server.com',
-    storageMode: StorageMode.memory,
     giveConsent: true,
   );
 

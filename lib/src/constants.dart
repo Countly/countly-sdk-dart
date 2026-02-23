@@ -1,3 +1,4 @@
+// ignore_for_file: constant_identifier_names
 import 'package:meta/meta.dart';
 
 @internal
@@ -13,17 +14,17 @@ class StorageSubKeys {
 @internal
 class DeviceIdType {
   /// Provided by user.
-  static const provided = 1;
+  static const provided = 0;
 
   /// Generated UUID.
-  static const generated = 2;
+  static const generated = 1;
 }
 
 /// SDK metadata
 @internal
 class SdkInternal {
-  static const sdkVersion = '1.0.0';
-  static const sdkName = 'countly-sdk-dart';
+  static const sdkVersion = '26.1.0';
+  static const sdkName = 'countly-sdk-dart-core';
   static const appVersion = '1.0.0';
   static const requestTimeoutSeconds = 60;
 }

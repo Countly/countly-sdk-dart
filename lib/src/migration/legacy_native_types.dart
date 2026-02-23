@@ -48,6 +48,8 @@ class LegacyIOSData {
   final Map<String, dynamic>? remoteConfig;
   final Map<String, dynamic>? serverConfig;
   final List<String>? queuedRequests;
+  final List<Map<String, dynamic>>? recordedEvents;
+  final String? legacyAppKey;
 
   const LegacyIOSData({
     this.deviceId,
@@ -56,6 +58,8 @@ class LegacyIOSData {
     this.remoteConfig,
     this.serverConfig,
     this.queuedRequests,
+    this.recordedEvents,
+    this.legacyAppKey,
   });
 
   bool get hasAny =>
@@ -63,7 +67,9 @@ class LegacyIOSData {
       (nsuuid?.isNotEmpty ?? false) ||
       (remoteConfig?.isNotEmpty ?? false) ||
       (serverConfig?.isNotEmpty ?? false) ||
-      (queuedRequests?.isNotEmpty ?? false);
+      (queuedRequests?.isNotEmpty ?? false) ||
+      (recordedEvents?.isNotEmpty ?? false) ||
+      (legacyAppKey?.isNotEmpty ?? false);
 
   factory LegacyIOSData.fromMap(Map<dynamic, dynamic> map) {
     return LegacyIOSData(
@@ -73,6 +79,11 @@ class LegacyIOSData {
       remoteConfig: (map['remoteConfig'] as Map?)?.cast<String, dynamic>(),
       serverConfig: (map['serverConfig'] as Map?)?.cast<String, dynamic>(),
       queuedRequests: (map['queuedRequests'] as List?)?.whereType<String>().toList(),
+      recordedEvents: (map['recordedEvents'] as List?)
+          ?.whereType<Map<dynamic, dynamic>>()
+          .map((event) => event.cast<String, dynamic>())
+          .toList(),
+      legacyAppKey: map['legacyAppKey'] as String?,
     );
   }
 }

@@ -1,4 +1,4 @@
-part of sdk_instance_lib;
+part of '../main.dart';
 
 class ConsentsModule {
   final CountlyInstance _inst;
@@ -34,6 +34,7 @@ class ConsentsModule {
     await _inst._getOutOfUnknownConsentState(false);
     if (!wasInUnknownState) {
       await _inst._recordConsentRequest();
+            await _inst.processEventsAndRequests();
     }
   }
 }

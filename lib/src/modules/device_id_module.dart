@@ -1,4 +1,4 @@
-part of sdk_instance_lib;
+part of '../main.dart';
 
 class DeviceIdModule {
   final CountlyInstance _inst;
@@ -8,11 +8,11 @@ class DeviceIdModule {
   Future<void> changeWithMerge(String newDeviceId) async {
     if (_inst._guardDisposed('id.changeWithMerge')) return;
     if (newDeviceId.isEmpty) {
-      _inst.L.e('id.changeWithMerge called with empty newDeviceId');
+      _inst.L.e('changeWithMerge called with empty newDeviceId');
       return;
     }
     if (newDeviceId == _inst._deviceId) {
-      _inst.L.d('id.changeWithMerge called with the same deviceId, no change needed');
+      _inst.L.d('changeWithMerge called with the same deviceId, no change needed');
       return;
     }
 
@@ -25,6 +25,7 @@ class DeviceIdModule {
     // Enqueue merge request containing old_device_id so backend can merge profiles.
     if (oldDeviceId != null && oldDeviceId.isNotEmpty) {
       final req = _inst._prepareRequest({'old_device_id': oldDeviceId});
+      if (req == null) return;
       await _inst._addToRequestQueue(req);
       _inst.L.d('Enqueued device ID merge request with old_device_id=[$oldDeviceId]');
     }
@@ -37,11 +38,11 @@ class DeviceIdModule {
   Future<void> changeWithoutMerge(String newDeviceId) async {
     if (_inst._guardDisposed('id.changeWithoutMerge')) return;
     if (newDeviceId.isEmpty) {
-      _inst.L.e('id.changeWithoutMerge called with empty newDeviceId');
+      _inst.L.e('changeWithoutMerge called with empty newDeviceId');
       return;
     }
     if (newDeviceId == _inst._deviceId) {
-      _inst.L.d('id.changeWithoutMerge called with the same deviceId, no change needed');
+      _inst.L.d('changeWithoutMerge called with the same deviceId, no change needed');
       return;
     }
 
@@ -49,7 +50,7 @@ class DeviceIdModule {
     _inst.L.i('Changing device ID without merge from [$oldDeviceId] to [$newDeviceId]');
 
     // Stop any open view so its data is finalized under the old device id.
-    _inst._viewsModule?._endIfActive();
+    await _inst._viewsModule?._endIfActive();
 
     await _inst.processEventsAndRequests();
     await _inst._clearAllDataQueuesAndCaches();
