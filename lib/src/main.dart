@@ -589,6 +589,9 @@ class CountlyInstance {
   @visibleForTesting
   bool get isTimerActive => _internalTimer?.isActive == true;
 
+  @visibleForTesting
+  bool get debugIsInUnknownConsentState => _isInUnknownConsentState;
+
   /// Exposes current device id (read-only public accessor).
   String? get deviceId => _deviceId;
   int? get deviceIdType => _deviceIdType;
