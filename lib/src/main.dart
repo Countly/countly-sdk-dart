@@ -123,7 +123,7 @@ class CountlyInstance {
     L.i('init: instanceKey=[$instanceKey] appKey=[${config.appKey}] serverUrl=[${config.serverUrl}]');
     L.d('config: deviceIdProvided=[${config.deviceId != null}] consentGiven=[${config.giveConsent}] startWithUnknownConsent=[${config.startWithUnknownConsent}]');
     L.d('config: internalTimerInterval=[${_sbs?.internalTimerInterval}s] eventQueueSize=[${_sbs?.eventQueueSize}] requestQueueSize=[${_sbs?.requestQueueSize}]');
-    L.d('config: storageMode=[${config.storageMode.name}] customStorageOverrides=[${config.storageMethods?.hasAny == true}]');
+    L.d('config: storageMode=[${config.storageMode?.name ?? 'unspecified'}] customStorageOverrides=[${config.storageMethods?.hasAny == true}]');
     L.d('config: disableOldDataMigration=[${config.disableOldDataMigration}]');
     L.d('config: loggingEnabled=[${config.enableSDKLogs}] logLevel=[${config.logLevel.name}] customLogger=[${config.logger != null}]');
 
@@ -304,7 +304,9 @@ class CountlyInstance {
 
   /// Initializes device id: loads from storage if any, else uses provided or generates new.
   Future<void> _initializeDeviceId() async {
-    if (config.storageMode == StorageMode.persistent || (config.storageMethods?.hasAny ?? false)) {
+    final hasPersistentStorage =
+        config.storageMode == StorageMode.persistent || (config.storageMethods?.hasAny ?? false);
+    if (hasPersistentStorage) {
       final stored = await _storage.readString(StorageSubKeys.deviceId);
       final storedType = await _storage.readString(StorageSubKeys.deviceIdType);
       if (stored != null) {
@@ -313,6 +315,9 @@ class CountlyInstance {
         _deviceIdType = int.tryParse(storedType ?? '') ?? DeviceIdType.provided;
         return;
       }
+      L.v('No persisted deviceId found in storage, proceeding with provided/generated deviceId');
+    } else {
+      L.v('Persistent/custom storage unavailable, skipping persisted deviceId lookup');
     }
     if (config.deviceId != null) {
       _deviceId = config.deviceId;
@@ -336,8 +341,14 @@ class CountlyInstance {
 
   /// Persists the current device id and type if storage is enabled.
   Future<void> _persistDeviceIdState() async {
-    if (config.storageMode == StorageMode.memory && !(config.storageMethods?.hasAny ?? false)) return;
-    if (_deviceId == null || _deviceIdType == null) return;
+    if (config.storageMode != StorageMode.persistent && !(config.storageMethods?.hasAny ?? false)) {
+      L.v('Skipping deviceId persistence: storage mode is not persistent and no custom storage methods are provided');
+      return;
+    }
+    if (_deviceId == null || _deviceIdType == null) {
+      L.v('Skipping deviceId persistence: deviceId or deviceIdType is null');
+      return;
+    }
     await _storage.writeString(StorageSubKeys.deviceId, _deviceId!);
     await _storage.writeString(StorageSubKeys.deviceIdType, _deviceIdType.toString());
   }
@@ -419,7 +430,10 @@ class CountlyInstance {
 
     final payload = jsonEncode(batch);
     final request = _prepareRequest({'events': payload});
-    if (request == null) return;
+    if (request == null) {
+      L.v('Event Bundler: prepared request is null, skipping queue enqueue');
+      return;
+    }
     L.d('Event Bundler: Flushed events to request queue');
     await _addToRequestQueue(request);
   }
@@ -621,12 +635,17 @@ class CountlyInstance {
       return;
     }
     final userDetails = <String, dynamic>{};
-    if (_userPropertiesNamedCache.isNotEmpty) {userDetails.addAll(_userPropertiesNamedCache);}
+    if (_userPropertiesNamedCache.isNotEmpty) {
+      userDetails.addAll(_userPropertiesNamedCache);
+    }
     if (_customUserPropertiesCache.isNotEmpty) {
       userDetails['custom'] = Map<String, dynamic>.from(_customUserPropertiesCache);
     }
     final request = _prepareRequest({'user_details': userDetails});
-    if (request == null) return;
+    if (request == null) {
+      L.v('Skipping enqueueing user properties: prepared request is null');
+      return;
+    }
     await _addToRequestQueue(request);
     L.d('Enqueued user properties request: named=${_userPropertiesNamedCache.keys.length} custom=${_customUserPropertiesCache.keys.length}');
     _userPropertiesNamedCache.clear();
@@ -645,7 +664,10 @@ class CountlyInstance {
       NamedUserProperty.gender,
       NamedUserProperty.byear
     };
-    if (props.isEmpty) return;
+    if (props.isEmpty) {
+      L.v('User properties payload is empty, skipping ingest');
+      return;
+    }
     props.forEach((key, value) {
       if (_sbs!.userPropertiesWhitelist.isNotEmpty) {
         if (!_sbs!.userPropertiesWhitelist.contains(key)) {
@@ -697,7 +719,10 @@ class CountlyInstance {
       };
       final metrics = {'_app_version': SdkInternal.appVersion};
       final req = _prepareRequest({'hc': hc, 'metrics': metrics});
-      if (req == null) return;
+      if (req == null) {
+        L.v('Health check request payload could not be prepared, skipping send');
+        return;
+      }
       _attachDynamicRequestMeta(req);
       final resp = await _network.makeRequest(req, Endpoints.i);
       final ok = _network.isResponseValid(resp, acceptJSON: false);
@@ -728,7 +753,10 @@ class CountlyInstance {
       }
     }
     final req = _prepareRequest({'consent': consentMap});
-    if (req == null) return;
+    if (req == null) {
+      L.v('Consent request payload could not be prepared, skipping enqueue');
+      return;
+    }
     await _addToRequestQueue(req);
     L.d('Recorded consent request:[$consentMap]');
   }
@@ -774,7 +802,10 @@ class CountlyInstance {
 
   /// Disposes this instance: cancels timer, optionally flushes pending events & requests, closes network client.
   Future<void> dispose({bool flush = true}) async {
-    if (_disposed) return;
+    if (_disposed) {
+      L.v('Dispose called on an already disposed instance, skipping');
+      return;
+    }
     _internalTimer?.cancel();
     _internalTimer = null;
     _serverConfigTimer?.cancel();
