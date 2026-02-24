@@ -4,14 +4,17 @@ class ViewsModule {
   final CountlyInstance _inst;
   ViewsModule(this._inst);
 
+  static const String _viewEventKey = '[CLY]_view';
+  static const Set<String> _internalViewSegmentationKeys = {'name', 'visit', 'recovered'};
   static const int _heartbeatInterval = 15; // seconds
   Timer? _heartbeatTimer;
   int _viewTime = 0; // ms
   DateTime? _lastBeatTime;
+  Map<String, dynamic>? _activeViewSegmentation;
 
   /// Starts a view that ends automatically when another view is started or on dispose.
   /// [viewName] must be non-empty.
-  Future<void> startAutoStoppedView(String viewName) async {
+  Future<void> startAutoStoppedView(String viewName, {Map<String, dynamic>? segmentation}) async {
     if (_inst._guardDisposed('views.startAutoStoppedView')) return;
 
     if (!(_inst._sbs?.isViewTrackingAllowed == true)) {
@@ -31,6 +34,7 @@ class ViewsModule {
     await _endIfActive();
 
     _inst._activeViewName = _inst._truncateKeyIfNeeded(viewName);
+    _activeViewSegmentation = _prepareViewSegmentation(segmentation);
     final now = DateTime.now();
     _inst._activeViewStart = now;
     _lastBeatTime = now;
@@ -41,13 +45,13 @@ class ViewsModule {
   }
 
   /// Ends currently active view if any.
-  Future<void> endActiveView() async {
+  Future<void> endActiveView({Map<String, dynamic>? segmentation}) async {
     if (_inst._guardDisposed('views.endActiveView')) return;
-    await _endIfActive();
+    await _endIfActive(endSegmentation: segmentation);
   }
 
   /// Ends currently active view if any. Used on dispose.
-  Future<void> _endIfActive() async {
+  Future<void> _endIfActive({Map<String, dynamic>? endSegmentation}) async {
     if (!(_inst._sbs?.isViewTrackingAllowed == true)) {
       _inst.L.v('View tracking disabled (SBS), skipping view end');
       return;
@@ -58,12 +62,26 @@ class ViewsModule {
     final now = DateTime.now();
     final start = _inst._activeViewStart!;
     int durMs;
-    final segmentation = <String, dynamic>{'name': _inst._activeViewName, 'visit': 1};
+    final startSegmentation = _activeViewSegmentation ?? const <String, dynamic>{};
+    final endSegmentationPrepared = _prepareViewSegmentation(endSegmentation);
+    final mergedSegmentation = <String, dynamic>{};
+    if (startSegmentation.isNotEmpty) {
+      mergedSegmentation.addAll(startSegmentation);
+    }
+    if (endSegmentationPrepared.isNotEmpty) {
+      mergedSegmentation.addAll(endSegmentationPrepared);
+    }
+    final segmentation = <String, dynamic>{};
+    if (mergedSegmentation.isNotEmpty) {
+      segmentation.addAll(mergedSegmentation);
+    }
+    segmentation['name'] = _inst._activeViewName;
+    segmentation['visit'] = 1;
     durMs = now.difference(start).inMilliseconds;
     if (durMs < 0) durMs = 0;
 
     final evt = <String, dynamic>{
-      'key': '[CLY]_view',
+      'key': _viewEventKey,
       'count': 1,
       'dur': durMs / 1000.0,
       'segmentation': segmentation,
@@ -78,6 +96,7 @@ class ViewsModule {
     _inst._activeViewStart = null;
     _viewTime = 0;
     _lastBeatTime = null;
+    _activeViewSegmentation = null;
     await _clearPersistedActiveViewState();
     _cancelHeartbeat();
   }
@@ -92,8 +111,12 @@ class ViewsModule {
         _inst.L.v('In unknown consent state, skipping persisting active view state');
         return;
       }
-      await _inst._storage
-          .writeJson('COUNTLY_ACTIVE_VIEW', {'n': name, 'ts': start.millisecondsSinceEpoch, 'd': _viewTime});
+      await _inst._storage.writeJson('COUNTLY_ACTIVE_VIEW', {
+        'n': name,
+        'ts': start.millisecondsSinceEpoch,
+        'd': _viewTime,
+        if ((_activeViewSegmentation?.isNotEmpty ?? false)) 's': _activeViewSegmentation,
+      });
     } catch (_) {}
   }
 
@@ -105,15 +128,25 @@ class ViewsModule {
       final name = data['n'] as String;
       final startMs = data['ts'] as int;
       final time = data['d'] as int;
+      final recoveredUserSegmentation =
+          _prepareViewSegmentation(data['s'] is Map ? Map<String, dynamic>.from(data['s'] as Map) : null);
       final start = DateTime.fromMillisecondsSinceEpoch(startMs);
       int durMs = time;
       if (durMs < 0) durMs = 0;
 
+      final segmentation = <String, dynamic>{};
+      if (recoveredUserSegmentation.isNotEmpty) {
+        segmentation.addAll(recoveredUserSegmentation);
+      }
+      segmentation['name'] = name;
+      segmentation['visit'] = 1;
+      segmentation['recovered'] = 1;
+
       final evt = <String, dynamic>{
-        'key': '[CLY]_view',
+        'key': _viewEventKey,
         'count': 1,
         'dur': durMs / 1000.0,
-        'segmentation': {'name': name, 'visit': 1, 'recovered': 1},
+        'segmentation': segmentation,
         'timestamp': start.millisecondsSinceEpoch,
         'hour': start.hour,
         'dow': start.weekday % 7,
@@ -174,4 +207,20 @@ class ViewsModule {
 
   @visibleForTesting
   Future<void> testHeartbeatOnce() async => await _onHeartbeat();
+
+  Map<String, dynamic> _prepareViewSegmentation(Map<String, dynamic>? segmentation) {
+    if (segmentation == null || segmentation.isEmpty) {
+      return <String, dynamic>{};
+    }
+
+    final userSegmentation = Map<String, dynamic>.from(segmentation);
+    userSegmentation.removeWhere((key, _) => _internalViewSegmentationKeys.contains(key));
+
+    final filtered = _inst.removeGraylistedSegmentation(userSegmentation, _viewEventKey);
+    if (filtered == null || filtered.isEmpty) {
+      return <String, dynamic>{};
+    }
+
+    return _inst._sanitizeSegmentation(filtered);
+  }
 }

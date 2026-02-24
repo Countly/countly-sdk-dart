@@ -128,13 +128,19 @@ await sdk.events.record(
 final sdk = Countly.defaultInstance!;
 
 // Start an auto-stopped view (automatically ends when another view starts)
-await sdk.views.startAutoStoppedView('HomePage');
+await sdk.views.startAutoStoppedView('HomePage', segmentation: {
+  'source': 'tab_home',
+});
 
 // Navigate to another view (automatically ends HomePage)
-await sdk.views.startAutoStoppedView('ProductPage');
+await sdk.views.startAutoStoppedView('ProductPage', segmentation: {
+  'category': 'electronics',
+});
 
 // Manually end the current view
-await sdk.views.endActiveView();
+await sdk.views.endActiveView(segmentation: {
+  'exit': 'back_button',
+});
 ```
 
 ### User Profiles

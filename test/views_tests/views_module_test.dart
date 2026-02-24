@@ -156,6 +156,68 @@ void main() {
       expect(viewEvent['hour'], isA<int>());
       expect(viewEvent['dow'], isA<int>());
     });
+
+    test('autostopped view accepts and records segmentation', () async {
+      final sdk = await _createInstance();
+
+      await sdk.views.startAutoStoppedView('SegmentedView', segmentation: {'section': 'home', 'step': 1});
+      await sdk.views.startAutoStoppedView('NextView');
+
+      final viewEvent = sdk.debugEventQueueSnapshot.first;
+      expect(viewEvent['segmentation']['name'], 'SegmentedView');
+      expect(viewEvent['segmentation']['visit'], 1);
+      expect(viewEvent['segmentation']['section'], 'home');
+      expect(viewEvent['segmentation']['step'], 1);
+    });
+
+    test('start and end segmentation are merged and end values take precedence', () async {
+      final sdk = await _createInstance();
+
+      await sdk.views.startAutoStoppedView('MergedView', segmentation: {'from_start': 'yes', 'shared': 'start'});
+      await sdk.views.endActiveView(segmentation: {'from_end': 'yes', 'shared': 'end'});
+
+      final viewEvent = sdk.debugEventQueueSnapshot.first;
+      expect(viewEvent['segmentation']['name'], 'MergedView');
+      expect(viewEvent['segmentation']['visit'], 1);
+      expect(viewEvent['segmentation']['from_start'], 'yes');
+      expect(viewEvent['segmentation']['from_end'], 'yes');
+      expect(viewEvent['segmentation']['shared'], 'end');
+    });
+
+    test('internal view segmentation keys cannot be overridden by user values', () async {
+      final sdk = await _createInstance();
+
+      await sdk.views.startAutoStoppedView('InternalKeysView',
+          segmentation: {'name': 'fake', 'visit': 999, 'recovered': 123, 'ok': true});
+      await sdk.views.endActiveView(segmentation: {'name': 'fake2', 'visit': 111, 'recovered': 222});
+
+      final viewEvent = sdk.debugEventQueueSnapshot.first;
+      expect(viewEvent['segmentation']['name'], 'InternalKeysView');
+      expect(viewEvent['segmentation']['visit'], 1);
+      expect(viewEvent['segmentation']['recovered'], isNull);
+      expect(viewEvent['segmentation']['ok'], true);
+    });
+
+    test('view segmentation respects SBS sw filtering', () async {
+      final sdk = await _createInstance(
+        sbs: {
+          'c': {
+            'sw': ['allowed']
+          }
+        },
+      );
+
+      await sdk.views.startAutoStoppedView('FilteredView', segmentation: {'allowed': 'yes', 'blocked': 'no'});
+      await sdk.views.endActiveView(segmentation: {'allowed': 'still', 'blocked2': 'no'});
+
+      final viewEvent = sdk.debugEventQueueSnapshot.first;
+      final seg = Map<String, dynamic>.from(viewEvent['segmentation'] as Map);
+      expect(seg['name'], 'FilteredView');
+      expect(seg['visit'], 1);
+      expect(seg['allowed'], 'still');
+      expect(seg.containsKey('blocked'), false);
+      expect(seg.containsKey('blocked2'), false);
+    });
   });
 
   group('Views Module - Duration Calculation', () {
@@ -449,6 +511,52 @@ void main() {
       expect(sdk2.debugRequestQueueSnapshot[0], equals(helper.trueConsentRequest));
       expect(sdk2.debugRequestQueueSnapshot[1], equals(helper.locationRequest));
       expect(sdk2.debugRequestQueueSnapshot[2], equals(helper.metricsRequest));
+    });
+
+    test('recovered view preserves user segmentation and protects internal keys', () async {
+      final backing = <String, String>{
+        'v-recovery-seg_COUNTLY_ACTIVE_VIEW': jsonEncode({
+          'n': 'RecoveredWithSeg',
+          'ts': DateTime.now().subtract(const Duration(seconds: 5)).millisecondsSinceEpoch,
+          'd': 7000,
+          's': {
+            'source': 'push',
+            'name': 'fake_name',
+            'visit': 999,
+            'recovered': 999,
+          }
+        }),
+      };
+
+      final network = FakeNetworkClient('https://example.com');
+      final cfg = CountlyConfig(
+        appKey: 'app-key',
+        serverUrl: 'https://example.com',
+        deviceId: 'test-device',
+        storageMode: StorageMode.persistent,
+        storageMethods: MemoryBackedStorage(backing).toMethods(),
+        giveConsent: true,
+        enableSDKLogs: true,
+        networkClientOverride: network,
+      );
+
+      final sdk = await Countly.init(cfg, instanceKey: 'v-recovery-seg');
+      addTearDown(() async {
+        await Countly.disposeAll();
+      });
+
+      final eventsReq = network.sent.firstWhere((r) => r.containsKey('events'));
+      final events = helper.deconstructEventsRequest(eventsReq);
+      final recovered = events.firstWhere((e) => e['key'] == '[CLY]_view' && e['segmentation']['recovered'] == 1);
+
+      expect(recovered['segmentation']['name'], 'RecoveredWithSeg');
+      expect(recovered['segmentation']['visit'], 1);
+      expect(recovered['segmentation']['recovered'], 1);
+      expect(recovered['segmentation']['source'], 'push');
+
+      expect(backing.containsKey('v-recovery-seg_COUNTLY_ACTIVE_VIEW'), false,
+          reason: 'Recovered active view state should be cleared after recoverView runs');
+      expect(sdk.debugEventQueueSnapshot, equals([]));
     });
   });
 
