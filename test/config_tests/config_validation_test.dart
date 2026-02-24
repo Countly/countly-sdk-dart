@@ -345,12 +345,12 @@ void main() {
   });
 
   group('CountlyConfig - storageMode', () {
-    test('defaults to memory', () {
+    test('defaults to null (unspecified)', () {
       final config = CountlyConfig(
         appKey: 'test-key',
         serverUrl: 'https://example.com',
       );
-      expect(config.storageMode, StorageMode.memory);
+      expect(config.storageMode, isNull);
     });
 
     test('can be explicitly set to persistent', () {

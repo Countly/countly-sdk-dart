@@ -86,7 +86,7 @@ final config = CountlyConfig(
     'name': 'John Doe',
     'tier': 'premium',
   },
-  storageMode: StorageMode.memory, // Optional: Storage mode (default)
+  storageMode: StorageMode.memory,  // Optional: storage mode. If omitted, core falls back to in-memory.
   disableOldDataMigration: false,    // Optional: Disable legacy migration
 );
 ```
