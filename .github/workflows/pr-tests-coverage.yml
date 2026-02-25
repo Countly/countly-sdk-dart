@@ -1,0 +1,57 @@
+name: PR Tests and Coverage
+
+on:
+  pull_request:
+    branches:
+      - staging
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run tests with coverage
+        run: flutter test --coverage
+
+      - name: Calculate coverage percentage
+        id: coverage
+        shell: bash
+        run: |
+          if [ ! -f coverage/lcov.info ]; then
+            echo "coverage/lcov.info not found"
+            exit 1
+          fi
+
+          LF=$(grep -ho 'LF:[0-9]*' coverage/lcov.info | awk -F: '{sum+=$2} END {print sum+0}')
+          LH=$(grep -ho 'LH:[0-9]*' coverage/lcov.info | awk -F: '{sum+=$2} END {print sum+0}')
+
+          if [ "$LF" -eq 0 ]; then
+            PCT="0.00"
+          else
+            PCT=$(awk "BEGIN {printf \"%.2f\", ($LH/$LF)*100}")
+          fi
+
+          echo "percentage=$PCT" >> "$GITHUB_OUTPUT"
+          echo "covered_lines=$LH" >> "$GITHUB_OUTPUT"
+          echo "total_lines=$LF" >> "$GITHUB_OUTPUT"
+
+      - name: Publish coverage summary
+        run: |
+          echo "### Test Coverage" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Coverage: **${{ steps.coverage.outputs.percentage }}%**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Covered lines: ${{ steps.coverage.outputs.covered_lines }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Total lines: ${{ steps.coverage.outputs.total_lines }}" >> "$GITHUB_STEP_SUMMARY"
