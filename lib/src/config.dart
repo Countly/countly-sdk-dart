@@ -43,8 +43,8 @@ class CountlyConfig {
   /// Optional initial user properties.
   final Map<String, dynamic>? userProperties;
 
-  /// Storage mode selection (memory by default).
-  final StorageMode storageMode;
+  /// Storage mode selection. If null, engine falls back to memory in storage layer.
+  final StorageMode? storageMode;
 
   /// Custom storage overrides (optional).
   final CustomStorageMethods? storageMethods;
@@ -127,7 +127,7 @@ class CountlyConfig {
     required String serverUrl,
     String? deviceId,
     Map<String, dynamic>? userProperties,
-    @visibleForTesting StorageMode storageMode = StorageMode.memory,
+    @visibleForTesting StorageMode? storageMode,
     @visibleForTesting CustomStorageMethods? storageMethods,
     bool startWithUnknownConsent = false,
     LogLevel logLevel = LogLevel.verbose,

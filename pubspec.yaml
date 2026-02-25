@@ -1,6 +1,6 @@
 name: countly_sdk_dart_core
 description: "Countly Dart SDK for tracking user actions, events, views, and user profiles on all platforms supported by Dart."
-version: 26.1.0-rc.1
+version: 26.1.0
 homepage: https://countly.com
 repository: https://github.com/Countly/countly-sdk-dart
 issue_tracker: https://github.com/Countly/countly-sdk-dart/issues

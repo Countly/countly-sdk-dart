@@ -1,4 +1,4 @@
-## 26.1.0-rc.1
+## 26.1.0
 
 * Initial SDK release with the following functionalities:
 
@@ -32,8 +32,8 @@
   * Segmentation support for strings, numbers, booleans, and lists
 
 * Views Module (sdk.views)
-  * `startAutoStoppedView(viewName)` - Start an auto-stopped view
-  * `endActiveView()` - End the currently active view
+  * `startAutoStoppedView(viewName, {segmentation})` - Start an auto-stopped view
+  * `endActiveView({segmentation})` - End the currently active view
   * Automatic view duration tracking with heartbeat mechanism
   * View state recovery after app restart
 
