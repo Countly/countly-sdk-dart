@@ -78,6 +78,11 @@ class CountlyConfig {
   /// Used only during initial metrics collection on SDK init.
   final Map<String, dynamic>? deviceMetricOverrides;
 
+  /// Maximum length of all string keys: event keys, view names, segmentation keys and custom user property keys.
+  /// Longer keys are truncated. Values below 1 are raised to 1. A key length limit from SDK Behavior Settings
+  /// ('lkl') takes precedence over this value. (default: 128 chars)
+  final int? maxKeyLength;
+
   /// SBS data to be used in first init.
   final Map<String, dynamic> sbs;
 
@@ -114,6 +119,7 @@ class CountlyConfig {
     required this.enableVisualWarnings,
     required this.customRequestHeaders,
     required this.deviceMetricOverrides,
+    required this.maxKeyLength,
     required this.sbs,
     required this.disableOldDataMigration,
     required this.platformEnvironment,
@@ -137,6 +143,7 @@ class CountlyConfig {
     bool enableVisualWarnings = false,
     bool giveConsent = false,
     Map<String, String>? customRequestHeaders,
+    int? maxKeyLength,
     Map<String, dynamic> sbs = const {},
     bool disableOldDataMigration = false,
     CountlyPlatformEnvironment platformEnvironment = const CountlyPlatformEnvironment(),
@@ -190,6 +197,7 @@ class CountlyConfig {
         enableVisualWarnings: enableVisualWarnings,
         customRequestHeaders: customRequestHeaders == null ? null : Map.unmodifiable(Map.of(customRequestHeaders)),
         deviceMetricOverrides: deviceMetricOverrides == null ? null : Map.unmodifiable(Map.of(deviceMetricOverrides)),
+        maxKeyLength: maxKeyLength,
         sbs: Map.of(sbs),
         disableOldDataMigration: disableOldDataMigration,
         platformEnvironment: platformEnvironment,
@@ -213,6 +221,7 @@ class CountlyConfig {
     bool? enableVisualWarnings,
     bool? giveConsent,
     Map<String, String>? customRequestHeaders,
+    int? maxKeyLength,
     Map<String, dynamic>? sbs,
     bool? disableOldDataMigration,
     CountlyPlatformEnvironment? platformEnvironment,
@@ -235,6 +244,7 @@ class CountlyConfig {
       enableVisualWarnings: enableVisualWarnings ?? this.enableVisualWarnings,
       giveConsent: giveConsent ?? this.giveConsent,
       customRequestHeaders: customRequestHeaders ?? this.customRequestHeaders,
+      maxKeyLength: maxKeyLength ?? this.maxKeyLength,
       sbs: sbs ?? this.sbs,
       disableOldDataMigration: disableOldDataMigration ?? this.disableOldDataMigration,
       platformEnvironment: platformEnvironment ?? this.platformEnvironment,

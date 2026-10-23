@@ -62,6 +62,7 @@ Future<CountlyInstance> _createInstance({
   Map<String, String>? storageBacking,
   StorageMode storageMode = StorageMode.memory,
   Map<String, dynamic>? sbs,
+  int? maxKeyLength,
 }) async {
   final log = logger ?? TestLogger();
   final client = networkClient ?? FakeNetworkClient('https://example.com');
@@ -78,6 +79,7 @@ Future<CountlyInstance> _createInstance({
     logger: log,
     networkClientOverride: client,
     sbs: sbs ?? {},
+    maxKeyLength: maxKeyLength,
   );
   final inst = await Countly.init(cfg);
   addTearDown(() async {
@@ -575,6 +577,55 @@ void main() {
       final event = sdk.debugEventQueueSnapshot.first;
       final seg = event['segmentation'] as Map<String, dynamic>;
       expect(seg.length, 3, reason: 'Only 3 segmentation values should be kept');
+    });
+  });
+
+  group('Config - maxKeyLength', () {
+    test('maxKeyLength truncates event keys, view names, segmentation and user property keys', () async {
+      final network = FakeNetworkClient('https://example.com');
+      final sdk = await _createInstance(maxKeyLength: 5, networkClient: network);
+
+      await sdk.events.record(key: 'abcdefghij', segmentation: {'segment_key': 'v'});
+      final event = sdk.debugEventQueueSnapshot.first;
+      expect(event['key'], 'abcde');
+      expect((event['segmentation'] as Map<String, dynamic>).keys, ['segme']);
+
+      await sdk.views.startAutoStoppedView('view_name_long');
+      expect(sdk.debugActiveViewName, 'view_');
+
+      await sdk.users.setProperties({'custom_key': 'v'});
+      await sdk.processEventsAndRequests();
+      final userReq = network.sent.firstWhere((r) => r.containsKey('user_details'));
+      expect((userReq['user_details']['custom'] as Map<String, dynamic>).keys, ['custo']);
+    });
+
+    test('maxKeyLength below 1 is raised to 1', () async {
+      final logger = TestLogger();
+      final sdk = await _createInstance(maxKeyLength: 0, logger: logger);
+
+      await sdk.events.record(key: 'abc');
+      expect(sdk.debugEventQueueSnapshot.first['key'], 'a');
+      expect(
+          logger.logs.any((log) => log.contains('[warning]') && log.contains("'maxKeyLength' is less than '1'")), true);
+    });
+
+    test('keys are truncated to 128 chars when maxKeyLength is not set', () async {
+      final sdk = await _createInstance();
+
+      await sdk.events.record(key: 'x' * 200);
+      expect((sdk.debugEventQueueSnapshot.first['key'] as String).length, 128);
+    });
+
+    test('SBS key length limit takes precedence over maxKeyLength', () async {
+      final sdk = await _createInstance(
+        maxKeyLength: 5,
+        sbs: {
+          'c': {'lkl': 10}
+        },
+      );
+
+      await sdk.events.record(key: 'x' * 50);
+      expect((sdk.debugEventQueueSnapshot.first['key'] as String).length, 10);
     });
   });
 
