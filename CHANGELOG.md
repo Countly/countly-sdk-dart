@@ -1,3 +1,6 @@
+## XX.XX.XX
+* Added `multiply(key, value)` to the Users Module (sdk.users) to multiply a numeric custom user property by the given value
+
 ## 26.1.0
 
 * Initial SDK release with the following functionalities:
