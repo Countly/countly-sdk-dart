@@ -6,6 +6,8 @@ import 'package:countly_sdk_dart_core/src/networking.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 
+import '../helper/helper.dart' as helper;
+
 class TestLogger implements SdkLogger {
   final List<String> logs = [];
   @override
@@ -62,6 +64,7 @@ Future<CountlyInstance> _createInstance({
   Map<String, String>? storageBacking,
   StorageMode storageMode = StorageMode.memory,
   Map<String, dynamic>? sbs,
+  int? maxKeyLength,
 }) async {
   final log = logger ?? TestLogger();
   final client = networkClient ?? FakeNetworkClient('https://example.com');
@@ -78,6 +81,7 @@ Future<CountlyInstance> _createInstance({
     logger: log,
     networkClientOverride: client,
     sbs: sbs ?? {},
+    maxKeyLength: maxKeyLength,
   );
   final inst = await Countly.init(cfg);
   addTearDown(() async {
@@ -575,6 +579,71 @@ void main() {
       final event = sdk.debugEventQueueSnapshot.first;
       final seg = event['segmentation'] as Map<String, dynamic>;
       expect(seg.length, 3, reason: 'Only 3 segmentation values should be kept');
+    });
+  });
+
+  group('Config - maxKeyLength', () {
+    test('maxKeyLength truncates event keys, view names, segmentation and user property keys', () async {
+      final network = FakeNetworkClient('https://example.com');
+      final sdk = await _createInstance(maxKeyLength: 5, networkClient: network);
+
+      await sdk.events.record(key: 'abcdefghij', segmentation: {'segment_key': 'v'});
+      await sdk.views.startAutoStoppedView('view_name_long');
+      await sdk.views.endActiveView();
+      await sdk.users.setProperties({'custom_key': 'v'});
+      await sdk.processEventsAndRequests();
+
+      final events = network.sent.expand(helper.deconstructEventsRequest).toList();
+      expect(events.map((e) => e['key']), ['abcde', '[CLY]_view']);
+      expect(events[0]['segmentation'], {'segme': 'v'});
+      expect(events[1]['segmentation'], {'name': 'view_', 'visit': 1});
+      final userReq = network.sent.firstWhere((r) => r.containsKey('user_details'));
+      expect(userReq['user_details']['custom'], {'custo': 'v'});
+    });
+
+    test('maxKeyLength below 1 is raised to 1', () async {
+      final logger = TestLogger();
+      final sdk = await _createInstance(maxKeyLength: 0, logger: logger);
+
+      await sdk.events.record(key: 'abc');
+      expect(sdk.debugEventQueueSnapshot.first['key'], 'a');
+      expect(
+          logger.logs.any((log) => log.contains('[warning]') && log.contains("'maxKeyLength' is less than '1'")), true);
+    });
+
+    test('keys are truncated to 128 chars when maxKeyLength is not set', () async {
+      final sdk = await _createInstance();
+
+      await sdk.events.record(key: 'x' * 200);
+      expect((sdk.debugEventQueueSnapshot.first['key'] as String).length, 128);
+    });
+
+    test('SBS key length limit takes precedence over maxKeyLength', () async {
+      final sdk = await _createInstance(
+        maxKeyLength: 5,
+        sbs: {
+          'c': {'lkl': 10}
+        },
+      );
+
+      await sdk.events.record(key: 'x' * 50);
+      expect((sdk.debugEventQueueSnapshot.first['key'] as String).length, 10);
+    });
+
+    test('key length limit fetched from the server takes precedence over maxKeyLength', () async {
+      final network = FakeNetworkClient(
+        'https://example.com',
+        sbsResponse: {
+          'c': {'lkl': 10}
+        },
+      );
+      final sdk = await _createInstance(maxKeyLength: 5, networkClient: network);
+      // init does not wait for its SBS fetch
+      await pumpEventQueue();
+
+      await sdk.events.record(key: 'x' * 50);
+      await sdk.processEventsAndRequests();
+      expect(network.sent.expand(helper.deconstructEventsRequest).map((e) => e['key']), ['x' * 10]);
     });
   });
 
