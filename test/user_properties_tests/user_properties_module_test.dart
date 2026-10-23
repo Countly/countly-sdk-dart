@@ -221,6 +221,36 @@ void main() {
     });
   });
 
+  group('User Properties - Numeric Operations', () {
+    test('multiply sends int multiplier for property', () async {
+      final network = FakeNetworkClient('https://example.com');
+      final sdk = await _createInstance(networkClient: network);
+
+      sdk.users.multiply('points', 3);
+      await sdk.processEventsAndRequests();
+
+      final userReq = network.sent.firstWhere((r) => r.containsKey('user_details'));
+      final custom = userReq['user_details']['custom'];
+
+      expect(custom['points'], isA<Map<String, dynamic>>());
+      expect(custom['points']['\$mul'], 3);
+    });
+
+    test('multiply sends double multiplier for property', () async {
+      final network = FakeNetworkClient('https://example.com');
+      final sdk = await _createInstance(networkClient: network);
+
+      sdk.users.multiply('score', 1.5);
+      await sdk.processEventsAndRequests();
+
+      final userReq = network.sent.firstWhere((r) => r.containsKey('user_details'));
+      final custom = userReq['user_details']['custom'];
+
+      expect(custom['score'], isA<Map<String, dynamic>>());
+      expect(custom['score']['\$mul'], 1.5);
+    });
+  });
+
   group('User Properties - Cache Behavior', () {
     test('multiple setProperties calls merge into cache', () async {
       final network = FakeNetworkClient('https://example.com');
