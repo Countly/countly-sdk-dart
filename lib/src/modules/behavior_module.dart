@@ -14,7 +14,7 @@ class BehaviorModule {
   int get internalTimerInterval => _sbs['sui'] as int? ?? SBSDefaults.sui;
   // bool get isSessionTrackingAllowed => (_sbs['st'] as bool? ?? true); // default 1 - NOT SUPPORTED
   // bool get isCrashTrackingAllowed => (_sbs['crt'] as bool? ?? true); // default 1 - NOT SUPPORTED
-  // bool get isLocationTrackingAllowed => (_sbs['lt'] as bool? ?? true); // default 1 - NOT SUPPORTED
+  bool get isLocationTrackingAllowed => _sbs['lt'] as bool? ?? SBSDefaults.lt;
   bool get isViewTrackingAllowed => _sbs['vt'] as bool? ?? SBSDefaults.vt;
   int get keyLengthLimit => _sbs['lkl'] as int? ?? SBSDefaults.lkl;
   int get valueSizeLimit => _sbs['lvs'] as int? ?? SBSDefaults.lvs;
@@ -72,7 +72,7 @@ class BehaviorModule {
       'sui': SBSDefaults.sui,
       // 'st': SBSDefaults.st, // NOT SUPPORTED
       // 'crt': SBSDefaults.crt, // NOT SUPPORTED
-      // 'lt': SBSDefaults.lt, // NOT SUPPORTED
+      'lt': SBSDefaults.lt,
       'vt': SBSDefaults.vt,
       'lkl': SBSDefaults.lkl,
       'lvs': SBSDefaults.lvs,
