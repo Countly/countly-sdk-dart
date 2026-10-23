@@ -20,6 +20,7 @@ part 'modules/consents_module.dart';
 part 'modules/views_module.dart';
 part 'modules/behavior_module.dart';
 part 'modules/device_id_module.dart';
+part 'modules/location_module.dart';
 part 'testing_utils.dart';
 
 class CountlyInstance {
@@ -67,6 +68,7 @@ class CountlyInstance {
   ViewsModule? _viewsModule;
   BehaviorModule? _sbs;
   DeviceIdModule? _deviceIdModule;
+  LocationModule? _locationModule;
 
   String? _activeViewName;
   DateTime? _activeViewStart;
@@ -136,6 +138,7 @@ class CountlyInstance {
     _consentsModule = ConsentsModule(this);
     _viewsModule = ViewsModule(this);
     _deviceIdModule = DeviceIdModule(this);
+    _locationModule = LocationModule(this);
 
     // Migration only for default instance
     if (instanceKey == 'default') {
@@ -847,6 +850,8 @@ class CountlyInstance {
   ConsentsModule get consents => _consentsModule ??= ConsentsModule(this);
   ViewsModule get views => _viewsModule ??= ViewsModule(this);
   DeviceIdModule get id => _deviceIdModule ??= DeviceIdModule(this);
+  /// Sets the user's location after init.
+  LocationModule get location => _locationModule ??= LocationModule(this);
 
   Map<String, dynamic> _sanitizeSegmentation(Map<String, dynamic> input) {
     final out = <String, dynamic>{};
