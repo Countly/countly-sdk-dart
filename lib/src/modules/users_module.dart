@@ -17,6 +17,9 @@ class UserData {
   static Map<String, dynamic> push(List<dynamic> values) => {'\$push': values};
   static Map<String, dynamic> addToSet(List<dynamic> values) => {'\$addToSet': values};
   static Map<String, dynamic> pull(List<dynamic> values) => {'\$pull': values};
+
+  /// Builds the `$mul` modifier that multiplies a property by [value].
+  static Map<String, dynamic> multiply(int value) => {'\$mul': value};
 }
 
 class UsersModule {
@@ -62,5 +65,10 @@ class UsersModule {
   // Remove values from a user property array
   Future<void> pullFromArray(String key, List<dynamic> values) async {
     await setProperties({key: UserData.pull(values)});
+  }
+
+  /// Multiplies a numeric custom user property by [value] on the server.
+  Future<void> multiply(String key, int value) async {
+    await setProperties({key: UserData.multiply(value)});
   }
 }

@@ -173,6 +173,9 @@ await sdk.users.addToSet('categories', ['electronics', 'books']);
 
 // Remove values from array property
 await sdk.users.pullFromArray('interests', ['outdated']);
+
+// Multiply numeric property
+await sdk.users.multiply('points', 2);
 ```
 
 ### Consent Management
