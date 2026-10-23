@@ -1,3 +1,6 @@
+## XX.XX.XX
+* Added `setLocation(countryCode, city, gpsCoordinates, ipAddress)` to the new Location Module (sdk.location) to set the user's location after init
+
 ## 26.1.0
 
 * Initial SDK release with the following functionalities:

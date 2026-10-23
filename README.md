@@ -175,6 +175,20 @@ await sdk.users.addToSet('categories', ['electronics', 'books']);
 await sdk.users.pullFromArray('interests', ['outdated']);
 ```
 
+### Location
+
+```dart
+final sdk = Countly.defaultInstance!;
+
+// Set the user's location (all parameters are optional, set at least one)
+await sdk.location.setLocation(
+  countryCode: 'TR',
+  city: 'Istanbul',
+  gpsCoordinates: '41.0082,28.9784',
+  ipAddress: '192.168.88.33',
+);
+```
+
 ### Consent Management
 
 ```dart
