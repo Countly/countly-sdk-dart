@@ -463,25 +463,10 @@ void main() {
         await Countly.disposeAll();
       });
 
-      // requests will include timestamp, hour, dow, tz and rr values
-      final consentRequest = Map<String, dynamic>.from(helper.trueConsentRequest);
-      consentRequest['timestamp'] = isA<int>();
-      consentRequest['hour'] = isA<int>();
-      consentRequest['dow'] = isA<int>();
-      consentRequest['tz'] = isA<int>();
-      consentRequest['rr'] = 4;
-      final locationRequest = Map<String, dynamic>.from(helper.locationRequest);
-      locationRequest['timestamp'] = isA<int>();
-      locationRequest['hour'] = isA<int>();
-      locationRequest['dow'] = isA<int>();
-      locationRequest['tz'] = isA<int>();
-      locationRequest['rr'] = 3;
-      final metricsRequest = Map<String, dynamic>.from(helper.metricsRequest);
-      metricsRequest['timestamp'] = isA<int>();
-      metricsRequest['hour'] = isA<int>();
-      metricsRequest['dow'] = isA<int>();
-      metricsRequest['tz'] = isA<int>();
-      metricsRequest['rr'] = 2;
+      // requests sent from the queue also include rr
+      final consentRequest = {...helper.trueConsentRequest, 'rr': 4};
+      final locationRequest = {...helper.locationRequest, 'rr': 3};
+      final metricsRequest = {...helper.metricsRequest, 'rr': 2};
 
       // data from first instance
       expect(network2.sent[0], equals(consentRequest));

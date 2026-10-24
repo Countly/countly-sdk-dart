@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io' show ContentType, HttpRequest, HttpServer, InternetAddress;
 
 import 'package:countly_sdk_dart_core/countly_sdk_dart_core.dart';
 import 'package:countly_sdk_dart_core/src/networking.dart';
@@ -94,6 +95,7 @@ Future<CountlyInstance> _createInstance({
   RequestCapturingNetworkClient? networkClient,
   Map<String, String>? customRequestHeaders,
   bool enableNetworkOverride = true,
+  Map<String, dynamic> sbs = const {},
 }) async {
   final client = enableNetworkOverride ? (networkClient ?? RequestCapturingNetworkClient('https://example.com')) : null;
   final cfg = CountlyConfig(
@@ -104,6 +106,7 @@ Future<CountlyInstance> _createInstance({
     giveConsent: giveConsent,
     networkClientOverride: client,
     customRequestHeaders: customRequestHeaders,
+    sbs: sbs,
   );
   final inst = await Countly.init(cfg);
   addTearDown(() async {
@@ -209,6 +212,133 @@ void main() {
       final req = network.sent.firstWhere((r) => r.containsKey('events'), orElse: () => <String, dynamic>{});
       if (req.isNotEmpty) {
         expect(req['tz'], isA<int>());
+      }
+    });
+  });
+
+  group('Request Creation Time', () {
+    test('a request carries its creation time while it waits in the queue', () async {
+      final sdk = await _createInstance(sbs: {
+        'c': {'networking': false}
+      });
+
+      final before = DateTime.now().millisecondsSinceEpoch;
+      await sdk.events.recordMetrics(metricOverride: {'queued': 'yes'});
+      final after = DateTime.now().millisecondsSinceEpoch;
+
+      final queued = sdk.debugRequestQueueSnapshot.last;
+      expect(queued['metrics']['queued'], 'yes');
+      expect(queued['timestamp'], inInclusiveRange(before, after));
+      _expectTimeFieldsOfItsTimestamp(queued);
+    });
+
+    test('every kind of request carries timestamp, hour, dow and tz', () async {
+      final network = RequestCapturingNetworkClient('https://example.com');
+      final sdk = await _createInstance(networkClient: network);
+
+      await sdk.events.record(key: 'test_event');
+      await sdk.users.setProperties({'name': 'John'});
+      await sdk.id.changeWithMerge('merged-device-id');
+      await sdk.processEventsAndRequests();
+
+      expect(network.sent.map(_requestKind),
+          ['sbs', 'hc', 'consent', 'location', 'metrics', 'events', 'old_device_id', 'user_details']);
+      for (final req in network.sent) {
+        _expectTimeFieldsOfItsTimestamp(req);
+      }
+    });
+
+    test('a request stored without time fields by an earlier version gets the time it is loaded, and keeps it',
+        () async {
+      const events = '[{"key":"stored_without_time","count":1}]';
+      final storage = MemoryBackedStorage();
+      storage.backing['default_COUNTLY_DART_RQ'] = jsonEncode([
+        {'app_key': 'test-app-key', 'device_id': 'test-device-id', 'events': events}
+      ]);
+
+      final before = DateTime.now().millisecondsSinceEpoch;
+      final sdk = await Countly.init(CountlyConfig(
+        appKey: 'test-app-key',
+        serverUrl: 'https://example.com',
+        deviceId: 'test-device-id',
+        storageMode: StorageMode.persistent,
+        giveConsent: true,
+        storageMethods: storage.toMethods(),
+        networkClientOverride: RequestCapturingNetworkClient('https://example.com'),
+        // Nothing is sent or newly stored, so only the loading itself writes the queue back.
+        sbs: {
+          'c': {'networking': false, 'tracking': false}
+        },
+      ));
+      final after = DateTime.now().millisecondsSinceEpoch;
+      addTearDown(() async {
+        await Countly.disposeAll();
+      });
+
+      final loaded = sdk.debugRequestQueueSnapshot.first;
+      expect(loaded['events'], events);
+      expect(loaded['timestamp'], inInclusiveRange(before, after));
+      _expectTimeFieldsOfItsTimestamp(loaded);
+      final stored = jsonDecode(storage.backing['default_COUNTLY_DART_RQ']!) as List<dynamic>;
+      expect((stored.first as Map<String, dynamic>)['timestamp'], loaded['timestamp']);
+    });
+
+    test('a queued request reaches the server with its creation time after a failed attempt and a restart', () async {
+      final server = await _MockCountlyServer.start();
+      addTearDown(server.close);
+      // Created on an earlier run on a device in UTC+3, so its hour, dow and tz need not match this machine.
+      final queuedEarlier = {
+        'app_key': 'test-app-key',
+        'device_id': 'test-device-id',
+        'sdk_version': '26.1.0',
+        'sdk_name': 'countly-sdk-dart-core',
+        'av': '1.0.0',
+        'timestamp': 1700000000000,
+        'hour': 1,
+        'dow': 3,
+        'tz': 180,
+        'events': '[{"key":"queued_earlier","count":1}]',
+      };
+      final storage = MemoryBackedStorage();
+      storage.backing['default_COUNTLY_DART_RQ'] = jsonEncode([queuedEarlier]);
+      final cfg = CountlyConfig(
+        appKey: 'test-app-key',
+        serverUrl: server.url,
+        deviceId: 'test-device-id',
+        storageMode: StorageMode.persistent,
+        giveConsent: true,
+        storageMethods: storage.toMethods(),
+      );
+      addTearDown(() async {
+        await Countly.disposeAll();
+      });
+
+      server.failuresLeft = 1;
+      final firstRunStart = DateTime.now().millisecondsSinceEpoch;
+      await Countly.init(cfg);
+      final firstRunReady = DateTime.now().millisecondsSinceEpoch;
+      await _waitFor(() => server.received.length >= 3);
+      await Countly.disposeAll();
+      await Countly.init(cfg);
+      await _waitFor(() => server.received.length >= 9);
+
+      expect(server.received.length, 9);
+      final fromQueue = server.received.where((r) => r.path == '/i' && !r.body.containsKey('hc')).toList();
+      expect(fromQueue.map((r) => _requestKind(r.body)), ['events', 'events', 'consent', 'location', 'metrics']);
+      for (final attempt in fromQueue.take(2)) {
+        expect(attempt.body['events'], queuedEarlier['events']);
+        expect(attempt.body['timestamp'], 1700000000000);
+        expect(attempt.body['hour'], 1);
+        expect(attempt.body['dow'], 3);
+        expect(attempt.body['tz'], 180);
+      }
+      for (final createdOnFirstRun in fromQueue.skip(2)) {
+        expect(createdOnFirstRun.body['timestamp'], inInclusiveRange(firstRunStart, firstRunReady));
+      }
+      expect(server.received.where((r) => r.path == '/o/sdk' && r.body['method'] == 'sc').length, 2);
+      expect(server.received.where((r) => r.path == '/i' && r.body.containsKey('hc')).length, 2);
+      for (final createdNow in server.received.where((r) => r.body['events'] != queuedEarlier['events'])) {
+        _expectTimeFieldsOfItsTimestamp(createdNow.body);
       }
     });
   });
@@ -593,5 +723,67 @@ class _RetryCountingNetworkClient extends NetworkClient {
   Future<http.Response> makeSelectiveRequest(Map<String, dynamic> data) async {
     attemptCount++;
     return FakeResponseSuccess();
+  }
+}
+
+/// A local stand-in for a Countly server: records every request it receives and answers
+/// `{"result":"Success"}`, or HTTP 500 while [failuresLeft] is above zero.
+class _MockCountlyServer {
+  final HttpServer _server;
+  final List<({String path, Map<String, dynamic> body})> received = [];
+  int failuresLeft = 0;
+
+  _MockCountlyServer._(this._server) {
+    _server.listen(_answer);
+  }
+
+  /// Starts the server on a free localhost port.
+  static Future<_MockCountlyServer> start() async =>
+      _MockCountlyServer._(await HttpServer.bind(InternetAddress.loopbackIPv4, 0));
+
+  /// The server URL to give the SDK.
+  String get url => 'http://${_server.address.address}:${_server.port}';
+
+  /// Records [request] and answers it.
+  Future<void> _answer(HttpRequest request) async {
+    final body = jsonDecode(await utf8.decoder.bind(request).join()) as Map<String, dynamic>;
+    received.add((path: request.uri.path, body: body));
+    final fail = failuresLeft > 0;
+    if (fail) failuresLeft--;
+    request.response
+      ..statusCode = fail ? 500 : 200
+      ..headers.contentType = ContentType.json
+      ..write(fail ? '{"result":"Error"}' : '{"result":"Success"}');
+    await request.response.close();
+  }
+
+  /// Stops the server.
+  Future<void> close() => _server.close(force: true);
+}
+
+/// Names a request by the key that sets it apart from the fields every request carries.
+String _requestKind(Map<String, dynamic> req) {
+  if (req['method'] == 'sc') return 'sbs';
+  const kinds = ['hc', 'consent', 'location', 'metrics', 'events', 'old_device_id', 'user_details'];
+  return kinds.firstWhere(req.containsKey, orElse: () => 'other');
+}
+
+/// Expects [req] to carry a timestamp in ms, and the hour, day of week (0 is Sunday) and
+/// timezone offset in minutes of that same moment on this machine.
+void _expectTimeFieldsOfItsTimestamp(Map<String, dynamic> req) {
+  final reason = 'request: $req';
+  expect(req['timestamp'], isA<int>(), reason: reason);
+  final time = DateTime.fromMillisecondsSinceEpoch(req['timestamp'] as int);
+  expect(req['hour'], time.hour, reason: reason);
+  expect(req['dow'], time.weekday == DateTime.sunday ? 0 : time.weekday, reason: reason);
+  expect(req['tz'], time.timeZoneOffset.inMinutes, reason: reason);
+}
+
+/// Polls [condition] until it holds, and fails the test when it still does not after [timeout].
+Future<void> _waitFor(bool Function() condition, {Duration timeout = const Duration(seconds: 10)}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (!condition()) {
+    if (DateTime.now().isAfter(deadline)) fail('Condition not met within $timeout');
+    await Future<void>.delayed(const Duration(milliseconds: 10));
   }
 }

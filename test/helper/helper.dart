@@ -2,12 +2,21 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 
+/// The time fields every request carries from the moment it is created.
+final requestTimeFields = {
+  'timestamp': isA<int>(),
+  'hour': isA<int>(),
+  'dow': isA<int>(),
+  'tz': isA<int>(),
+};
+
 final sdkBehaviorRequest = {
   'app_key': 'app-key',
   'device_id': 'test-device',
   'sdk_version': '26.1.0',
   'sdk_name': 'countly-sdk-dart-core',
   'av': '1.0.0',
+  ...requestTimeFields,
   'method': 'sc',
 };
 
@@ -19,10 +28,7 @@ final healthCheckRequest = {
   'av': '1.0.0',
   'hc': {'el': 0, 'wl': 0, 'sc': '', 'em': ''},
   'metrics': {'_app_version': '1.0.0'},
-  'timestamp': anyOf(isA<int>(), isA<num>()),
-  'hour': anyOf(isA<int>(), isA<num>()),
-  'dow': anyOf(isA<int>(), isA<num>()),
-  'tz': anyOf(isA<int>(), isA<num>()),
+  ...requestTimeFields,
 };
 
 final falseConsentRequest = {
@@ -31,6 +37,7 @@ final falseConsentRequest = {
   'sdk_version': '26.1.0',
   'sdk_name': 'countly-sdk-dart-core',
   'av': '1.0.0',
+  ...requestTimeFields,
   'consent': {
     'events': false,
     'users': false,
@@ -45,6 +52,7 @@ final trueConsentRequest = {
   'sdk_version': '26.1.0',
   'sdk_name': 'countly-sdk-dart-core',
   'av': '1.0.0',
+  ...requestTimeFields,
   'consent': {
     'events': true,
     'users': true,
@@ -59,6 +67,7 @@ final locationRequest = {
   'sdk_version': '26.1.0',
   'sdk_name': 'countly-sdk-dart-core',
   'av': '1.0.0',
+  ...requestTimeFields,
   'location': '',
 };
 
@@ -68,6 +77,7 @@ final metricsRequest = {
   'sdk_version': '26.1.0',
   'sdk_name': 'countly-sdk-dart-core',
   'av': '1.0.0',
+  ...requestTimeFields,
   'metrics': {
     '_os': isA<String>(),
     '_device': isA<String>(),

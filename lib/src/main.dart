@@ -223,6 +223,12 @@ class CountlyInstance {
           L.w('Dropped request queue item with unexpected type: ${item.runtimeType}');
         }
       }
+      // Requests stored by an older SDK version, or built from migrated native events, carry no time yet.
+      final untimed = _requestQueue.where((request) => request['timestamp'] == null).toList();
+      for (final request in untimed) {
+        _attachRequestTime(request);
+      }
+      if (untimed.isNotEmpty) await _persistRequestQueue();
     } else {
       L.v('No persisted request queue found');
     }
@@ -438,7 +444,7 @@ class CountlyInstance {
     await _addToRequestQueue(request);
   }
 
-  /// Adds necessary common fields to request data.
+  /// Adds necessary common fields to request data, including the time the request is created.
   /// Returns null if device ID is not set, preventing invalid requests from being queued.
   Map<String, dynamic>? _prepareRequest(Map<String, dynamic> data) {
     if (_deviceId == null) {
@@ -449,7 +455,7 @@ class CountlyInstance {
       L.e('prepareRequest called with empty appKey, dropping request');
       return null;
     }
-    return {
+    final request = {
       'app_key': config.appKey,
       'device_id': _deviceId,
       'sdk_version': _sdkVersion,
@@ -457,18 +463,17 @@ class CountlyInstance {
       'av': SdkInternal.appVersion,
       ...data
     };
+    _attachRequestTime(request);
+    return request;
   }
 
-  /// Attach time and optionally rr
-  void _attachDynamicRequestMeta(Map<String, dynamic> req, {bool includeRR = false}) {
+  /// Attaches the current time to [req]: timestamp in ms, hour, day of week (0 is Sunday) and timezone offset in minutes.
+  void _attachRequestTime(Map<String, dynamic> req) {
     final now = DateTime.now();
     req['timestamp'] = now.millisecondsSinceEpoch;
     req['hour'] = now.hour;
     req['dow'] = now.weekday % 7;
     req['tz'] = now.timeZoneOffset.inMinutes;
-    if (includeRR) {
-      req['rr'] = _requestQueue.length;
-    }
   }
 
   /// Adds a request to the request queue with overflow handling.
@@ -567,7 +572,7 @@ class CountlyInstance {
       return false;
     }
     try {
-      _attachDynamicRequestMeta(req, includeRR: true);
+      req['rr'] = _requestQueue.length;
       final resp = await _network.makeSelectiveRequest(req);
       L.i('Received response: status=[${resp.statusCode}], body=[${resp.body}]');
       final ok = _network.isResponseValid(resp, acceptJSON: false);
@@ -723,7 +728,6 @@ class CountlyInstance {
         L.v('Health check request payload could not be prepared, skipping send');
         return;
       }
-      _attachDynamicRequestMeta(req);
       final resp = await _network.makeRequest(req, Endpoints.i);
       final ok = _network.isResponseValid(resp, acceptJSON: false);
       if (ok) {

@@ -1,3 +1,7 @@
+## XX.XX.XX
+
+* Fixed queued requests reporting the time they were sent instead of the time they were created. Every request, including the SDK behavior settings request, now carries `timestamp`, `hour`, `dow` and `tz` from the moment it is created
+
 ## 26.1.0
 
 * Initial SDK release with the following functionalities:
