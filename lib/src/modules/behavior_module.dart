@@ -74,7 +74,7 @@ class BehaviorModule {
       // 'crt': SBSDefaults.crt, // NOT SUPPORTED
       // 'lt': SBSDefaults.lt, // NOT SUPPORTED
       'vt': SBSDefaults.vt,
-      'lkl': SBSDefaults.lkl,
+      'lkl': _configuredKeyLengthLimit(),
       'lvs': SBSDefaults.lvs,
       'lsv': SBSDefaults.lsv,
       // 'lbc': SBSDefaults.lbc, // NOT SUPPORTED
@@ -103,6 +103,18 @@ class BehaviorModule {
       'esw': SBSDefaults.esw,
     });
     _inst.L.d('BehaviorModule: defaults initialized');
+  }
+
+  /// Key length limit from [CountlyConfig.maxKeyLength], or the default when it is not set or less than 1.
+  int _configuredKeyLengthLimit() {
+    final maxKeyLength = _inst.config.maxKeyLength;
+    if (maxKeyLength == null) return SBSDefaults.lkl;
+    if (maxKeyLength < 1) {
+      _inst.L.w("BehaviorModule: provided 'maxKeyLength' is less than '1', using the default:[${SBSDefaults.lkl}]");
+      return SBSDefaults.lkl;
+    }
+    _inst.L.i("BehaviorModule: provided 'maxKeyLength' override:[$maxKeyLength]");
+    return maxKeyLength;
   }
 
   /// Load persisted SBS object and apply any overrides.
