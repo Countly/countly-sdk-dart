@@ -601,14 +601,21 @@ void main() {
       expect(userReq['user_details']['custom'], {'custo': 'v'});
     });
 
-    test('maxKeyLength below 1 is raised to 1', () async {
+    test('maxKeyLength below 1 is ignored and the default 128 is used', () async {
       final logger = TestLogger();
       final sdk = await _createInstance(maxKeyLength: 0, logger: logger);
 
-      await sdk.events.record(key: 'abc');
-      expect(sdk.debugEventQueueSnapshot.first['key'], 'a');
+      await sdk.events.record(key: 'x' * 200);
+      expect((sdk.debugEventQueueSnapshot.first['key'] as String).length, 128);
       expect(
           logger.logs.any((log) => log.contains('[warning]') && log.contains("'maxKeyLength' is less than '1'")), true);
+    });
+
+    test('maxKeyLength of 1 is kept', () async {
+      final sdk = await _createInstance(maxKeyLength: 1);
+
+      await sdk.events.record(key: 'abc');
+      expect(sdk.debugEventQueueSnapshot.first['key'], 'a');
     });
 
     test('keys are truncated to 128 chars when maxKeyLength is not set', () async {

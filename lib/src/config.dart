@@ -79,7 +79,7 @@ class CountlyConfig {
   final Map<String, dynamic>? deviceMetricOverrides;
 
   /// Maximum length of all string keys: event keys, view names, segmentation keys and custom user property keys.
-  /// Longer keys are truncated. Values below 1 are raised to 1. A key length limit from SDK Behavior Settings
+  /// Longer keys are truncated. Values below 1 are ignored. A key length limit from SDK Behavior Settings
   /// ('lkl') takes precedence over this value. (default: 128 chars)
   final int? maxKeyLength;
 
