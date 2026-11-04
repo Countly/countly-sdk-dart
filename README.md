@@ -82,6 +82,7 @@ final config = CountlyConfig(
   deviceMetricOverrides: {           // Optional: Override device metrics
     '_os': 'Custom OS',
   },
+  maxKeyLength: 128,                 // Optional: Max length of all string keys (default 128)
   userProperties: {                  // Optional: Initial user properties
     'name': 'John Doe',
     'tier': 'premium',
