@@ -1,6 +1,8 @@
 ## XX.XX.XX
 
 * Added `setLocation({countryCode, city, gpsCoordinates})` to the new Location Module (sdk.location) to set the user's location after init
+* Added `multiply(key, value)` to the Users Module (sdk.users) to multiply a numeric custom user property by the given value
+* Added `maxKeyLength` to `CountlyConfig` to limit the length of all string keys (default 128 chars). A key length limit from SDK Behavior Settings takes precedence over it.
 
 ## 26.1.0
 

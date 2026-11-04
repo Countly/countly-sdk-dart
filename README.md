@@ -82,6 +82,7 @@ final config = CountlyConfig(
   deviceMetricOverrides: {           // Optional: Override device metrics
     '_os': 'Custom OS',
   },
+  maxKeyLength: 128,                 // Optional: Max length of all string keys (default 128)
   userProperties: {                  // Optional: Initial user properties
     'name': 'John Doe',
     'tier': 'premium',
@@ -173,6 +174,9 @@ await sdk.users.addToSet('categories', ['electronics', 'books']);
 
 // Remove values from array property
 await sdk.users.pullFromArray('interests', ['outdated']);
+
+// Multiply numeric property
+await sdk.users.multiply('points', 2);
 ```
 
 ### Location
