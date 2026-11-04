@@ -84,7 +84,6 @@ void main() {
         countryCode: 'TR',
         city: 'Istanbul',
         gpsCoordinates: '41.0082,28.9784',
-        ipAddress: '192.168.88.33',
       );
 
       expect(sdk.debugRequestQueueLength, initialRQLength + 1);
@@ -94,14 +93,13 @@ void main() {
             'location': '41.0082,28.9784',
             'city': 'Istanbul',
             'country_code': 'TR',
-            'ip_address': '192.168.88.33',
           })));
     });
 
     test('sends only the values that are set', () async {
       final sdk = await _createInstance();
 
-      await sdk.location.setLocation(gpsCoordinates: '56.42345,123.45325', city: '', ipAddress: null);
+      await sdk.location.setLocation(gpsCoordinates: '56.42345,123.45325', city: '', countryCode: null);
 
       expect(sdk.debugRequestQueueSnapshot.last, equals(_expectedLocationRequest({'location': '56.42345,123.45325'})));
     });
@@ -112,7 +110,7 @@ void main() {
       final initialRQLength = sdk.debugRequestQueueLength;
 
       await sdk.location.setLocation();
-      await sdk.location.setLocation(countryCode: '', city: '', gpsCoordinates: '', ipAddress: '');
+      await sdk.location.setLocation(countryCode: '', city: '', gpsCoordinates: '');
 
       expect(sdk.debugRequestQueueLength, initialRQLength);
       expect(logger.logs.where((log) => log.contains('without any location value')).length, 2);

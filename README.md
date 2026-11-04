@@ -185,7 +185,6 @@ await sdk.location.setLocation(
   countryCode: 'TR',
   city: 'Istanbul',
   gpsCoordinates: '41.0082,28.9784',
-  ipAddress: '192.168.88.33',
 );
 ```
 

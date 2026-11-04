@@ -9,10 +9,9 @@ class LocationModule {
   /// The [countryCode] is the ISO country code of the user's country and [city] is the name of the user's city.
   /// Set [countryCode] and [city] together.
   /// The [gpsCoordinates] are comma separated latitude and longitude values, for example "56.42345,123.45325".
-  /// The [ipAddress] is the user's IP address, for example "192.168.88.33".
-  Future<void> setLocation({String? countryCode, String? city, String? gpsCoordinates, String? ipAddress}) async {
+  Future<void> setLocation({String? countryCode, String? city, String? gpsCoordinates}) async {
     if (_inst._guardDisposed('location.setLocation')) return;
-    _inst.L.d('Setting location: countryCode=[$countryCode] city=[$city] gps=[$gpsCoordinates] ip=[$ipAddress]');
+    _inst.L.d('Setting location: countryCode=[$countryCode] city=[$city] gps=[$gpsCoordinates]');
     if (!_inst.hasConsentInternal()) {
       _inst.L.w('Attempt to set location without consent');
       return;
@@ -25,7 +24,6 @@ class LocationModule {
       if (gpsCoordinates != null && gpsCoordinates.isNotEmpty) 'location': gpsCoordinates,
       if (city != null && city.isNotEmpty) 'city': city,
       if (countryCode != null && countryCode.isNotEmpty) 'country_code': countryCode,
-      if (ipAddress != null && ipAddress.isNotEmpty) 'ip_address': ipAddress,
     };
     if (location.isEmpty) {
       _inst.L.w('location.setLocation called without any location value, skipping');
