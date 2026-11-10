@@ -4,7 +4,7 @@ import 'logging/logging_helper.dart';
 import 'constants.dart';
 
 class NetworkClient {
-  final String baseUrl;
+  String baseUrl;
   final http.Client _client;
   final InstanceLogger? L;
   final int requestTimeout;
