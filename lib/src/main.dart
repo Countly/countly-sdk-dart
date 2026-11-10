@@ -23,8 +23,11 @@ part 'modules/device_id_module.dart';
 part 'testing_utils.dart';
 
 class CountlyInstance {
-  final CountlyConfig config;
+  CountlyConfig _config;
   final String instanceKey; // default instance == 'default'.
+
+  /// Configuration of this instance, with the server URL and app key currently in use.
+  CountlyConfig get config => _config;
 
   final List<Map<String, dynamic>> _eventQueue = [];
   final List<Map<String, dynamic>> _requestQueue = [];
@@ -77,7 +80,7 @@ class CountlyInstance {
   bool _isInUnknownConsentState = false;
   late final CountlyPlatformEnvironment _platformEnvironment;
 
-  CountlyInstance._(this.config, this.instanceKey);
+  CountlyInstance._(this._config, this.instanceKey);
 
   static Future<CountlyInstance> create(CountlyConfig config, {String instanceKey = 'default'}) async {
     final inst = CountlyInstance._(config, instanceKey);
@@ -426,10 +429,10 @@ class CountlyInstance {
     }
     final batch = List<Map<String, dynamic>>.from(_eventQueue);
     _eventQueue.clear();
+    // Prepared before the storage write, so an app key change during that write cannot move these events to the new app.
+    final request = _prepareRequest({'events': jsonEncode(batch)});
     await _persistEventQueue();
 
-    final payload = jsonEncode(batch);
-    final request = _prepareRequest({'events': payload});
     if (request == null) {
       L.v('Event Bundler: prepared request is null, skipping queue enqueue');
       return;
@@ -545,6 +548,8 @@ class CountlyInstance {
     // Iterate snapshot to avoid mutation issues while sending.
     final rqSnapshot = List<Map<String, dynamic>>.from(_requestQueue);
     for (final req in rqSnapshot) {
+      // The queue can be flushed or filtered while an earlier request is on its way.
+      if (!_requestQueue.any((r) => identical(r, req))) continue;
       final ok = await _sendRequest(req);
       if (!ok) {
         final backoffDuration = _sbs?.internalTimerInterval ?? SBSDefaults.sui;
@@ -554,7 +559,7 @@ class CountlyInstance {
         break;
       } else {
         L.i('Request sent successfully, removing from queue');
-        _requestQueue.removeAt(0);
+        _requestQueue.removeWhere((r) => identical(r, req));
         await _persistRequestQueue();
       }
     }
@@ -796,6 +801,99 @@ class CountlyInstance {
 
     // At the end we want to report consent status regardless.
     await _recordConsentRequest();
+  }
+
+  /// Changes the server URL. Every request sent from now on goes to [serverUrl], including the requests already
+  /// queued. It must be an http or https URL with a host; trailing "/" characters are removed. An invalid URL is
+  /// ignored. The URL is kept in memory only: the next init uses the URL from the config again.
+  /// After the change, the consent state is queued and the SDK behavior settings are fetched from the new server.
+  Future<void> changeServerUrl(String serverUrl) async {
+    if (_guardDisposed('changeServerUrl')) return;
+    final String newServerUrl;
+    try {
+      newServerUrl = config.copyWith(serverUrl: serverUrl).serverUrl;
+    } on ArgumentError catch (e) {
+      L.e('changeServerUrl called with an invalid server URL [$serverUrl]: ${e.message}');
+      return;
+    }
+    if ((Uri.tryParse(newServerUrl)?.host ?? '').isEmpty) {
+      L.e('changeServerUrl called with a server URL without a host [$serverUrl]');
+      return;
+    }
+    L.i('Changing server URL from [${config.serverUrl}] to [$newServerUrl]');
+    _config = config.copyWith(serverUrl: newServerUrl);
+    _network.baseUrl = newServerUrl;
+    await _catchUpAfterTargetChange();
+  }
+
+  /// Changes the app key. New requests carry [appKey], while the requests already queued keep their app key
+  /// (see [replaceAllAppKeysInQueueWithCurrentAppKey] and [removeDifferentAppKeysFromQueue]).
+  /// Before the change, the active view is ended and pending events and user properties are queued with the old key.
+  /// An empty key or the "YOUR_APP_KEY" placeholder is ignored, and so is the current key. The key is kept in memory
+  /// only: the next init uses the key from the config again.
+  /// After the change, the consent state is queued and the SDK behavior settings are fetched for the new app.
+  Future<void> changeAppKey(String appKey) async {
+    if (_guardDisposed('changeAppKey')) return;
+    final String newAppKey;
+    try {
+      newAppKey = config.copyWith(appKey: appKey).appKey;
+    } on ArgumentError catch (e) {
+      L.e('changeAppKey called with an invalid app key [$appKey]: ${e.message}');
+      return;
+    }
+    if (newAppKey == 'YOUR_APP_KEY') {
+      L.e('changeAppKey called with the placeholder app key [$appKey]');
+      return;
+    }
+    if (newAppKey == config.appKey) {
+      L.d('changeAppKey called with the current app key, no change needed');
+      return;
+    }
+    L.i('Changing app key from [${config.appKey}] to [$newAppKey]');
+    await _viewsModule?._endIfActive();
+    await _bundleEventQueue();
+    await _enqueueUserPropertiesCache();
+    _config = config.copyWith(appKey: newAppKey);
+    await _catchUpAfterTargetChange();
+  }
+
+  /// Tells a new server or app what it needs right after [changeServerUrl] or [changeAppKey]: queues the consent
+  /// state and fetches the SDK behavior settings, while the stored settings stay in use until the answer arrives.
+  Future<void> _catchUpAfterTargetChange() async {
+    await _recordConsentRequest();
+    // ignore: discarded_futures
+    _sbs?.fetchAndApply();
+  }
+
+  /// Removes every event and request that is queued but not sent yet. A request already on its way is not stopped.
+  /// The active view, pending user properties and the health check counters stay as they are.
+  Future<void> flushQueues() async {
+    if (_guardDisposed('flushQueues')) return;
+    L.i('Flushing queues: removing [${_eventQueue.length}] events and [${_requestQueue.length}] requests');
+    _eventQueue.clear();
+    _requestQueue.clear();
+    await _persistEventQueue();
+    await _persistRequestQueue();
+  }
+
+  /// Sets the app key of every queued request to the current app key, so that they are sent to the current app.
+  Future<void> replaceAllAppKeysInQueueWithCurrentAppKey() async {
+    if (_guardDisposed('replaceAllAppKeysInQueueWithCurrentAppKey')) return;
+    L.i('Replacing the app key of [${_requestQueue.length}] queued requests with [${config.appKey}]');
+    for (final request in _requestQueue) {
+      request['app_key'] = config.appKey;
+    }
+    await _persistRequestQueue();
+  }
+
+  /// Removes every queued request whose app key differs from the current app key.
+  Future<void> removeDifferentAppKeysFromQueue() async {
+    if (_guardDisposed('removeDifferentAppKeysFromQueue')) return;
+    final queuedBefore = _requestQueue.length;
+    // Requests stored in the legacy query string format can load the app key as a number.
+    _requestQueue.removeWhere((request) => request['app_key']?.toString() != config.appKey);
+    L.i('Removed [${queuedBefore - _requestQueue.length}] queued requests with an app key other than the current one');
+    await _persistRequestQueue();
   }
 
   bool _disposed = false;
