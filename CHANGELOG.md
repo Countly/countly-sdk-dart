@@ -2,10 +2,10 @@
 
 * Added `multiply(key, value)` to the Users Module (sdk.users) to multiply a numeric custom user property by the given value
 * Added `maxKeyLength` to `CountlyConfig` to limit the length of all string keys (default 128 chars). A key length limit from SDK Behavior Settings takes precedence over it.
-* Added `changeServerUrl(serverUrl)` to the SDK instance to change the server URL after init. Requests already queued are sent to the new URL.
-* Added `changeAppKey(appKey)` to the SDK instance to change the app key after init. Requests already queued keep the app key they were created with.
-* Added `flushQueues()`, `replaceAllAppKeysInQueueWithCurrentAppKey()` and `removeDifferentAppKeysFromQueue()` to the SDK instance to clear the queues, or to move or drop the queued requests of another app key.
-* Mitigated an issue where a queued request could be lost without being sent when the request queue overflowed while another request was being sent.
+* Added `changeServerUrl(serverUrl)` to the SDK instance to change the server URL after init
+* Added `changeAppKey(appKey)` to the SDK instance to change the app key after init
+* Added `flushQueues()`, `replaceAllAppKeysInQueueWithCurrentAppKey()` and `removeDifferentAppKeysFromQueue()` to the SDK instance to manage the request queue
+* Mitigated an issue where a queued request could be lost if the request queue overflowed during a send
 
 ## 26.1.0
 
