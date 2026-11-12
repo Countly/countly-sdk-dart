@@ -1,8 +1,13 @@
 name: PR Tests and Coverage
 
 on:
+  push:
+    branches:
+      - master
+      - staging
   pull_request:
     branches:
+      - master
       - staging
 
 permissions:
