@@ -63,3 +63,26 @@ jobs:
           echo "- Coverage: **${{ steps.coverage.outputs.percentage }}%**" >> "$GITHUB_STEP_SUMMARY"
           echo "- Covered lines: ${{ steps.coverage.outputs.covered_lines }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Total lines: ${{ steps.coverage.outputs.total_lines }}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Write the CI report fragment
+        env:
+          PERCENTAGE: ${{ steps.coverage.outputs.percentage }}
+          COVERED_LINES: ${{ steps.coverage.outputs.covered_lines }}
+          TOTAL_LINES: ${{ steps.coverage.outputs.total_lines }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/ci-report-coverage"
+          {
+            echo "Coverage"
+            echo "Line coverage $PERCENTAGE%"
+            echo "- Coverage: **$PERCENTAGE%**"
+            echo "- Covered lines: $COVERED_LINES"
+            echo "- Total lines: $TOTAL_LINES"
+          } > "$RUNNER_TEMP/ci-report-coverage/report.md"
+
+      - name: Upload the CI report fragment
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ci-report-coverage
+          path: ${{ runner.temp }}/ci-report-coverage
+          if-no-files-found: ignore
