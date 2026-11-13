@@ -1,0 +1,141 @@
+[
+  {
+    "path": "/o/sdk",
+    "params": {
+      "app_key": "parity-app-key",
+      "av": "<masked>",
+      "device_id": "parity-device-001",
+      "method": "sc",
+      "sdk_name": "countly-sdk-dart-core",
+      "sdk_version": "<masked>"
+    }
+  },
+  {
+    "path": "/i",
+    "params": {
+      "app_key": "parity-app-key",
+      "av": "<masked>",
+      "device_id": "parity-device-001",
+      "dow": "<masked>",
+      "hc": {
+        "el": "<masked>",
+        "em": "<masked>",
+        "sc": "<masked>",
+        "wl": "<masked>"
+      },
+      "hour": "<masked>",
+      "metrics": {
+        "_app_version": "<masked>"
+      },
+      "sdk_name": "countly-sdk-dart-core",
+      "sdk_version": "<masked>",
+      "timestamp": "<masked>",
+      "tz": "<masked>"
+    }
+  },
+  {
+    "path": "/i",
+    "params": {
+      "app_key": "parity-app-key",
+      "av": "<masked>",
+      "consent": {
+        "events": true,
+        "feedback": true,
+        "metrics": true,
+        "users": true,
+        "views": true
+      },
+      "device_id": "parity-device-001",
+      "dow": "<masked>",
+      "hour": "<masked>",
+      "rr": "<masked>",
+      "sdk_name": "countly-sdk-dart-core",
+      "sdk_version": "<masked>",
+      "timestamp": "<masked>",
+      "tz": "<masked>"
+    }
+  },
+  {
+    "path": "/i",
+    "params": {
+      "app_key": "parity-app-key",
+      "av": "<masked>",
+      "device_id": "parity-device-001",
+      "dow": "<masked>",
+      "hour": "<masked>",
+      "location": "",
+      "rr": "<masked>",
+      "sdk_name": "countly-sdk-dart-core",
+      "sdk_version": "<masked>",
+      "timestamp": "<masked>",
+      "tz": "<masked>"
+    }
+  },
+  {
+    "path": "/i",
+    "params": {
+      "app_key": "parity-app-key",
+      "av": "<masked>",
+      "device_id": "parity-device-001",
+      "dow": "<masked>",
+      "hour": "<masked>",
+      "metrics": {
+        "_app_version": "<masked>",
+        "_density": "<masked>",
+        "_device": "<masked>",
+        "_device_type": "<masked>",
+        "_locale": "<masked>",
+        "_orientation": "<masked>",
+        "_os": "<masked>",
+        "_resolution": "<masked>"
+      },
+      "rr": "<masked>",
+      "sdk_name": "countly-sdk-dart-core",
+      "sdk_version": "<masked>",
+      "timestamp": "<masked>",
+      "tz": "<masked>"
+    }
+  },
+  {
+    "path": "/i",
+    "params": {
+      "app_key": "parity-app-key",
+      "av": "<masked>",
+      "device_id": "parity-device-001",
+      "dow": "<masked>",
+      "events": [
+        {
+          "count": 1,
+          "dow": "<masked>",
+          "dur": "<masked>",
+          "hour": "<masked>",
+          "key": "[CLY]_view",
+          "segmentation": {
+            "name": "Home",
+            "source": "scenario",
+            "visit": 1
+          },
+          "timestamp": "<masked>"
+        },
+        {
+          "count": 1,
+          "dow": "<masked>",
+          "dur": "<masked>",
+          "hour": "<masked>",
+          "key": "[CLY]_view",
+          "segmentation": {
+            "name": "Settings",
+            "visit": 1
+          },
+          "timestamp": "<masked>"
+        }
+      ],
+      "hour": "<masked>",
+      "rr": "<masked>",
+      "sdk_name": "countly-sdk-dart-core",
+      "sdk_version": "<masked>",
+      "timestamp": "<masked>",
+      "tz": "<masked>"
+    }
+  }
+]

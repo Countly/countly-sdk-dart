@@ -1,0 +1,206 @@
+[
+  {
+    "path": "/o/sdk",
+    "params": {
+      "app_key": "parity-app-key",
+      "av": "<masked>",
+      "device_id": "parity-device-001",
+      "method": "sc",
+      "sdk_name": "countly-sdk-dart-core",
+      "sdk_version": "<masked>"
+    }
+  },
+  {
+    "path": "/i",
+    "params": {
+      "app_key": "parity-app-key",
+      "av": "<masked>",
+      "device_id": "parity-device-001",
+      "dow": "<masked>",
+      "hc": {
+        "el": "<masked>",
+        "em": "<masked>",
+        "sc": "<masked>",
+        "wl": "<masked>"
+      },
+      "hour": "<masked>",
+      "metrics": {
+        "_app_version": "<masked>"
+      },
+      "sdk_name": "countly-sdk-dart-core",
+      "sdk_version": "<masked>",
+      "timestamp": "<masked>",
+      "tz": "<masked>"
+    }
+  },
+  {
+    "path": "/i",
+    "params": {
+      "app_key": "parity-app-key",
+      "av": "<masked>",
+      "consent": {
+        "events": true,
+        "feedback": true,
+        "metrics": true,
+        "users": true,
+        "views": true
+      },
+      "device_id": "parity-device-001",
+      "dow": "<masked>",
+      "hour": "<masked>",
+      "rr": "<masked>",
+      "sdk_name": "countly-sdk-dart-core",
+      "sdk_version": "<masked>",
+      "timestamp": "<masked>",
+      "tz": "<masked>"
+    }
+  },
+  {
+    "path": "/i",
+    "params": {
+      "app_key": "parity-app-key",
+      "av": "<masked>",
+      "device_id": "parity-device-001",
+      "dow": "<masked>",
+      "hour": "<masked>",
+      "location": "",
+      "rr": "<masked>",
+      "sdk_name": "countly-sdk-dart-core",
+      "sdk_version": "<masked>",
+      "timestamp": "<masked>",
+      "tz": "<masked>"
+    }
+  },
+  {
+    "path": "/i",
+    "params": {
+      "app_key": "parity-app-key",
+      "av": "<masked>",
+      "device_id": "parity-device-001",
+      "dow": "<masked>",
+      "hour": "<masked>",
+      "metrics": {
+        "_app_version": "<masked>",
+        "_density": "<masked>",
+        "_device": "<masked>",
+        "_device_type": "<masked>",
+        "_locale": "<masked>",
+        "_orientation": "<masked>",
+        "_os": "<masked>",
+        "_resolution": "<masked>"
+      },
+      "rr": "<masked>",
+      "sdk_name": "countly-sdk-dart-core",
+      "sdk_version": "<masked>",
+      "timestamp": "<masked>",
+      "tz": "<masked>"
+    }
+  },
+  {
+    "path": "/i",
+    "params": {
+      "app_key": "parity-app-key",
+      "av": "<masked>",
+      "device_id": "parity-device-001",
+      "dow": "<masked>",
+      "events": [
+        {
+          "count": 2,
+          "dow": "<masked>",
+          "dur": 5.0,
+          "hour": "<masked>",
+          "key": "purchase",
+          "segmentation": {
+            "boolList": [
+              true,
+              false,
+              true
+            ],
+            "doubleList": [
+              1.1,
+              2.2,
+              3.3
+            ],
+            "hashirama": -2147483647,
+            "intList": [
+              1,
+              2,
+              3
+            ],
+            "itachi": 1.7976931348623157e+308,
+            "kakaski": 5e-324,
+            "mapList": [
+              {
+                "key1": "value1",
+                "key2": 2
+              },
+              {
+                "key1": "value2",
+                "key2": 3
+              },
+              {
+                "key1": "value3",
+                "key2": 4
+              }
+            ],
+            "mixedList": [
+              "value1",
+              2,
+              3.3,
+              true
+            ],
+            "nar": "uto",
+            "sakura": false,
+            "sasuke": 2147483647,
+            "stringList": [
+              "value1",
+              "value2",
+              "value3"
+            ],
+            "tobi": {
+              "obito": "uchiha",
+              "zetsu": "white"
+            }
+          },
+          "sum": 9.99,
+          "timestamp": "<masked>"
+        }
+      ],
+      "hour": "<masked>",
+      "rr": "<masked>",
+      "sdk_name": "countly-sdk-dart-core",
+      "sdk_version": "<masked>",
+      "timestamp": "<masked>",
+      "tz": "<masked>"
+    }
+  },
+  {
+    "path": "/i",
+    "params": {
+      "app_key": "parity-app-key",
+      "av": "<masked>",
+      "device_id": "parity-device-001",
+      "dow": "<masked>",
+      "hour": "<masked>",
+      "rr": "<masked>",
+      "sdk_name": "countly-sdk-dart-core",
+      "sdk_version": "<masked>",
+      "timestamp": "<masked>",
+      "tz": "<masked>",
+      "user_details": {
+        "byear": 1980,
+        "custom": {
+          "age": 30,
+          "tier": "gold"
+        },
+        "email": "john@example.com",
+        "gender": "M",
+        "name": "John Doe",
+        "organization": "Countly",
+        "phone": "1234567890",
+        "picture": "https://example.com/picture.jpg",
+        "username": "john_d"
+      }
+    }
+  }
+]
