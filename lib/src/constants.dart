@@ -29,6 +29,15 @@ class SdkInternal {
   static const requestTimeoutSeconds = 60;
 }
 
+/// Request compression: bodies between [minBytes] and [maxBytes] are sent gzip-compressed, with [urlMarker] as the
+/// only query of the URL. The server refuses a compressed body that is larger than [maxBytes] once decoded.
+@internal
+class RequestCompression {
+  static const minBytes = 1024;
+  static const maxBytes = 1024 * 1024;
+  static const urlMarker = 'content_encoding=gzip';
+}
+
 @internal
 class Endpoints {
   static const i = '/i';

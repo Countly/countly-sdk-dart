@@ -851,6 +851,15 @@
                 "isExperimental": false,
                 "isNamed": true,
                 "isRequired": false,
+                "name": "enableRequestCompression",
+                "relativePath": "lib/src/config.dart",
+                "typeName": "bool?"
+              },
+              {
+                "isDeprecated": false,
+                "isExperimental": false,
+                "isNamed": true,
+                "isRequired": false,
                 "name": "platformEnvironment",
                 "relativePath": "lib/src/config.dart",
                 "typeName": "CountlyPlatformEnvironment?"
@@ -1053,6 +1062,15 @@
                 "isExperimental": false,
                 "isNamed": true,
                 "isRequired": false,
+                "name": "enableRequestCompression",
+                "relativePath": "lib/src/config.dart",
+                "typeName": "bool"
+              },
+              {
+                "isDeprecated": false,
+                "isExperimental": false,
+                "isNamed": true,
+                "isRequired": false,
                 "name": "platformEnvironment",
                 "relativePath": "lib/src/config.dart",
                 "typeName": "CountlyPlatformEnvironment"
@@ -1144,6 +1162,17 @@
             "isStatic": false,
             "isWriteable": false,
             "name": "disableOldDataMigration",
+            "relativePath": "lib/src/config.dart",
+            "typeName": "bool"
+          },
+          {
+            "entryPoints": [],
+            "isDeprecated": false,
+            "isExperimental": false,
+            "isReadable": true,
+            "isStatic": false,
+            "isWriteable": false,
+            "name": "enableRequestCompression",
             "relativePath": "lib/src/config.dart",
             "typeName": "bool"
           },

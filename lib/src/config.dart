@@ -89,6 +89,12 @@ class CountlyConfig {
   /// Internal: Disable migration of data from native SDKs (Android/iOS).
   final bool disableOldDataMigration;
 
+  /// If true, request bodies between 1 KB and 1 MB are sent gzip-compressed, once the server's SDK Behavior Settings
+  /// answer says it reads them. A compressed request that the server, or something in front of it, answers without
+  /// accepting it stops compression until the next SDK Behavior Settings answer says again that the server reads
+  /// compressed bodies. Browsers without CompressionStream keep sending plain bodies. (default: false)
+  final bool enableRequestCompression;
+
   /// Internal: Platform environment adapters.
   final CountlyPlatformEnvironment platformEnvironment;
 
@@ -122,6 +128,7 @@ class CountlyConfig {
     required this.maxKeyLength,
     required this.sbs,
     required this.disableOldDataMigration,
+    required this.enableRequestCompression,
     required this.platformEnvironment,
     required this.sdkVersionOverride,
     required this.sdkNameOverride,
@@ -146,6 +153,7 @@ class CountlyConfig {
     int? maxKeyLength,
     Map<String, dynamic> sbs = const {},
     bool disableOldDataMigration = false,
+    bool enableRequestCompression = false,
     CountlyPlatformEnvironment platformEnvironment = const CountlyPlatformEnvironment(),
     String? sdkVersionOverride,
     String? sdkNameOverride,
@@ -200,6 +208,7 @@ class CountlyConfig {
         maxKeyLength: maxKeyLength,
         sbs: Map.of(sbs),
         disableOldDataMigration: disableOldDataMigration,
+        enableRequestCompression: enableRequestCompression,
         platformEnvironment: platformEnvironment,
         sdkVersionOverride: sdkVersionOverride?.trim(),
         sdkNameOverride: sdkNameOverride?.trim(),
@@ -224,6 +233,7 @@ class CountlyConfig {
     int? maxKeyLength,
     Map<String, dynamic>? sbs,
     bool? disableOldDataMigration,
+    bool? enableRequestCompression,
     CountlyPlatformEnvironment? platformEnvironment,
     String? sdkVersionOverride,
     String? sdkNameOverride,
@@ -247,6 +257,7 @@ class CountlyConfig {
       maxKeyLength: maxKeyLength ?? this.maxKeyLength,
       sbs: sbs ?? this.sbs,
       disableOldDataMigration: disableOldDataMigration ?? this.disableOldDataMigration,
+      enableRequestCompression: enableRequestCompression ?? this.enableRequestCompression,
       platformEnvironment: platformEnvironment ?? this.platformEnvironment,
       sdkVersionOverride: sdkVersionOverride ?? this.sdkVersionOverride,
       sdkNameOverride: sdkNameOverride ?? this.sdkNameOverride,

@@ -156,7 +156,8 @@ class BehaviorModule {
   }
 
   /// Fetch latest SBS from server and apply any overrides.
-  /// Persists the full response for future use.
+  /// Persists the full response for future use, without the "gzip" key, which tells the network client whether this
+  /// server reads compressed bodies.
   Future<void> fetchAndApply() async {
     if (_inst._guardDisposed('behaviorModule.fetchLatest')) return;
     if (_inst._isInUnknownConsentState) {
@@ -167,11 +168,18 @@ class BehaviorModule {
       final data = _inst._prepareRequest({});
       if (data == null) return;
       data['method'] = 'sc';
+      if (_inst._network.requestCompressionEnabled) {
+        // text, not a number: the server matches the text "1", and a JSON body keeps a number's type
+        data['gzip'] = '1';
+      }
+      final sentTo = _inst._network.baseUrl;
       final resp = await _inst._network.makeRequest(data, Endpoints.sdk);
       if (_inst._network.isResponseValid(resp, acceptJSON: true)) {
         final decoded = jsonDecode(resp.body);
         _inst.L.d('BehaviorModule: fetched latest SBS values:[${resp.body}]');
         if (decoded is Map<String, dynamic>) {
+          // the gzip key is read from each live answer and never stored
+          _inst._network.onGzipAnswer(sentTo, decoded.remove('gzip') == true);
           await _inst._storage.writeJson(StorageSubKeys.behavior, decoded);
           final overrides = decoded['c'];
           if (overrides is Map<String, dynamic>) {
