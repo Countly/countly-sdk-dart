@@ -111,6 +111,7 @@ class CountlyInstance {
     // ignore: invalid_use_of_visible_for_testing_member
     _network = config.networkClientOverride ??
         NetworkClient(config.serverUrl, L: L, customHeaders: config.customRequestHeaders);
+    _network.requestCompressionEnabled = config.enableRequestCompression;
     // Default instance only migration
     _migration = MigrationService(
       _storage,
@@ -128,6 +129,7 @@ class CountlyInstance {
     L.d('config: internalTimerInterval=[${_sbs?.internalTimerInterval}s] eventQueueSize=[${_sbs?.eventQueueSize}] requestQueueSize=[${_sbs?.requestQueueSize}]');
     L.d('config: storageMode=[${config.storageMode?.name ?? 'unspecified'}] customStorageOverrides=[${config.storageMethods?.hasAny == true}]');
     L.d('config: disableOldDataMigration=[${config.disableOldDataMigration}]');
+    L.d('config: enableRequestCompression=[${config.enableRequestCompression}]');
     L.d('config: loggingEnabled=[${config.enableSDKLogs}] logLevel=[${config.logLevel.name}] customLogger=[${config.logger != null}]');
 
     if (config.giveConsent || config.startWithUnknownConsent) {

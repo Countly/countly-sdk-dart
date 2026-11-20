@@ -5,6 +5,7 @@
 * Added `changeServerUrl(serverUrl)` to the SDK instance to change the server URL after init
 * Added `changeAppKey(appKey)` to the SDK instance to change the app key after init
 * Added `flushQueues()`, `replaceAllAppKeysInQueueWithCurrentAppKey()` and `removeDifferentAppKeysFromQueue()` to the SDK instance to manage the request queue
+* Added `enableRequestCompression` to `CountlyConfig`. Request bodies between 1 KB and 1 MB are then sent gzip-compressed, once the server's SDK Behavior Settings answer says it reads them. Browsers without `CompressionStream` keep sending plain bodies.
 * Mitigated an issue where a queued request could be lost if the request queue overflowed during a send
 
 ## 26.1.0
